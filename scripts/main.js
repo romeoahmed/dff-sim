@@ -4,6 +4,7 @@
  */
 
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import "../styles/main.css";
 
 import { Signal, DFlipFlop } from "./physics.js";
 import { Oscilloscope } from "./renderer.js";
