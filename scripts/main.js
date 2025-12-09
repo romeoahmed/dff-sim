@@ -3,7 +3,7 @@
  * @file 主控制器：负责 UI 交互、物理循环调度与数据绑定
  */
 
-import '@fortawesome/fontawesome-free/css/all.min.css';
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
 import { Signal, DFlipFlop } from "./physics.js";
 import { Oscilloscope } from "./renderer.js";
