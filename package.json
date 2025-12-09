@@ -1,0 +1,35 @@
+{
+  "name": "dff-sim",
+  "version": "1.0.0",
+  "description": "D-FlipFlop Simulation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+     "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint scripts/**/*.js",
+    "lint:css": "stylelint styles/*.css",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
+  },
+  "keywords": [],
+  "author": "Romeo Ahmed <ahmedorqwn@gmail.com>",
+  "license": "ISC",
+  "packageManager": "pnpm@10.24.0",
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "browser-sync": "^3.0.4",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsdoc": "^61.5.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1",
+    "vite": "^7.2.7"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0"
+  }
+}

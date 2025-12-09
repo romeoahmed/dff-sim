@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D触发器与指令流水线演示</title>
+    <link rel="stylesheet" href="styles/main.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1><i class="fa-solid fa-microchip"></i> D-FlipFlop Simulation</h1>
+        <p>电压浮动、工程鲁棒性与时钟同步演示</p>
+      </header>
+
+      <main>
+        <!-- 左侧：示波器 -->
+        <section class="oscilloscope-panel">
+          <div class="scope-header">
+            <span
+              ><i class="fa-solid fa-wave-square"></i> Real-time
+              Oscilloscope</span
+            >
+            <span id="time-scale">50ms/div</span>
+          </div>
+          <canvas
+            id="waveform-canvas"
+            aria-label="实时电压波形图，显示 CLK, D, Q 三路信号"
+          ></canvas>
+          <div class="legend">
+            <span class="leg-item color-clk">CLK (Clock)</span>
+            <span class="leg-item color-d">D (Input)</span>
+            <span class="leg-item color-q">Q (Output)</span>
+          </div>
+        </section>
+
+        <!-- 右侧：控制与状态 -->
+        <section class="control-panel">
+          <!-- 电路可视化 -->
+          <div class="circuit-viz">
+            <div class="chip">
+              <div class="pin input-d">
+                <span class="pin-label">D</span>
+                <div class="voltage-display" id="volt-d">0.00V</div>
+              </div>
+              <div class="pin input-clk">
+                <span class="pin-label">> CLK</span>
+                <div class="voltage-display" id="volt-clk">0.00V</div>
+              </div>
+              <div class="pin output-q">
+                <span class="pin-label">Q</span>
+                <div class="voltage-display" id="volt-q">0.00V</div>
+              </div>
+              <div class="chip-label">D-FlipFlop</div>
+            </div>
+          </div>
+
+          <!-- 控制器 -->
+          <div class="controls">
+            <div class="control-group">
+              <label for="noiseSlider"
+                ><i class="fa-solid fa-bolt"></i> 输入噪声 (Noise Level)</label
+              >
+              <input
+                type="range"
+                id="noiseSlider"
+                min="0"
+                max="100"
+                value="10"
+              />
+              <span id="noiseVal">10%</span>
+            </div>
+
+            <div class="control-group">
+              <label for="speedSlider"
+                ><i class="fa-solid fa-clock"></i> 时钟速度 (Clock Speed)</label
+              >
+              <input
+                type="range"
+                id="speedSlider"
+                min="1"
+                max="100"
+                value="30"
+              />
+            </div>
+
+            <div class="control-group button-group">
+              <button id="btn-toggle-d" class="btn">
+                <i class="fa-solid fa-toggle-off"></i> Toggle Input D
+              </button>
+            </div>
+
+            <div class="info-box">
+              <h4><i class="fa-solid fa-circle-info"></i> 工程规范</h4>
+              <ul>
+                <li>
+                  Logic 1 Input: <span class="highlight">1.0V - 2.0V</span>
+                </li>
+                <li>
+                  Logic 0 Input: <span class="highlight">0.0V - 0.6V</span>
+                </li>
+                <li>Unstable Zone: <span class="warn">0.6V - 1.0V</span></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="scripts/main.js"></script>
+  </body>
+</html>
