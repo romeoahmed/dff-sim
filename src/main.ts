@@ -203,30 +203,29 @@ class SimulationApp {
     });
 
     // 4. 异步重置按钮
+
+    const activateReset = () => {
+      this.resetActive = true;
+      this.btnReset?.classList.add("active");
+    };
+
+    const deactivateReset = () => {
+      this.resetActive = false;
+      this.btnReset?.classList.remove("active");
+    };
+
     // 按下时激活重置
-    this.btnReset.addEventListener("mousedown", () => {
-      this.resetActive = true;
-      this.btnReset?.classList.add("active");
-    });
+    this.btnReset.addEventListener("mousedown", activateReset);
+
     // 松开时释放重置
-    this.btnReset.addEventListener("mouseup", () => {
-      this.resetActive = false;
-      this.btnReset?.classList.remove("active");
-    });
+    this.btnReset.addEventListener("mouseup", deactivateReset);
+
     // 鼠标移出时也释放（防止卡住）
-    this.btnReset.addEventListener("mouseleave", () => {
-      this.resetActive = false;
-      this.btnReset?.classList.remove("active");
-    });
+    this.btnReset.addEventListener("mouseleave", deactivateReset);
+
     // 触摸屏支持
-    this.btnReset.addEventListener("touchstart", () => {
-      this.resetActive = true;
-      this.btnReset?.classList.add("active");
-    });
-    this.btnReset.addEventListener("touchend", () => {
-      this.resetActive = false;
-      this.btnReset?.classList.remove("active");
-    });
+    this.btnReset.addEventListener("touchstart", activateReset);
+    this.btnReset.addEventListener("touchend", deactivateReset);
   }
 
   /**
