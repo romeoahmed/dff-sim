@@ -1,83 +1,53 @@
-import js from "@eslint/js";
-import jsdoc from "eslint-plugin-jsdoc";
+import { defineConfig } from "eslint/config";
+import eslint from "@eslint/js";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
-export default [
-  // 1. 引入 ESLint 推荐配置
-  js.configs.recommended,
+export default defineConfig(
+  // 1. 引入 ESLint 推荐配置 (JS 基础)
+  eslint.configs.recommended,
 
-  // 2. 引入 JSDoc 推荐配置
-  jsdoc.configs["flat/recommended"],
+  // 2. 引入 TypeScript 推荐配置 (包含 parser 和 plugin)
+  ...tseslint.configs.recommended,
 
-  // 3. 配置 eslint-config-prettier，格式化规则由 Prettier 接管
+  // 3. Prettier 兼容配置 (放在最后，关闭所有格式化相关规则)
   eslintConfigPrettier,
 
+  // 4. 项目自定义规则
   {
-    files: ["scripts/**/*.js"],
-    plugins: {
-      jsdoc: jsdoc,
-    },
+    files: ["**/*.{js,mjs,ts}"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
       globals: {
         ...globals.browser,
+        ...globals.node, // 增加 Node 环境支持 (用于 scripts 和 config)
       },
     },
     rules: {
       // =========================
-      // 代码质量与风格 (Code Quality)
+      // TypeScript 专属规则
+      // =========================
+      // 允许定义未使用但以 _ 开头的变量 (例如 _args)
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
+
+      // 警告显式的 any 类型，鼓励使用具体类型
+      "@typescript-eslint/no-explicit-any": "warn",
+
+      // =========================
+      // 通用代码质量
       // =========================
       "no-var": "error",
       "prefer-const": "warn",
-      eqeqeq: ["error", "always"], // 强制全等，比单纯 "error" 更严格
+      eqeqeq: ["error", "always"], // 强制使用 ===
 
-      // 物理仿真项目特有：
-      // 禁止在循环中遗留 console.log，防止卡顿，但允许报错
-      "no-console": ["warn", { allow: ["warn", "error"] }],
-
-      // 允许定义未使用但以 _ 开头的变量 (比如 _args)，方便调试或占位
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-
-      // =========================
-      // JSDoc 增强配置
-      // =========================
-
-      // 强制要有描述 (Description)，而不只是参数类型
-      // 比如: /** 计算电压 */ 而不是 /** @param x */
-      "jsdoc/require-description": "warn",
-
-      // 强制要求写 JSDoc 注释块
-      "jsdoc/require-jsdoc": [
-        "warn",
-        {
-          require: {
-            FunctionDeclaration: true,
-            MethodDefinition: true,
-            ClassDeclaration: true,
-            // 可选：如果你希望强制类属性也写注释，开启下面这个
-            // "ClassExpression": true
-          },
-        },
-      ],
-
-      // 必须写 @param，但对解构参数不做强制要求
-      "jsdoc/require-param": "warn",
-
-      // 必须写类型
-      "jsdoc/require-param-type": "warn",
-
-      // 必须写 @returns，但【关键修改】：忽略构造函数
-      "jsdoc/require-returns": [
-        "warn",
-        {
-          checkConstructors: false,
-        },
-      ],
-
-      // 检查 @returns 的类型是否存在
-      "jsdoc/require-returns-type": "warn",
+      // 允许 console.warn 和 console.error，其他 console 报警告
+      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
     },
   },
-];
+);

@@ -1,9 +1,9 @@
-// @ts-check
 /**
- * @file 渲染器：基于 Canvas 的示波器波形绘制
+ * 渲染器：基于 Canvas 的示波器波形绘制
  */
 
-import { Colors } from "./constants.js";
+import { Colors, SimulationConfig } from "./constants";
+import type { VoltageData } from "./types";
 
 /**
  * 示波器类
@@ -13,27 +13,23 @@ import { Colors } from "./constants.js";
 export class Oscilloscope {
   /**
    * 逻辑宽度
-   * @type {number}
    */
-  width = 0;
+  width: number = 0;
 
   /**
    * 逻辑高度
-   * @type {number}
    */
-  height = 0;
+  height: number = 0;
 
   /**
    * 数据缓冲区最大长度
-   * @type {number}
    */
-  bufferLength = 500;
+  bufferLength: number = 500;
 
   /**
    * 存储各通道的历史电压数据
-   * @type {{d: number[], clk: number[], q: number[]}}
    */
-  data = {
+  data: VoltageData = {
     d: new Array(this.bufferLength).fill(0),
     clk: new Array(this.bufferLength).fill(0),
     q: new Array(this.bufferLength).fill(0),
@@ -41,25 +37,23 @@ export class Oscilloscope {
 
   /**
    * Canvas 元素
-   * @type {HTMLCanvasElement}
    */
-  canvas;
+  canvas: HTMLCanvasElement;
 
   /**
    * 绘图上下文
-   * @type {CanvasRenderingContext2D}
    */
-  ctx;
+  ctx: CanvasRenderingContext2D;
 
   /**
    * 初始化示波器实例
-   * @param {string} canvasId - DOM 中 Canvas 元素的 ID
+   * @param canvasId - DOM 中 Canvas 元素的 ID
    */
-  constructor(canvasId) {
+  constructor(canvasId: string) {
     // 获取 Canvas 元素
     const el = document.getElementById(canvasId);
     if (!el) throw new Error(`Canvas element #${canvasId} not found`);
-    this.canvas = /** @type {HTMLCanvasElement} */ (el);
+    this.canvas = el as HTMLCanvasElement;
 
     // 获取绘图上下文
     const context = this.canvas.getContext("2d");
@@ -75,7 +69,6 @@ export class Oscilloscope {
    * 处理 Canvas 的高分屏 (Retina) 适配
    *
    * 调整 canvas.width (物理像素) 与 canvas.style.width (CSS 像素) 的比例
-   * @returns {void}
    */
   resize() {
     if (!this.canvas.parentElement) return;
@@ -106,12 +99,11 @@ export class Oscilloscope {
 
   /**
    * 推入新的电压采样点，并移除最早的数据（FIFO）
-   * @param {number} d - 输入 D 电压
-   * @param {number} clk - 时钟 CLK 电压
-   * @param {number} q - 输出 Q 电压
-   * @returns {void}
+   * @param d - 输入 D 电压
+   * @param clk - 时钟 CLK 电压
+   * @param q - 输出 Q 电压
    */
-  pushData(d, clk, q) {
+  pushData(d: number, clk: number, q: number) {
     this.data.d.push(d);
     this.data.clk.push(clk);
     this.data.q.push(q);
@@ -125,32 +117,37 @@ export class Oscilloscope {
 
   /**
    * 执行单帧渲染
-   * @returns {void}
    */
   draw() {
     // 清除画布 (使用逻辑宽高)
     this.ctx.clearRect(0, 0, this.width, this.height);
 
+    const { layout } = SimulationConfig;
+
     // 绘制电压阈值参考线
-    this.drawThresholdLine(1.0, "Input High Threshold (1.0V)");
-    this.drawThresholdLine(0.6, "Input Low Threshold (0.6V)");
+    this.drawThresholdLine(1.0, "Input High Threshold (1.0V)", layout.dOffset);
+    this.drawThresholdLine(0.6, "Input Low Threshold (0.6V)", layout.dOffset);
 
     // 绘制三条通道波形
     // Y轴偏移量 (Offset) 用于在垂直方向将波形错开
-    this.drawWaveform(this.data.clk, Colors.green, 20, "CLK");
-    this.drawWaveform(this.data.d, Colors.blue, 100, "D");
-    this.drawWaveform(this.data.q, Colors.red, 180, "Q");
+    this.drawWaveform(this.data.clk, Colors.green, layout.clkOffset, "CLK");
+    this.drawWaveform(this.data.d, Colors.blue, layout.dOffset, "D");
+    this.drawWaveform(this.data.q, Colors.red, layout.qOffset, "Q");
   }
 
   /**
    * 绘制单条波形线
-   * @param {number[]} dataArray - 电压数据数组
-   * @param {string} color - 线条颜色 Hex
-   * @param {number} yOffset - 垂直起始位置偏移
-   * @param {string} label - 通道标签
-   * @returns {void}
+   * @param dataArray - 电压数据数组
+   * @param color - 线条颜色 Hex
+   * @param yOffset - 垂直起始位置偏移
+   * @param label - 通道标签
    */
-  drawWaveform(dataArray, color, yOffset, label) {
+  drawWaveform(
+    dataArray: number[],
+    color: string,
+    yOffset: number,
+    label: string,
+  ) {
     this.ctx.beginPath();
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = 2; // 高分屏下实际渲染为 2 * DPR 像素
@@ -161,15 +158,15 @@ export class Oscilloscope {
 
     const ctx = this.ctx;
 
-    for (let i = 0; i < dataArray.length; i++) {
+    dataArray.forEach((value, i) => {
       const x = i * pixelsPerPoint;
       // 坐标变换：Canvas Y轴向下，因此需要 (Base - Value)
       // 2.5V 是预留的顶部余量
-      const y = yOffset + 2.5 * scaleY - dataArray[i] * scaleY;
+      const y = yOffset + 2.5 * scaleY - value * scaleY;
 
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
-    }
+    });
     ctx.stroke();
 
     // 绘制标签
@@ -180,14 +177,15 @@ export class Oscilloscope {
 
   /**
    * 绘制虚线阈值参考线
-   * @param {number} voltage - 目标电压值
-   * @param {string} text - 说明文本
-   * @returns {void}
+   * @param voltage - 目标电压值
+   * @param text - 说明文本
+   * @param baseOffset - 参考基准线的 Y 轴偏移量 (新增参数)
    */
-  drawThresholdLine(voltage, text) {
+  drawThresholdLine(voltage: number, text: string, baseOffset: number) {
     const scaleY = 30;
-    // 计算基于 Input D (yOffset=100) 区域的相对高度
-    const y = 100 + 2.5 * scaleY - voltage * scaleY;
+
+    // 计算基于 baseOffset 区域的相对高度
+    const y = baseOffset + 2.5 * scaleY - voltage * scaleY;
 
     this.ctx.beginPath();
     this.ctx.strokeStyle = "#494d64";

@@ -1,74 +1,59 @@
-// @ts-check
 /**
- * @file 物理模拟引擎：处理电压、噪声与逻辑门行为
+ * 物理模拟引擎：处理电压、噪声与逻辑门行为
  */
 
-import { VoltageSpecs } from "./constants.js";
+import { VoltageSpecs } from "./constants";
 
 const TWO_PI = 2.0 * Math.PI;
+const VOLTAGE_CLAMP_MIN = -0.5;
+const VOLTAGE_CLAMP_MAX = VoltageSpecs.systemMax;
 
 /**
  * 模拟单个电压信号源，包含噪声生成与阻容延迟模拟
  */
 export class Signal {
   /**
-   * 当前实际电压值（含噪声）
-   *  @type {number}
+   * 当前实际电压值 (含噪声)
    */
-  currentValue = 0;
+  currentValue: number = 0;
 
   /**
    * 目标逻辑状态 (0 或 1)
-   * @type {number}
    */
-  targetLogic = 0;
+  targetLogic: number = 0;
 
   /**
    * 噪声强度 (标准差，单位 V)
-   * @type {number}
    */
-  noiseLevel = 0.1;
-
-  /**
-   * 逻辑高电平的基准电压
-   * @type {number}
-   */
-  baseHigh;
-
-  /**
-   * 逻辑低电平的基准电压
-   * @type {number}
-   */
-  baseLow;
+  noiseLevel: number = 0.1;
 
   // --- Box-Muller 优化缓存 ---
 
   /**
    * 缓存的下一个高斯随机数
-   * @type {number|null}
    */
-  _noiseCache = null;
+  private _noiseCache: number | null = null;
 
   /**
    * 创建一个电压信号源
-   * @param {number} [baseHigh] - 逻辑高电平的基准电压 (V)
-   * @param {number} [baseLow] - 逻辑低电平的基准电压 (V)
-   * @param {number} [slewRate] - 信号压摆率 / 平滑系数 (0.0 - 1.0)
+   * @param baseHigh - 逻辑高电平的基准电压 (V)
+   * @param baseLow - 逻辑低电平的基准电压 (V)
+   * @param smoothingFactor - 信号压摆率 / 平滑系数 (0.0 - 1.0)
    */
-  constructor(baseHigh = 1.8, baseLow = 0.2, slewRate = 0.5) {
-    this.baseHigh = baseHigh;
-    this.baseLow = baseLow;
-    this.slewRate = slewRate;
-  }
+  constructor(
+    public baseHigh: number = 1.8,
+    public baseLow: number = 0.2,
+    public smoothingFactor: number = 0.5,
+  ) {}
 
   /**
    * 计算下一帧的电压值
    *
    * 包含高斯白噪声注入和低通滤波（模拟 Slew Rate）
-   * @returns {void}
    */
   update() {
-    const { targetLogic, baseHigh, baseLow, noiseLevel, slewRate } = this;
+    const { targetLogic, baseHigh, baseLow, noiseLevel, smoothingFactor } =
+      this;
 
     // 1. 确定无噪声的目标电压
     const targetVoltage = targetLogic === 1 ? baseHigh : baseLow;
@@ -96,10 +81,13 @@ export class Signal {
     const noisyVoltage = targetVoltage + noise * noiseLevel;
 
     // 4. 模拟电容充放电 (低通滤波 / Slew Rate)
-    this.currentValue += (noisyVoltage - this.currentValue) * slewRate;
+    this.currentValue += (noisyVoltage - this.currentValue) * smoothingFactor;
 
     // 5. 物理限制 Clamping (-0.5V ~ 3.0V)
-    this.currentValue = Math.max(-0.5, Math.min(3.0, this.currentValue));
+    this.currentValue = Math.max(
+      VOLTAGE_CLAMP_MIN,
+      Math.min(VOLTAGE_CLAMP_MAX, this.currentValue),
+    );
   }
 }
 
@@ -112,24 +100,22 @@ export class DFlipFlop {
   /**
    * 输出信号 Q
    *
-   * 输出跳变比输入更干脆，slewRate 设为 0.8
-   * @type {Signal}
+   * 输出跳变比输入更干脆，smoothingFactor 设为 0.8
    */
-  qSignal = new Signal(1.9, 0.1, 0.8);
+  qSignal: Signal = new Signal(1.9, 0.1, 0.8);
 
   /**
    * 记录上一帧的 CLK 逻辑状态
-   * @type {number}
    */
-  lastClkState = 0;
+  lastClkState: number = 0;
 
   /**
    * 执行单步逻辑运算
-   * @param {number} dVoltage - 当前 D 输入端的实际电压
-   * @param {number} clkVoltage - 当前 CLK 输入端的实际电压
-   * @returns {number} - 计算后的 Q 输出端电压
+   * @param dVoltage - 当前 D 输入端的实际电压
+   * @param clkVoltage - 当前 CLK 输入端的实际电压
+   * @returns 计算后的 Q 输出端电压
    */
-  process(dVoltage, clkVoltage) {
+  process(dVoltage: number, clkVoltage: number) {
     const { logicHighMin, logicLowMax } = VoltageSpecs;
 
     // 1. 施密特触发器类似的输入判断 (简化版)
