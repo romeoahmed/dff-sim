@@ -5,6 +5,10 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default defineConfig(
+  {
+    ignores: ["dist/**", "node_modules/**"],
+  },
+
   // 1. 引入 ESLint 推荐配置 (JS 基础)
   eslint.configs.recommended,
 

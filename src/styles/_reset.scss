@@ -1,0 +1,46 @@
+// ==============================================
+// Reset & Base Styles
+// ==============================================
+@use "variables" as *;
+
+// 更现代的 Reset
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: $ctp-base;
+  color: $ctp-text;
+  font-family: $font-main;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  // 字体抗锯齿，文字更清晰
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 自定义滚动条 (针对 Webkit 浏览器)
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $ctp-base;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $ctp-surface1;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: $ctp-surface0;
+  }
+}

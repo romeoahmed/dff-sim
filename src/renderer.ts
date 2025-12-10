@@ -46,6 +46,11 @@ export class Oscilloscope {
   ctx: CanvasRenderingContext2D;
 
   /**
+   * 窗口 resize 事件处理函数的引用
+   */
+  private _resizeHandler: () => void;
+
+  /**
    * 初始化示波器实例
    * @param canvasId - DOM 中 Canvas 元素的 ID
    */
@@ -60,9 +65,12 @@ export class Oscilloscope {
     if (!context) throw new Error(`Failed to get 2D context for #${canvasId}`);
     this.ctx = context;
 
-    // 初始化尺寸并绑定窗口变化事件
+    // 初始化尺寸
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+
+    // 绑定窗口变化事件
+    this._resizeHandler = () => this.resize();
+    window.addEventListener("resize", this._resizeHandler);
   }
 
   /**
@@ -71,12 +79,14 @@ export class Oscilloscope {
    * 调整 canvas.width (物理像素) 与 canvas.style.width (CSS 像素) 的比例
    */
   resize() {
+    const {layout} = SimulationConfig;
+
     if (!this.canvas.parentElement) return;
 
     // 获取父容器尺寸（逻辑像素）
     const parentRect = this.canvas.parentElement.getBoundingClientRect();
-    const displayWidth = parentRect.width - 32; // 减去 CSS padding
-    const displayHeight = 300;
+    const displayWidth = parentRect.width - layout.canvasPadding; // 减去 CSS padding
+    const displayHeight = layout.canvasHeight;
 
     // 获取设备像素比
     const dpr = window.devicePixelRatio || 1;
@@ -90,6 +100,7 @@ export class Oscilloscope {
     this.canvas.height = Math.floor(displayHeight * dpr);
 
     // 3. 缩放绘图上下文，使后续绘图指令基于逻辑坐标
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置 transform
     this.ctx.scale(dpr, dpr);
 
     // 4. 更新内部逻辑宽高
@@ -154,7 +165,7 @@ export class Oscilloscope {
     this.ctx.lineJoin = "round";
 
     const pixelsPerPoint = this.width / this.bufferLength;
-    const scaleY = 30; // 1V = 30px 高度
+    const scaleY = SimulationConfig.layout.canvasPadding;
 
     const ctx = this.ctx;
 
@@ -199,5 +210,17 @@ export class Oscilloscope {
     this.ctx.fillStyle = "#5b6078";
     this.ctx.font = "10px sans-serif";
     this.ctx.fillText(text, this.width - 150, y - 5);
+  }
+
+  /**
+   * 销毁实例，移除事件监听
+   */
+  destroy() {
+    window.removeEventListener("resize", this._resizeHandler);
+
+    // 清空数据缓冲区
+    this.data.d.length = 0;
+    this.data.clk.length = 0;
+    this.data.q.length = 0;
   }
 }

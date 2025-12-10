@@ -1,0 +1,115 @@
+// ==============================================
+// Controls: Sliders, Buttons, Info Box
+// ==============================================
+@use "variables" as *;
+
+// 控制面板容器
+.controls {
+  background-color: $ctp-mantle;
+  padding: 20px;
+  border-radius: $radius-lg;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  border: 1px solid $ctp-surface0;
+  box-shadow: $shadow-md;
+}
+
+// 控制组（标签 + 滑块）
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    color: $ctp-subtext0;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+// 滑块样式
+input[type="range"] {
+  width: 100%;
+  accent-color: $ctp-mauve;
+  cursor: pointer;
+  height: 6px;
+}
+
+// 无障碍：键盘聚焦时的样式
+input[type="range"]:focus-visible,
+button:focus-visible {
+  outline: 2px solid $ctp-blue;
+  outline-offset: 2px;
+  border-radius: $radius-sm;
+}
+
+// 按钮基础样式
+.btn {
+  background-color: $ctp-blue;
+  color: $ctp-base;
+  border: none;
+  padding: 12px;
+  border-radius: $radius-md;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95rem;
+  transition: all $transition-normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    filter: brightness(0.9);
+  }
+
+  &.active {
+    background-color: $ctp-green;
+  }
+}
+
+// 信息框
+.info-box {
+  margin-top: auto;
+  background-color: $ctp-surface0;
+  padding: 12px;
+  border-radius: $radius-md;
+  font-size: 0.85rem;
+  border-left: 4px solid $ctp-mauve; // 左侧强调线
+
+  h4 {
+    margin-bottom: 8px;
+    color: $ctp-mauve;
+  }
+
+  ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  li {
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+}
+
+// 高亮文字
+.highlight {
+  color: $ctp-green;
+  font-family: $font-mono;
+}
+
+// 警告文字
+.warn {
+  color: $ctp-red;
+  font-family: $font-mono;
+}

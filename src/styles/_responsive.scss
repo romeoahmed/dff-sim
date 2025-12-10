@@ -1,0 +1,29 @@
+// ==============================================
+// Responsive: Media Queries
+// ==============================================
+@use "variables" as *;
+
+// 窄屏下变为单列布局
+@media (width <= 768px) {
+  .container {
+    height: auto;
+    min-height: 100vh;
+    padding: 10px 0;
+  }
+
+  main {
+    grid-template-columns: 1fr; // 单列
+    display: flex;
+    flex-direction: column;
+  }
+
+  .oscilloscope-panel {
+    height: 300px; // 示波器固定高度
+    flex: none;
+  }
+
+  // 移动端调整芯片显示大小
+  .chip {
+    transform: scale(0.9);
+  }
+}

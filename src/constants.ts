@@ -70,5 +70,7 @@ export const SimulationConfig = {
     dOffset: 100,
     qOffset: 180,
     scaleY: 30, // 1V 对应的像素高度
+    canvasHeight: 300,
+    canvasPadding: 32,
   },
 } as const;

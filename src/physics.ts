@@ -44,7 +44,9 @@ export class Signal {
     public baseHigh: number = 1.8,
     public baseLow: number = 0.2,
     public smoothingFactor: number = 0.5,
-  ) {}
+  ) {
+    this.currentValue = baseLow;
+  }
 
   /**
    * 计算下一帧的电压值

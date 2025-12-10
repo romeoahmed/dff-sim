@@ -32,7 +32,7 @@
 - **语言**：[TypeScript](https://www.typescriptlang.org/) (全类型覆盖，严格模式)
 - **构建工具**：[Vite](https://vitejs.dev/)
 - **代码规范**：ESLint + Prettier (配置了针对 TypeScript 的严格检查)
-- **样式**：CSS Variables + FontAwesome
+- **样式**：[Sass](https://sass-lang.com/) (Dart Sass) + Catppuccin 主题 + FontAwesome
 
 ## 🚀 快速开始
 
@@ -71,7 +71,14 @@ src/
 ├── renderer.ts     # 渲染器：基于 Canvas 的示波器波形绘制
 ├── types.ts        # TypeScript 类型定义
 └── styles/
-    └── main.css    # 全局样式文件
+    ├── main.scss           # 样式主入口文件
+    ├── _variables.scss     # 变量定义（颜色、阴影、字体、动画时长）
+    ├── _reset.scss         # 基础重置和滚动条样式
+    ├── _layout.scss        # 容器、header、main 布局
+    ├── _oscilloscope.scss  # 示波器面板和图例
+    ├── _chip.scss          # 芯片可视化、引脚、发光效果（含 @mixin glow）
+    ├── _controls.scss      # 控制面板、滑块、按钮、信息框
+    └── _responsive.scss    # 响应式媒体查询
 ```
 
 ## 📝 许可证

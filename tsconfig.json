@@ -11,6 +11,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "esnext",
     "target": "esnext",
+    "moduleResolution": "bundler",
     "types": ["vite/client"],
     // For nodejs:
     // "lib": ["esnext"],

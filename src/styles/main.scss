@@ -1,0 +1,12 @@
+// ==============================================
+// Main Entry Point
+// ==============================================
+// 导入顺序很重要：变量 -> 重置 -> 布局 -> 组件 -> 响应式
+
+@use "variables";
+@use "reset";
+@use "layout";
+@use "oscilloscope";
+@use "chip";
+@use "controls";
+@use "responsive";

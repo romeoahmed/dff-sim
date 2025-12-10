@@ -3,7 +3,7 @@
  */
 
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import "./styles/main.css";
+import "./styles/main.scss";
 
 import { Signal, DFlipFlop } from "./physics";
 import { Oscilloscope } from "./renderer";
