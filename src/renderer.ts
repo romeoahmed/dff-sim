@@ -79,7 +79,7 @@ export class Oscilloscope {
    * 调整 canvas.width (物理像素) 与 canvas.style.width (CSS 像素) 的比例
    */
   resize() {
-    const {layout} = SimulationConfig;
+    const { layout } = SimulationConfig;
 
     if (!this.canvas.parentElement) return;
 

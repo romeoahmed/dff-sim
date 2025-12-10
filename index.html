@@ -6,21 +6,30 @@
 
     <!-- SEO & 社交分享优化 -->
     <title>D触发器物理仿真 | D-FlipFlop Simulation</title>
-    <meta name="description" content="基于 Web 的 D 触发器物理行为仿真，模拟电压噪声、RC 延迟与亚稳态现象" />
+    <meta
+      name="description"
+      content="基于 Web 的 D 触发器物理行为仿真，模拟电压噪声、RC 延迟与亚稳态现象"
+    />
     <meta name="author" content="Romeo Ahmed" />
 
     <!-- Open Graph (社交分享预览) -->
     <meta property="og:title" content="D-FlipFlop Simulation" />
-    <meta property="og:description" content="电压浮动、工程鲁棒性与时钟同步演示" />
+    <meta
+      property="og:description"
+      content="电压浮动、工程鲁棒性与时钟同步演示"
+    />
     <meta property="og:type" content="website" />
-    
+
     <!-- 主题色（浏览器地址栏/PWA） -->
     <meta name="theme-color" content="#24273a" />
   </head>
   <body>
     <div class="container">
       <header>
-        <h1><i class="fa-solid fa-microchip" aria-hidden="true"></i> D-FlipFlop Simulation</h1>
+        <h1>
+          <i class="fa-solid fa-microchip" aria-hidden="true"></i> D-FlipFlop
+          Simulation
+        </h1>
         <p>电压浮动、工程鲁棒性与时钟同步演示</p>
       </header>
 
@@ -29,8 +38,8 @@
         <section class="oscilloscope-panel">
           <div class="scope-header">
             <span
-              ><i class="fa-solid fa-wave-square" aria-hidden="true"></i> Real-time
-              Oscilloscope</span
+              ><i class="fa-solid fa-wave-square" aria-hidden="true"></i>
+              Real-time Oscilloscope</span
             >
             <span id="time-scale">50ms/div</span>
           </div>
@@ -71,7 +80,8 @@
           <div class="controls">
             <div class="control-group">
               <label for="noiseSlider"
-                ><i class="fa-solid fa-bolt" aria-hidden="true"></i> 输入噪声 (Noise Level)</label
+                ><i class="fa-solid fa-bolt" aria-hidden="true"></i> 输入噪声
+                (Noise Level)</label
               >
               <input
                 type="range"
@@ -85,7 +95,8 @@
 
             <div class="control-group">
               <label for="speedSlider"
-                ><i class="fa-solid fa-clock" aria-hidden="true"></i> 时钟速度 (Clock Speed)</label
+                ><i class="fa-solid fa-clock" aria-hidden="true"></i> 时钟速度
+                (Clock Speed)</label
               >
               <input
                 type="range"
@@ -98,12 +109,16 @@
 
             <div class="control-group button-group">
               <button id="btn-toggle-d" class="btn" type="button">
-                <i class="fa-solid fa-toggle-off" aria-hidden="true"></i> Toggle Input D
+                <i class="fa-solid fa-toggle-off" aria-hidden="true"></i> Toggle
+                Input D
               </button>
             </div>
 
             <div class="info-box">
-              <h4><i class="fa-solid fa-circle-info" aria-hidden="true"></i> 工程规范</h4>
+              <h4>
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                工程规范
+              </h4>
               <ul>
                 <li>
                   Logic 1 Input: <span class="highlight">1.0V - 2.0V</span>
