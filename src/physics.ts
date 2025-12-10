@@ -16,7 +16,7 @@ export class Signal {
   /**
    * 目标逻辑状态 (0 或 1)
    */
-  targetLogic: number = 0;
+  targetLogic: 0 | 1 = 0;
 
   /**
    * 噪声强度 (标准差，单位 V)
@@ -108,7 +108,7 @@ export class DFlipFlop {
   /**
    * 记录上一帧的 CLK 逻辑状态
    */
-  lastClkState: number = 0;
+  lastClkState: 0 | 1 = 0;
 
   /**
    * 执行单步逻辑运算
@@ -120,7 +120,7 @@ export class DFlipFlop {
     const { logicHighMin, logicLowMax } = VoltageSpecs;
 
     // 1. 施密特触发器类似的输入判断 (简化版)
-    let clkLogic = 0;
+    let clkLogic: 0 | 1 = 0;
     if (clkVoltage > logicHighMin) {
       clkLogic = 1;
     } else if (clkVoltage < logicLowMax) {
