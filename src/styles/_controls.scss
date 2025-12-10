@@ -76,6 +76,14 @@ button:focus-visible {
   }
 }
 
+.btn-reset {
+  &:active,
+  &.active {
+    background: $ctp-red;
+    border-color: $ctp-red;
+  }
+}
+
 // 信息框
 .info-box {
   margin-top: auto;

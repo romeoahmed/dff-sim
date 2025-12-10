@@ -114,9 +114,17 @@ export class DFlipFlop {
    * 执行单步逻辑运算
    * @param dVoltage - 当前 D 输入端的实际电压
    * @param clkVoltage - 当前 CLK 输入端的实际电压
+   * @param resetActive - 异步重置信号是否激活 (低电平有效时传 false)
    * @returns 计算后的 Q 输出端电压
    */
-  process(dVoltage: number, clkVoltage: number) {
+  process(dVoltage: number, clkVoltage: number, resetActive: boolean) {
+    // 0. 异步重置优先级最高
+    if (resetActive) {
+      this.qSignal.targetLogic = 0;
+      this.qSignal.update();
+      return this.qSignal.currentValue;
+    }
+
     const { logicHighMin, logicLowMax } = VoltageSpecs;
 
     // 1. 施密特触发器类似的输入判断 (简化版)

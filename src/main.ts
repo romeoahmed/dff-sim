@@ -90,6 +90,16 @@ class SimulationApp {
   btnToggleD = document.getElementById("btn-toggle-d");
 
   /**
+   * 重置按钮
+   */
+  btnReset = document.getElementById("btn-reset");
+
+  /**
+   * 重置信号激活状态
+   */
+  resetActive: boolean = false;
+
+  /**
    * 噪声滑块
    */
   sldNoise = document.getElementById("noiseSlider");
@@ -141,6 +151,9 @@ class SimulationApp {
     if (!this.btnToggleD) {
       throw new Error("Required element #btn-toggle-d not found");
     }
+    if (!this.btnReset) {
+      throw new Error("Required element #btn-reset not found");
+    }
     if (!(this.sldNoise instanceof HTMLInputElement)) {
       throw new Error("Required element #noiseSlider is not an input");
     }
@@ -188,6 +201,32 @@ class SimulationApp {
       if (this.elSpeedVal)
         this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
     });
+
+    // 4. 异步重置按钮
+    // 按下时激活重置
+    this.btnReset.addEventListener("mousedown", () => {
+      this.resetActive = true;
+      this.btnReset?.classList.add("active");
+    });
+    // 松开时释放重置
+    this.btnReset.addEventListener("mouseup", () => {
+      this.resetActive = false;
+      this.btnReset?.classList.remove("active");
+    });
+    // 鼠标移出时也释放（防止卡住）
+    this.btnReset.addEventListener("mouseleave", () => {
+      this.resetActive = false;
+      this.btnReset?.classList.remove("active");
+    });
+    // 触摸屏支持
+    this.btnReset.addEventListener("touchstart", () => {
+      this.resetActive = true;
+      this.btnReset?.classList.add("active");
+    });
+    this.btnReset.addEventListener("touchend", () => {
+      this.resetActive = false;
+      this.btnReset?.classList.remove("active");
+    });
   }
 
   /**
@@ -225,6 +264,7 @@ class SimulationApp {
     const qVolts = this.dff.process(
       this.signalD.currentValue,
       this.signalClk.currentValue,
+      this.resetActive,
     );
 
     return {
