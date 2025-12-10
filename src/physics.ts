@@ -48,6 +48,9 @@ export class Signal {
    * 计算下一帧的电压值
    *
    * 包含高斯白噪声注入和低通滤波（模拟 Slew Rate）
+   *
+   * @remarks
+   * Box-Muller 算法实现参考 AI 辅助建议
    */
   update() {
     const { targetLogic, baseHigh, baseLow, noiseLevel, smoothingFactor } =

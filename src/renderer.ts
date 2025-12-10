@@ -85,6 +85,9 @@ export class Oscilloscope {
    * 处理 Canvas 的高分屏 (Retina) 适配
    *
    * 调整 canvas.width (物理像素) 与 canvas.style.width (CSS 像素) 的比例
+   *
+   * @remarks
+   * DPI 适配方案参考 AI 辅助建议
    */
   resize() {
     const { layout } = SimulationConfig;
@@ -108,7 +111,7 @@ export class Oscilloscope {
     this.canvas.height = Math.floor(displayHeight * dpr);
 
     // 3. 缩放绘图上下文，使后续绘图指令基于逻辑坐标
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置 transform
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置 transform，避免多次 resize 导致缩放叠加
     this.ctx.scale(dpr, dpr);
 
     // 4. 更新内部逻辑宽高
