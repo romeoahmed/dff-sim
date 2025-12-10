@@ -183,7 +183,7 @@ class SimulationApp {
       this.dff.qSignal.noiseLevel =
         noiseVolts * SimulationConfig.outputNoiseRatio;
 
-      if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent}%`;
+      if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent} %`;
     });
 
     // 3. 时钟速度控制
