@@ -5,7 +5,8 @@
 import type { ColorConfig, VoltageSpecConfig } from "./types";
 
 /**
- * 颜色配置
+ * 颜色配置 (Catppuccin Macchiato)
+ * @see https://github.com/catppuccin/palette
  */
 export const Colors = {
   green: "#a6da95",
