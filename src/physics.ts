@@ -50,7 +50,7 @@ export class Signal {
    * 包含高斯白噪声注入和低通滤波（模拟 Slew Rate）
    *
    * @remarks
-   * Box-Muller 算法实现参考 AI 辅助建议
+   * Marsaglia Polar Method 参考 AI 辅助建议
    */
   update() {
     const { targetLogic, baseHigh, baseLow, noiseLevel, smoothingFactor } =
@@ -59,20 +59,23 @@ export class Signal {
     // 1. 确定无噪声的目标电压
     const targetVoltage = targetLogic === 1 ? baseHigh : baseLow;
 
-    // 2. 生成高斯噪声 (Box-Muller 变换 - 双缓冲优化)
-    let noise;
+    // 2. 生成高斯噪声 (Marsaglia Polar Method - 双缓冲优化)
+    let noise: number;
     if (this._noiseCache === null) {
-      let u = 0,
-        v = 0;
-      while (u === 0) u = Math.random();
-      while (v === 0) v = Math.random();
+      let u: number, v: number, s: number;
 
-      const radius = Math.sqrt(-2.0 * Math.log(u));
-      const angle = 2 * Math.PI * v;
+      // 拒绝采样：直到点落在单位圆内
+      do {
+        u = Math.random() * 2 - 1; // [-1, 1]
+        v = Math.random() * 2 - 1; // [-1, 1]
+        s = u * u + v * v;
+      } while (s >= 1 || s === 0);
 
-      // Box-Muller 生成两个独立的正态分布值
-      noise = radius * Math.cos(angle);
-      this._noiseCache = radius * Math.sin(angle);
+      const mul = Math.sqrt((-2.0 * Math.log(s)) / s);
+
+      // 生成两个独立的正态分布值
+      noise = u * mul;
+      this._noiseCache = v * mul;
     } else {
       noise = this._noiseCache;
       this._noiseCache = null; // 清空缓存
@@ -81,7 +84,7 @@ export class Signal {
     // 3. 叠加噪声
     const noisyVoltage = targetVoltage + noise * noiseLevel;
 
-    // 4. 模拟电容充放电 (低通滤波)
+    // 4. RC 低通滤波
     this.currentValue += (noisyVoltage - this.currentValue) * smoothingFactor;
 
     // 5. 物理限制
@@ -127,7 +130,7 @@ export class DFlipFlop {
 
     const { logicHighMin, logicLowMax } = VoltageSpecs;
 
-    // 1. 施密特触发器类似的输入判断 (简化版)
+    // 1. 施密特触发器
     let clkLogic: 0 | 1 = 0;
     if (clkVoltage > logicHighMin) {
       clkLogic = 1;

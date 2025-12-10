@@ -147,8 +147,13 @@ export class Oscilloscope {
     const { layout } = SimulationConfig;
 
     // 绘制电压阈值参考线
-    this.drawThresholdLine(1.0, "Input High Threshold (1.0V)", layout.dOffset);
-    this.drawThresholdLine(0.6, "Input Low Threshold (0.6V)", layout.dOffset);
+    this.drawThresholdLine(1.0, "Input High Threshold (1.0V)", layout.dOffset); // 上方 (默认)
+    this.drawThresholdLine(
+      0.6,
+      "Input Low Threshold (0.6V)",
+      layout.dOffset,
+      true,
+    ); // 下方
 
     // 绘制三条通道波形
     // Y轴偏移量 (Offset) 用于在垂直方向将波形错开
@@ -193,17 +198,23 @@ export class Oscilloscope {
 
     // 绘制标签
     ctx.fillStyle = color;
-    ctx.font = "bold 12px sans-serif";
-    ctx.fillText(label, 5, yOffset + 20);
+    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(label, 6, Math.round(yOffset + 18));
   }
 
   /**
    * 绘制虚线阈值参考线
    * @param voltage - 目标电压值
    * @param text - 说明文本
-   * @param baseOffset - 参考基准线的 Y 轴偏移量 (新增参数)
+   * @param baseOffset - 参考基准线的 Y 轴偏移量
+   * @param labelBelow - 标签是否绘制在线下方（默认在上方）
    */
-  drawThresholdLine(voltage: number, text: string, baseOffset: number) {
+  drawThresholdLine(
+    voltage: number,
+    text: string,
+    baseOffset: number,
+    labelBelow: boolean = false,
+  ) {
     const scaleY = SimulationConfig.layout.scaleY;
 
     // 计算基于 baseOffset 区域的相对高度
@@ -219,8 +230,11 @@ export class Oscilloscope {
     this.ctx.setLineDash([]); // 恢复实线
 
     this.ctx.fillStyle = Colors.fill;
-    this.ctx.font = "10px sans-serif";
-    this.ctx.fillText(text, this.width - 150, y - 5);
+    this.ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+
+    // 上方: y - 4，下方: y + 12（12 约等于字体高度）
+    const textY = labelBelow ? y + 12 : y - 4;
+    this.ctx.fillText(text, Math.round(this.width - 160), Math.round(textY));
   }
 
   /**
