@@ -4,10 +4,6 @@
 
 import { VoltageSpecs } from "./constants";
 
-const TWO_PI = 2.0 * Math.PI;
-const VOLTAGE_CLAMP_MIN = -0.5;
-const VOLTAGE_CLAMP_MAX = VoltageSpecs.systemMax;
-
 /**
  * 模拟单个电压信号源，包含噪声生成与阻容延迟模拟
  */
@@ -69,7 +65,7 @@ export class Signal {
       while (v === 0) v = Math.random();
 
       const radius = Math.sqrt(-2.0 * Math.log(u));
-      const angle = TWO_PI * v;
+      const angle = 2 * Math.PI * v;
 
       // Box-Muller 生成两个独立的正态分布值
       noise = radius * Math.cos(angle);
@@ -82,13 +78,13 @@ export class Signal {
     // 3. 叠加噪声
     const noisyVoltage = targetVoltage + noise * noiseLevel;
 
-    // 4. 模拟电容充放电 (低通滤波 / Slew Rate)
+    // 4. 模拟电容充放电 (低通滤波)
     this.currentValue += (noisyVoltage - this.currentValue) * smoothingFactor;
 
-    // 5. 物理限制 Clamping (-0.5V ~ 3.0V)
+    // 5. 物理限制
     this.currentValue = Math.max(
-      VOLTAGE_CLAMP_MIN,
-      Math.min(VOLTAGE_CLAMP_MAX, this.currentValue),
+      VoltageSpecs.clampMin,
+      Math.min(VoltageSpecs.systemMax, this.currentValue),
     );
   }
 }

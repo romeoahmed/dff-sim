@@ -50,7 +50,7 @@ class SimulationApp {
    * 时钟频率步进速度
    */
   clockSpeed: number =
-    SimulationConfig.defaultSpeed * SimulationConfig.clockSpeedFactor; // ~0.06V
+    SimulationConfig.defaultSpeed * SimulationConfig.clockSpeedFactor; // ~0.06
 
   // --- DOM 元素缓存 ---
 
@@ -103,6 +103,16 @@ class SimulationApp {
    * 噪声数值显示
    */
   elNoiseVal = document.getElementById("noiseVal");
+
+  /**
+   * 速度数值显示
+   */
+  elSpeedVal = document.getElementById("speedVal");
+
+  /**
+   * 上一帧的时间戳
+   */
+  private _lastFrameTime: number = 0;
 
   // --- 脏检查缓存 (Dirty Check Cache) ---
 
@@ -171,6 +181,12 @@ class SimulationApp {
       const val = parseInt(target.value);
 
       this.clockSpeed = val * SimulationConfig.clockSpeedFactor;
+
+      // 计算实际频率: f = (baseFrameRate * clockSpeed) / (2π)
+      const freqHz =
+        (SimulationConfig.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
+      if (this.elSpeedVal)
+        this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
     });
   }
 
@@ -194,8 +210,9 @@ class SimulationApp {
    * 物理计算步进 (Physics Step)
    * @returns 当前电压快照
    */
-  updatePhysics(): SignalSample {
-    this.clockPhase += this.clockSpeed;
+  updatePhysics(deltaTime: number): SignalSample {
+    this.clockPhase +=
+      this.clockSpeed * deltaTime * SimulationConfig.baseFrameRate; // 归一化到 60fps 基准
 
     // 生成方波
     this.signalClk.targetLogic = Math.sin(this.clockPhase) > 0 ? 1 : 0;
@@ -270,10 +287,16 @@ class SimulationApp {
   /**
    * 动画主循环
    */
-  loop() {
-    const data = this.updatePhysics();
+  loop(timestamp: number = 0) {
+    // 计算 deltaTime (秒)
+    const deltaTime = this._lastFrameTime
+      ? (timestamp - this._lastFrameTime) / 1000
+      : 1 / SimulationConfig.baseFrameRate;
+    this._lastFrameTime = timestamp;
+
+    const data = this.updatePhysics(deltaTime);
     this.updateUI(data);
-    requestAnimationFrame(() => this.loop());
+    requestAnimationFrame((t) => this.loop(t));
   }
 }
 
