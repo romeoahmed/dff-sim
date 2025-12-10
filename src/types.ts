@@ -33,6 +33,8 @@ export interface ColorConfig {
 
 /**
  * 电压物理规范类型
+ *
+ * 包含电压阈值、输出范围及信号响应特性（RC 滤波系数）
  */
 export interface VoltageSpecConfig {
   /** 逻辑 1 输入的最低电压阈值 */
@@ -55,6 +57,91 @@ export interface VoltageSpecConfig {
 
   /** 电压钳位下限 (允许轻微负压) */
   clampMin: number;
+
+  /** 默认信号平滑系数 (RC 滤波) */
+  smoothingFactor: number;
+
+  /** 输出信号平滑系数 (更快的响应) */
+  outputSmoothingFactor: number;
+}
+
+/**
+ * 波形图布局配置
+ */
+export interface LayoutConfig {
+  /** CLK 通道的 Y 轴偏移量 (px) */
+  clkOffset: number;
+
+  /** D 通道的 Y 轴偏移量 (px) */
+  dOffset: number;
+
+  /** Q 通道的 Y 轴偏移量 (px) */
+  qOffset: number;
+
+  /** 1V 对应的像素高度 */
+  scaleY: number;
+
+  /** Canvas 高度 (px) */
+  canvasHeight: number;
+
+  /** Canvas 内边距 (px) */
+  canvasPadding: number;
+
+  /** 波形线宽 (px) */
+  waveformLineWidth: number;
+
+  /** 虚线阈值参考线宽 (px) */
+  thresholdLineWidth: number;
+
+  /** 顶部电压余量 (V) */
+  voltageHeadroom: number;
+
+  /** 通道标签 X 偏移 (px) */
+  labelOffsetX: number;
+
+  /** 通道标签 Y 偏移 (px) */
+  labelOffsetY: number;
+
+  /** 虚线模式 [线长, 间隔] */
+  dashPattern: [number, number];
+
+  /** 阈值标签距右边距 (px) */
+  thresholdLabelMargin: number;
+
+  /** 阈值标签在线上方的偏移 (px) */
+  thresholdLabelAbove: number;
+
+  /** 阈值标签在线下方的偏移 (px) */
+  thresholdLabelBelow: number;
+}
+
+/**
+ * 仿真参数配置
+ */
+export interface SimulationConfigType {
+  /** 最大噪声电压 (V) */
+  maxNoiseLevel: number;
+
+  /** 时钟速度系数 */
+  clockSpeedFactor: number;
+
+  /** 默认时钟速度 (0-100) */
+  defaultSpeed: number;
+
+  /** 默认噪声 (0-100) */
+  defaultNoise: number;
+
+  /** 基准帧率 (用于物理计算归一化) */
+  baseFrameRate: number;
+
+  /** 数据缓冲区长度 */
+  bufferLength: number;
+
+  /** Q 输出噪声相对于 D 输入的比例 */
+  outputNoiseRatio: number;
+
+  /** 波形图布局配置 */
+  layout: LayoutConfig;
 }
 
 /**

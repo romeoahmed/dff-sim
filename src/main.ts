@@ -180,7 +180,8 @@ class SimulationApp {
       const noiseVolts = (percent / 100) * SimulationConfig.maxNoiseLevel;
 
       this.signalD.noiseLevel = noiseVolts;
-      this.dff.qSignal.noiseLevel = noiseVolts * 0.5;
+      this.dff.qSignal.noiseLevel =
+        noiseVolts * SimulationConfig.outputNoiseRatio;
 
       if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent}%`;
     });

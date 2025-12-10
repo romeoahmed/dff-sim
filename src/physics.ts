@@ -2,7 +2,7 @@
  * 物理模拟引擎：处理电压、噪声与逻辑门行为
  */
 
-import { VoltageSpecs } from "./constants";
+import { VoltageSpecs, SimulationConfig } from "./constants";
 
 /**
  * 模拟单个电压信号源，包含噪声生成与阻容延迟模拟
@@ -21,9 +21,10 @@ export class Signal {
   /**
    * 噪声强度 (标准差，单位 V)
    */
-  noiseLevel: number = 0.1;
+  noiseLevel: number =
+    (SimulationConfig.defaultNoise / 100) * SimulationConfig.maxNoiseLevel;
 
-  // --- Box-Muller 优化缓存 ---
+  // --- Marsaglia Polar Method 优化缓存 ---
 
   /**
    * 缓存的下一个高斯随机数
@@ -37,9 +38,9 @@ export class Signal {
    * @param smoothingFactor - 信号压摆率 / 平滑系数 (0.0 - 1.0)
    */
   constructor(
-    public baseHigh: number = 1.8,
-    public baseLow: number = 0.2,
-    public smoothingFactor: number = 0.5,
+    public baseHigh: number = VoltageSpecs.outputHighMin,
+    public baseLow: number = VoltageSpecs.outputLowMax,
+    public smoothingFactor: number = VoltageSpecs.smoothingFactor,
   ) {
     this.currentValue = baseLow;
   }
@@ -106,7 +107,11 @@ export class DFlipFlop {
    *
    * 输出跳变比输入更干脆，smoothingFactor 设为 0.8
    */
-  qSignal: Signal = new Signal(1.9, 0.1, 0.8);
+  qSignal: Signal = new Signal(
+    (VoltageSpecs.outputHighMin + VoltageSpecs.outputHighMax) / 2,
+    VoltageSpecs.outputLowMax / 2,
+    VoltageSpecs.outputSmoothingFactor,
+  );
 
   /**
    * 记录上一帧的 CLK 逻辑状态
