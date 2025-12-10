@@ -27,6 +27,149 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
+    <!-- 关于按钮（固定在右上角） -->
+    <button
+      id="btn-about"
+      class="btn-about"
+      type="button"
+      aria-label="关于本项目"
+    >
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    </button>
+
+    <!-- 侧边栏遮罩 -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- 侧边栏面板 -->
+    <aside id="sidebar-about" class="sidebar" aria-hidden="true">
+      <header class="sidebar-header">
+        <h2>
+          <i class="fa-solid fa-book-open" aria-hidden="true"></i> 关于本项目
+        </h2>
+        <button
+          id="btn-close-sidebar"
+          class="btn-close"
+          type="button"
+          aria-label="关闭"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="sidebar-content">
+        <!-- 物理原理 -->
+        <section class="about-section">
+          <h3>
+            <i class="fa-solid fa-atom" aria-hidden="true"></i> 物理与数学原理
+          </h3>
+          <ul>
+            <li>
+              <strong>Box-Muller 变换</strong>：将均匀分布随机数转换为高斯分布，
+              模拟真实电路中的热噪声（Johnson-Nyquist noise）。
+            </li>
+            <li>
+              <strong>RC 低通滤波</strong>：使用一阶差分方程模拟电容充放电效应，
+              信号跳变呈指数曲线而非瞬间阶跃。
+            </li>
+            <li>
+              <strong>施密特触发器</strong>：通过滞回区间（0.6V -
+              1.0V）实现抗抖动， 避免噪声导致的逻辑误判。
+            </li>
+            <li>
+              <strong>亚稳态模拟</strong>：当 D 输入在时钟边沿处于未定义区间时，
+              输出随机坍缩，演示建立/保持时间违例的后果。
+            </li>
+          </ul>
+        </section>
+
+        <!-- 技术栈 -->
+        <section class="about-section">
+          <h3>
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i> 技术栈
+          </h3>
+          <ul>
+            <li><strong>TypeScript</strong> — 严格类型检查，提升代码可靠性</li>
+            <li><strong>Vite</strong> — 现代化构建工具，极速热更新</li>
+            <li>
+              <strong>Sass (SCSS)</strong> — 模块化样式，变量与 Mixin 复用
+            </li>
+            <li><strong>Canvas API</strong> — 高性能实时波形渲染</li>
+            <li><strong>Catppuccin Macchiato</strong> — 优雅的配色主题</li>
+          </ul>
+        </section>
+
+        <!-- 开发历程 -->
+        <section class="about-section">
+          <h3><i class="fa-solid fa-road" aria-hidden="true"></i> 开发历程</h3>
+          <p>
+            这个项目见证了我从传统前端开发到现代化工程实践的转变。
+            最初只是一个简单的 HTML + CSS + JavaScript 演示页面，后来逐步迁移到
+            <strong>Vite + TypeScript + SCSS</strong> 技术栈。
+          </p>
+          <p>
+            在这个过程中，我学会了：模块化架构设计、类型安全编程、
+            ESLint/Prettier 代码规范、以及如何用 Sass 组织复杂样式。
+            这不仅是一个仿真项目，更是我前端工程化能力的一次完整实践。
+          </p>
+        </section>
+
+        <!-- 致谢 -->
+        <section class="about-section">
+          <h3><i class="fa-solid fa-heart" aria-hidden="true"></i> 致谢</h3>
+          <ul class="thanks-list">
+            <li>
+              <i class="fa-brands fa-font-awesome" aria-hidden="true"></i>
+              <a href="https://fontawesome.com/" target="_blank" rel="noopener"
+                >Font Awesome</a
+              >
+              — 提供精美的免费图标
+            </li>
+            <li>
+              <i class="fa-solid fa-robot" aria-hidden="true"></i>
+              <a
+                href="https://gemini.google.com/"
+                target="_blank"
+                rel="noopener"
+                >Google Gemini</a
+              >
+              — AI 编程助手，协助代码优化
+            </li>
+            <li>
+              <i class="fa-solid fa-brain" aria-hidden="true"></i>
+              <a href="https://claude.ai/" target="_blank" rel="noopener"
+                >Anthropic Claude</a
+              >
+              — AI 编程助手，提供架构建议
+            </li>
+            <li>
+              <i class="fa-brands fa-github" aria-hidden="true"></i>
+              <a
+                href="https://github.com/catppuccin"
+                target="_blank"
+                rel="noopener"
+                >Catppuccin</a
+              >
+              — 优雅的配色方案
+            </li>
+          </ul>
+        </section>
+      </div>
+
+      <footer class="sidebar-footer">
+        <p>
+          Made with
+          <i
+            class="fa-solid fa-heart"
+            style="color: #ed8796"
+            aria-hidden="true"
+          ></i>
+          by 王宇轩
+          <br>
+          Romeo Ahmed &lt;ahmedorqwn@gmail.com&gt;
+        </p>
+      </footer>
+    </aside>
+
     <div class="container">
       <header>
         <h1>

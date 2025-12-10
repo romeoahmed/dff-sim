@@ -1,0 +1,233 @@
+// ==============================================
+// Sidebar: About / Credits Panel
+// ==============================================
+@use "variables" as *;
+
+// 关于按钮（固定右上角）
+.btn-about {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: $ctp-surface0;
+  border: 1px solid $ctp-surface1;
+  color: $ctp-text;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-normal;
+  box-shadow: $shadow-md;
+
+  &:hover {
+    background-color: $ctp-mauve;
+    color: $ctp-base;
+    transform: scale(1.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $ctp-blue;
+    outline-offset: 2px;
+  }
+}
+
+// 遮罩层
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgb(0 0 0 / 50%);
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity $transition-slow,
+    visibility $transition-slow;
+
+  &.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+// 侧边栏面板
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  max-width: 90vw;
+  height: 100vh;
+  background-color: $ctp-mantle;
+  border-left: 1px solid $ctp-surface0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform $transition-slow;
+  box-shadow: -4px 0 20px rgb(0 0 0 / 30%);
+
+  &.active {
+    transform: translateX(0);
+  }
+}
+
+// 侧边栏头部
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid $ctp-surface0;
+  flex-shrink: 0;
+
+  h2 {
+    color: $ctp-mauve;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+// 关闭按钮
+.btn-close {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-md;
+  background-color: transparent;
+  border: 1px solid $ctp-surface1;
+  color: $ctp-subtext0;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:hover {
+    background-color: $ctp-red;
+    border-color: $ctp-red;
+    color: $ctp-base;
+  }
+}
+
+// 侧边栏内容区
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+// 关于章节
+.about-section {
+  margin-bottom: 24px;
+
+  h3 {
+    color: $ctp-blue;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid $ctp-surface0;
+  }
+
+  p {
+    color: $ctp-text;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    color: $ctp-subtext0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    padding-left: 16px;
+    position: relative;
+
+    &::before {
+      content: "›";
+      position: absolute;
+      left: 0;
+      color: $ctp-mauve;
+      font-weight: bold;
+    }
+
+    strong {
+      color: $ctp-text;
+    }
+  }
+}
+
+// 致谢列表特殊样式
+.thanks-list {
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 0;
+
+    &::before {
+      display: none;
+    }
+
+    i {
+      color: $ctp-mauve;
+      width: 20px;
+      text-align: center;
+    }
+
+    a {
+      color: $ctp-blue;
+      text-decoration: none;
+      transition: color $transition-fast;
+
+      &:hover {
+        color: $ctp-mauve;
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// 侧边栏底部
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid $ctp-surface0;
+  text-align: center;
+  flex-shrink: 0;
+
+  p {
+    color: $ctp-subtext0;
+    font-size: 0.8rem;
+    margin: 0;
+  }
+}
+
+// 响应式：小屏幕下全宽
+@media (width <= 480px) {
+  .sidebar {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .btn-about {
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+  }
+}
