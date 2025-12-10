@@ -30,7 +30,7 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
-    "sass": "^1.95.1",
+    "sass-embedded": "^1.95.1",
     "stylelint": "^16.26.1",
     "stylelint-config-standard-scss": "^16.0.0",
     "typescript": "^5.9.3",
