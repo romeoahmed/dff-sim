@@ -58,7 +58,15 @@ export class Oscilloscope {
     // 获取 Canvas 元素
     const el = document.getElementById(canvasId);
     if (!el) throw new Error(`Canvas element #${canvasId} not found`);
-    this.canvas = el as HTMLCanvasElement;
+    if (!(el instanceof HTMLCanvasElement)) {
+      throw new Error(`Element #${canvasId} is not a canvas`);
+    }
+    this.canvas = el;
+
+    // 检查 canvas 是否在 DOM 树中
+    if (!this.canvas.parentElement) {
+      throw new Error(`Canvas #${canvasId} must be attached to the DOM`);
+    }
 
     // 获取绘图上下文
     const context = this.canvas.getContext("2d");
@@ -165,7 +173,7 @@ export class Oscilloscope {
     this.ctx.lineJoin = "round";
 
     const pixelsPerPoint = this.width / this.bufferLength;
-    const scaleY = SimulationConfig.layout.canvasPadding;
+    const scaleY = SimulationConfig.layout.scaleY;
 
     const ctx = this.ctx;
 
@@ -193,13 +201,13 @@ export class Oscilloscope {
    * @param baseOffset - 参考基准线的 Y 轴偏移量 (新增参数)
    */
   drawThresholdLine(voltage: number, text: string, baseOffset: number) {
-    const scaleY = 30;
+    const scaleY = SimulationConfig.layout.scaleY;
 
     // 计算基于 baseOffset 区域的相对高度
     const y = baseOffset + 2.5 * scaleY - voltage * scaleY;
 
     this.ctx.beginPath();
-    this.ctx.strokeStyle = "#494d64";
+    this.ctx.strokeStyle = Colors.stroke;
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([5, 5]); // 虚线模式
     this.ctx.moveTo(0, y);
@@ -207,7 +215,7 @@ export class Oscilloscope {
     this.ctx.stroke();
     this.ctx.setLineDash([]); // 恢复实线
 
-    this.ctx.fillStyle = "#5b6078";
+    this.ctx.fillStyle = Colors.fill;
     this.ctx.font = "10px sans-serif";
     this.ctx.fillText(text, this.width - 150, y - 5);
   }

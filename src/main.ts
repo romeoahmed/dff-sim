@@ -92,12 +92,12 @@ class SimulationApp {
   /**
    * 噪声滑块
    */
-  sldNoise = document.getElementById("noiseSlider") as HTMLInputElement;
+  sldNoise = document.getElementById("noiseSlider");
 
   /**
    * 速度滑块
    */
-  sldSpeed = document.getElementById("speedSlider") as HTMLInputElement;
+  sldSpeed = document.getElementById("speedSlider");
 
   /**
    * 噪声数值显示
@@ -128,7 +128,15 @@ class SimulationApp {
    * 初始化 DOM 事件监听器
    */
   initListeners() {
-    if (!this.btnToggleD || !this.sldNoise || !this.sldSpeed) return;
+    if (!this.btnToggleD) {
+      throw new Error("Required element #btn-toggle-d not found");
+    }
+    if (!(this.sldNoise instanceof HTMLInputElement)) {
+      throw new Error("Required element #noiseSlider is not an input");
+    }
+    if (!(this.sldSpeed instanceof HTMLInputElement)) {
+      throw new Error("Required element #speedSlider is not an input");
+    }
 
     // 1. 输入 D 切换按钮
     this.btnToggleD.addEventListener("click", () => {
@@ -139,7 +147,10 @@ class SimulationApp {
 
     // 2. 噪声滑块控制
     this.sldNoise.addEventListener("input", (e) => {
-      const target = e.target as HTMLInputElement;
+      const target = e.target;
+      if (!(target instanceof HTMLInputElement)) {
+        throw new Error(`Element #${target} is not a input`);
+      }
       const percent = parseInt(target.value);
 
       // 使用常量计算噪声
@@ -153,8 +164,12 @@ class SimulationApp {
 
     // 3. 时钟速度控制
     this.sldSpeed.addEventListener("input", (e) => {
-      const target = e.target as HTMLInputElement;
+      const target = e.target;
+      if (!(target instanceof HTMLInputElement)) {
+        throw new Error(`Element #${target} is not a input`);
+      }
       const val = parseInt(target.value);
+
       this.clockSpeed = val * SimulationConfig.clockSpeedFactor;
     });
   }

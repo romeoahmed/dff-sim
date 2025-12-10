@@ -12,6 +12,8 @@ export interface ColorConfig {
   yellow: string;
   text: string;
   grid: string;
+  stroke: string;
+  fill: string;
 }
 
 /**

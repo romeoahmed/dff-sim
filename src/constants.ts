@@ -2,6 +2,8 @@
  * 全局配置与常量定义
  */
 
+import type { ColorConfig, VoltageSpecConfig } from "./types";
+
 /**
  * 颜色配置对象
  */
@@ -23,7 +25,13 @@ export const Colors = {
 
   /** 网格线颜色 */
   grid: "#363a4f",
-} as const;
+
+  /** 描边颜色 */
+  stroke: "#494d64",
+
+  /** 填充颜色 */
+  fill: "#5b6078",
+} as const satisfies ColorConfig;
 
 /**
  * 电压物理规范 (单位: 伏特 V)
@@ -46,7 +54,7 @@ export const VoltageSpecs = {
 
   /** 系统最大供电电压 */
   systemMax: 2.5,
-} as const;
+} as const satisfies VoltageSpecConfig;
 
 /**
  * 仿真参数配置
