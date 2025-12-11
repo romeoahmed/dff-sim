@@ -185,6 +185,7 @@ export class Oscilloscope {
       scaleY,
       labelOffsetX,
       labelOffsetY,
+      waveformLabelFont,
     } = Layout;
 
     this.ctx.beginPath();
@@ -209,7 +210,7 @@ export class Oscilloscope {
 
     // 绘制标签
     ctx.fillStyle = color;
-    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+    ctx.font = waveformLabelFont;
     ctx.fillText(label, labelOffsetX, Math.round(yOffset + labelOffsetY));
   }
 
@@ -234,6 +235,7 @@ export class Oscilloscope {
       thresholdLabelBelow,
       thresholdLabelAbove,
       thresholdLabelMargin,
+      thresholdLabelFont,
     } = Layout;
 
     // 计算基于 baseOffset 区域的相对高度
@@ -249,7 +251,7 @@ export class Oscilloscope {
     this.ctx.setLineDash([]); // 恢复实线
 
     this.ctx.fillStyle = Colors.fill;
-    this.ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+    this.ctx.font = thresholdLabelFont;
 
     // 上方: y - thresholdLabelBelow，下方: y + thresholdLabelAbove
     const textY = labelBelow
