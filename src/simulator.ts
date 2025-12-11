@@ -357,5 +357,26 @@ export class SimulationApp {
       pinClkActive: false,
       pinQActive: false,
     };
+
+    // 关键：同步 UI 控件的当前值到仿真参数
+    if (this.sldNoise instanceof HTMLInputElement) {
+      const percent = parseInt(this.sldNoise.value);
+      const noiseVolts = (percent / 100) * Simulation.maxNoiseLevel;
+      this.signalD.noiseLevel = noiseVolts;
+      this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
+      if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent} %`;
+    }
+
+    if (this.sldSpeed instanceof HTMLInputElement) {
+      const val = parseInt(this.sldSpeed.value);
+      this.clockSpeed = val * Simulation.clockSpeedFactor;
+      const freqHz =
+        (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
+      if (this.elSpeedVal)
+        this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
+    }
+
+    // 更新按钮状态
+    this.updateToggleButton();
   }
 }
