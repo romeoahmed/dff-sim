@@ -280,6 +280,13 @@ export class SimulationApp {
    * @param data - 当前帧的电压数据对象
    */
   updateUI(data: SignalSample) {
+    if (!this.elVoltD || !this.elVoltClk || !this.elVoltQ) {
+      throw new Error("Required voltage display elements not found");
+    }
+    if (!this.elPinD || !this.elPinClk || !this.elPinQ) {
+      throw new Error("Required pin elements not found");
+    }
+
     const updateText = (
       el: HTMLElement | null,
       val: number,
