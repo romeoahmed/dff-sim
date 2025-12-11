@@ -166,6 +166,10 @@ export class SimulationApp {
 
     // 2. 噪声滑块控制
     this.sldNoise.addEventListener("input", (e) => {
+      if (!this.elNoiseVal) {
+        throw new Error("Required element #noiseVal not found");
+      }
+
       const target = e.target;
       if (!(target instanceof HTMLInputElement)) {
         throw new Error(`Element #${target} is not a input`);
@@ -178,11 +182,15 @@ export class SimulationApp {
       this.signalD.noiseLevel = noiseVolts;
       this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
 
-      if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent} %`;
+      this.elNoiseVal.innerText = `${percent} %`;
     });
 
     // 3. 时钟速度控制
     this.sldSpeed.addEventListener("input", (e) => {
+      if (!this.elSpeedVal) {
+        throw new Error("Required element #speedVal not found");
+      }
+
       const target = e.target;
       if (!(target instanceof HTMLInputElement)) {
         throw new Error(`Element #${target} is not a input`);
@@ -194,8 +202,8 @@ export class SimulationApp {
       // 计算实际频率: f = (baseFrameRate * clockSpeed) / (2π)
       const freqHz =
         (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
-      if (this.elSpeedVal)
-        this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
+
+      this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
     });
 
     // 4. 异步重置按钮
@@ -359,22 +367,29 @@ export class SimulationApp {
     };
 
     // 关键：同步 UI 控件的当前值到仿真参数
-    if (this.sldNoise instanceof HTMLInputElement) {
-      const percent = parseInt(this.sldNoise.value);
-      const noiseVolts = (percent / 100) * Simulation.maxNoiseLevel;
-      this.signalD.noiseLevel = noiseVolts;
-      this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
-      if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent} %`;
+    if (!this.elNoiseVal) {
+      throw new Error("Required element #noiseVal not found");
+    }
+    if (!this.elSpeedVal) {
+      throw new Error("Required element #speedVal not found");
+    }
+    if (!(this.sldNoise instanceof HTMLInputElement)) {
+      throw new Error("Required element #noiseSlider is not an input");
+    }
+    if (!(this.sldSpeed instanceof HTMLInputElement)) {
+      throw new Error("Required element #speedSlider is not an input");
     }
 
-    if (this.sldSpeed instanceof HTMLInputElement) {
-      const val = parseInt(this.sldSpeed.value);
-      this.clockSpeed = val * Simulation.clockSpeedFactor;
-      const freqHz =
-        (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
-      if (this.elSpeedVal)
-        this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
-    }
+    const percent = parseInt(this.sldNoise.value);
+    const noiseVolts = (percent / 100) * Simulation.maxNoiseLevel;
+    this.signalD.noiseLevel = noiseVolts;
+    this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
+    this.elNoiseVal.innerText = `${percent} %`;
+
+    const val = parseInt(this.sldSpeed.value);
+    this.clockSpeed = val * Simulation.clockSpeedFactor;
+    const freqHz = (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
+    this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
 
     // 更新按钮状态
     this.updateToggleButton();
