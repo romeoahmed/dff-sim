@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "baeumer.vscode-eslint",
+    "stylelint.vscode-stylelint"
+  ]
+}
