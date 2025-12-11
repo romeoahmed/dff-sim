@@ -2,7 +2,7 @@
  * 物理模拟引擎：处理电压、噪声与逻辑门行为
  */
 
-import { VoltageSpecs, SimulationConfig } from "./constants";
+import { VoltageSpecs, Simulation } from "./constants";
 
 /**
  * 模拟单个电压信号源，包含噪声生成与阻容延迟模拟
@@ -22,7 +22,7 @@ export class Signal {
    * 噪声强度 (标准差，单位 V)
    */
   noiseLevel: number =
-    (SimulationConfig.defaultNoise / 100) * SimulationConfig.maxNoiseLevel;
+    (Simulation.defaultNoise / 100) * Simulation.maxNoiseLevel;
 
   // --- Marsaglia Polar Method 优化缓存 ---
 

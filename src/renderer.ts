@@ -2,7 +2,7 @@
  * 渲染器：基于 Canvas 的示波器波形绘制
  */
 
-import { Colors, VoltageSpecs, SimulationConfig } from "./constants";
+import { Colors, VoltageSpecs, Simulation, Layout } from "./constants";
 import type { VoltageData } from "./types";
 
 /**
@@ -24,7 +24,7 @@ export class Oscilloscope {
   /**
    * 数据缓冲区最大长度
    */
-  bufferLength: number = SimulationConfig.bufferLength;
+  bufferLength: number = Simulation.bufferLength;
 
   /**
    * 存储各通道的历史电压数据
@@ -90,14 +90,14 @@ export class Oscilloscope {
    * DPI 适配方案参考 AI 辅助建议
    */
   resize() {
-    const { layout } = SimulationConfig;
+    const { canvasHeight, canvasPadding } = Layout;
 
     if (!this.canvas.parentElement) return;
 
     // 获取父容器尺寸（逻辑像素）
     const parentRect = this.canvas.parentElement.getBoundingClientRect();
-    const displayWidth = parentRect.width - layout.canvasPadding; // 减去 CSS padding
-    const displayHeight = layout.canvasHeight;
+    const displayWidth = parentRect.width - canvasPadding; // 减去 CSS padding
+    const displayHeight = canvasHeight;
 
     // 获取设备像素比
     const dpr = window.devicePixelRatio || 1;
@@ -141,29 +141,29 @@ export class Oscilloscope {
    * 执行单帧渲染
    */
   draw() {
+    const { dOffset, clkOffset, qOffset } = Layout;
+
     // 清除画布 (使用逻辑宽高)
     this.ctx.clearRect(0, 0, this.width, this.height);
-
-    const { layout } = SimulationConfig;
 
     // 绘制电压阈值参考线
     this.drawThresholdLine(
       VoltageSpecs.logicHighMin,
       `Input High Threshold (${VoltageSpecs.logicHighMin.toFixed(1)}V)`,
-      layout.dOffset,
+      dOffset,
     ); // 上方 (默认)
     this.drawThresholdLine(
       VoltageSpecs.logicLowMax,
       `Input Low Threshold (${VoltageSpecs.logicLowMax.toFixed(1)}V)`,
-      layout.dOffset,
+      dOffset,
       true,
     ); // 下方
 
     // 绘制三条通道波形
     // Y轴偏移量 (Offset) 用于在垂直方向将波形错开
-    this.drawWaveform(this.data.clk, Colors.green, layout.clkOffset, "CLK");
-    this.drawWaveform(this.data.d, Colors.blue, layout.dOffset, "D");
-    this.drawWaveform(this.data.q, Colors.red, layout.qOffset, "Q");
+    this.drawWaveform(this.data.clk, Colors.clk, clkOffset, "CLK");
+    this.drawWaveform(this.data.d, Colors.d, dOffset, "D");
+    this.drawWaveform(this.data.q, Colors.q, qOffset, "Q");
   }
 
   /**
@@ -179,11 +179,17 @@ export class Oscilloscope {
     yOffset: number,
     label: string,
   ) {
-    const { layout } = SimulationConfig;
+    const {
+      waveformLineWidth,
+      voltageHeadroom,
+      scaleY,
+      labelOffsetX,
+      labelOffsetY,
+    } = Layout;
 
     this.ctx.beginPath();
     this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = layout.waveformLineWidth; // 高分屏下实际渲染为 waveformLineWidth * DPR 像素
+    this.ctx.lineWidth = waveformLineWidth; // 高分屏下实际渲染为 waveformLineWidth * DPR 像素
     this.ctx.lineJoin = "round";
 
     const pixelsPerPoint = this.width / this.bufferLength;
@@ -194,10 +200,7 @@ export class Oscilloscope {
       const x = i * pixelsPerPoint;
       // 坐标变换：Canvas Y轴向下，因此需要 (Base - Value)
       // voltageHeadroom 是预留的顶部余量
-      const y =
-        yOffset +
-        layout.voltageHeadroom * layout.scaleY -
-        value * layout.scaleY;
+      const y = yOffset + voltageHeadroom * scaleY - value * scaleY;
 
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
@@ -207,11 +210,7 @@ export class Oscilloscope {
     // 绘制标签
     ctx.fillStyle = color;
     ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
-    ctx.fillText(
-      label,
-      layout.labelOffsetX,
-      Math.round(yOffset + layout.labelOffsetY),
-    );
+    ctx.fillText(label, labelOffsetX, Math.round(yOffset + labelOffsetY));
   }
 
   /**
@@ -235,7 +234,7 @@ export class Oscilloscope {
       thresholdLabelBelow,
       thresholdLabelAbove,
       thresholdLabelMargin,
-    } = SimulationConfig.layout;
+    } = Layout;
 
     // 计算基于 baseOffset 区域的相对高度
     const y = baseOffset + voltageHeadroom * scaleY - voltage * scaleY;

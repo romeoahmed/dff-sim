@@ -7,7 +7,7 @@ import "./styles/main.scss";
 
 import { Signal, DFlipFlop } from "./physics";
 import { Oscilloscope } from "./renderer";
-import { VoltageSpecs, SimulationConfig } from "./constants";
+import { VoltageSpecs, Simulation } from "./constants";
 import type { SignalSample } from "./types";
 
 /**
@@ -49,8 +49,7 @@ class SimulationApp {
   /**
    * 时钟频率步进速度
    */
-  clockSpeed: number =
-    SimulationConfig.defaultSpeed * SimulationConfig.clockSpeedFactor; // ~0.06
+  clockSpeed: number = Simulation.defaultSpeed * Simulation.clockSpeedFactor; // ~0.06
 
   // --- DOM 元素缓存 ---
 
@@ -177,11 +176,10 @@ class SimulationApp {
       const percent = parseInt(target.value);
 
       // 使用常量计算噪声
-      const noiseVolts = (percent / 100) * SimulationConfig.maxNoiseLevel;
+      const noiseVolts = (percent / 100) * Simulation.maxNoiseLevel;
 
       this.signalD.noiseLevel = noiseVolts;
-      this.dff.qSignal.noiseLevel =
-        noiseVolts * SimulationConfig.outputNoiseRatio;
+      this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
 
       if (this.elNoiseVal) this.elNoiseVal.innerText = `${percent} %`;
     });
@@ -194,11 +192,11 @@ class SimulationApp {
       }
       const val = parseInt(target.value);
 
-      this.clockSpeed = val * SimulationConfig.clockSpeedFactor;
+      this.clockSpeed = val * Simulation.clockSpeedFactor;
 
       // 计算实际频率: f = (baseFrameRate * clockSpeed) / (2π)
       const freqHz =
-        (SimulationConfig.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
+        (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
       if (this.elSpeedVal)
         this.elSpeedVal.innerText = `${freqHz.toFixed(2)} Hz`;
     });
@@ -233,7 +231,10 @@ class SimulationApp {
    * 更新按钮状态
    */
   updateToggleButton() {
-    if (!this.btnToggleD) return;
+    if (!this.btnToggleD) {
+      throw new Error("Required element #btn-toggle-d not found");
+    }
+
     if (this.signalD.targetLogic === 1) {
       this.btnToggleD.classList.add("active");
       this.btnToggleD.innerHTML =
@@ -250,8 +251,7 @@ class SimulationApp {
    * @returns 当前电压快照
    */
   updatePhysics(deltaTime: number): SignalSample {
-    this.clockPhase +=
-      this.clockSpeed * deltaTime * SimulationConfig.baseFrameRate; // 归一化到 60fps 基准
+    this.clockPhase += this.clockSpeed * deltaTime * Simulation.baseFrameRate; // 归一化到 60fps 基准
 
     // 生成方波
     this.signalClk.targetLogic = Math.sin(this.clockPhase) > 0 ? 1 : 0;
@@ -331,7 +331,7 @@ class SimulationApp {
     // 计算 deltaTime (秒)
     const deltaTime = this._lastFrameTime
       ? (timestamp - this._lastFrameTime) / 1000
-      : 1 / SimulationConfig.baseFrameRate;
+      : 1 / Simulation.baseFrameRate;
     this._lastFrameTime = timestamp;
 
     const data = this.updatePhysics(deltaTime);

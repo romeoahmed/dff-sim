@@ -7,16 +7,16 @@
  */
 export interface ColorConfig {
   /** 时钟信号颜色 (CLK) */
-  green: string;
+  clk: string;
 
   /** 输入信号颜色 (D) */
-  blue: string;
+  d: string;
 
   /** 输出信号颜色 (Q) */
-  red: string;
+  q: string;
 
   /** 高亮与数值显示 */
-  yellow: string;
+  highlight: string;
 
   /** 普通文本 */
   text: string;
@@ -113,12 +113,18 @@ export interface LayoutConfig {
 
   /** 阈值标签在线下方的偏移 (px) */
   thresholdLabelBelow: number;
+
+  /** 波形标签字体样式 */
+  waveformLabelFont: string;
+
+  /** 阈值标签字体样式 */
+  thresholdLabelFont: string;
 }
 
 /**
  * 仿真参数配置
  */
-export interface SimulationConfigType {
+export interface SimulationConfig {
   /** 最大噪声电压 (V) */
   maxNoiseLevel: number;
 
@@ -139,9 +145,6 @@ export interface SimulationConfigType {
 
   /** Q 输出噪声相对于 D 输入的比例 */
   outputNoiseRatio: number;
-
-  /** 波形图布局配置 */
-  layout: LayoutConfig;
 }
 
 /**
