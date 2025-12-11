@@ -63,6 +63,7 @@ export function initSettingsSidebar() {
       const input = form.elements.namedItem(key);
       if (input instanceof HTMLInputElement) {
         input.value = String(VoltageSpecs[key]);
+        input.placeholder = String(defaultSpecs[key]); // 设置淡色默认值
       }
     });
 
@@ -125,8 +126,14 @@ export function initSettingsSidebar() {
     });
 
     const err = validate(values);
-    errorMsg!.textContent = err || "";
+    errorMsg.textContent = err || "";
     btnSave.disabled = !!err;
+
+    if (err) {
+      errorMsg.classList.add("active");
+    } else {
+      errorMsg.classList.remove("active");
+    }
   });
 
   // 保存设置
@@ -140,16 +147,14 @@ export function initSettingsSidebar() {
       }
     });
 
+    // 有点多余，但防止用户绕过 input 事件直接提交
     const err = validate(values);
-    if (err) {
-      errorMsg!.textContent = err;
-      return;
-    }
+    if (err) return;
 
     // 应用设置
     Object.assign(VoltageSpecs, values);
 
-    // TODO: 触发刷新仿真器
+    // 刷新仿真器
     if (
       window.simulationApp &&
       typeof window.simulationApp.refresh === "function"
@@ -163,7 +168,15 @@ export function initSettingsSidebar() {
     // 恢复默认值到表单
     Object.assign(VoltageSpecs, defaultSpecs);
 
-    errorMsg!.textContent = "";
+    editableKeys.forEach((key) => {
+      const input = form.elements.namedItem(key);
+      if (input instanceof HTMLInputElement) {
+        input.value = String(defaultSpecs[key]);
+      }
+    });
+
+    errorMsg.textContent = "";
+    errorMsg.classList.remove("active");
     btnSave.disabled = false;
   });
 }

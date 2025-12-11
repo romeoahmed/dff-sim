@@ -111,7 +111,7 @@ export class Oscilloscope {
     this.canvas.height = Math.floor(displayHeight * dpr);
 
     // 3. 缩放绘图上下文，使后续绘图指令基于逻辑坐标
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置 transform，避免多次 resize 导致缩放叠加
+    this.ctx.resetTransform(); // 重置变换矩阵，防止多次 resize 导致叠加
     this.ctx.scale(dpr, dpr);
 
     // 4. 更新内部逻辑宽高
