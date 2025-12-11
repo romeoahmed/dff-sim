@@ -1,6 +1,7 @@
 // ==============================================
 // Sidebar: About / Credits Panel
 // ==============================================
+@use "sass:color";
 @use "variables" as *;
 
 // 关于按钮（固定右上角）
@@ -31,6 +32,38 @@
 
   &:focus-visible {
     outline: 2px solid $ctp-blue;
+    outline-offset: 2px;
+  }
+}
+
+// 设置按钮（固定右上角，靠左一些）
+.btn-settings {
+  position: fixed;
+  top: 20px;
+  right: 74px; // 比 .btn-about 向左偏移
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: $ctp-surface0;
+  border: 1px solid $ctp-surface1;
+  color: $ctp-text;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-normal;
+  box-shadow: $shadow-md;
+
+  &:hover {
+    background-color: $ctp-blue;
+    color: $ctp-base;
+    transform: scale(1.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $ctp-mauve;
     outline-offset: 2px;
   }
 }
@@ -120,6 +153,62 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+
+  // 设置表单
+  #settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      label {
+        color: $ctp-subtext0;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+      }
+
+      input[type="number"] {
+        padding: 6px 10px;
+        border: 1px solid $ctp-surface1;
+        border-radius: $radius-md;
+        background: $ctp-base;
+        color: $ctp-text;
+        font-size: 1rem;
+        transition: border-color $transition-fast;
+
+        &:focus {
+          border-color: $ctp-blue;
+          outline: none;
+        }
+
+        &.invalid {
+          border-color: $ctp-red;
+          background: color.mix($ctp-red, $ctp-base, 10%);
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+
+      .btn {
+        flex: 1;
+      }
+    }
+
+    .error-msg {
+      color: $ctp-red;
+      font-size: 0.92rem;
+      margin-top: 4px;
+      min-height: 1.2em;
+    }
+  }
 }
 
 // 关于章节
@@ -159,7 +248,7 @@
     position: relative;
 
     &::before {
-      content: "›";
+      content: ">";
       position: absolute;
       left: 0;
       color: $ctp-mauve;
@@ -227,6 +316,13 @@
   .btn-about {
     top: 10px;
     right: 10px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .btn-settings {
+    top: 10px;
+    right: 60px; // 向左偏移
     width: 40px;
     height: 40px;
   }

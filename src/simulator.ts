@@ -158,7 +158,7 @@ export class SimulationApp {
     }
 
     // 1. 输入 D 切换按钮
-    this.btnToggleD.addEventListener("click", () => {
+    this.btnToggleD.addEventListener("pointerdown", () => {
       const current = this.signalD.targetLogic;
       this.signalD.targetLogic = current === 1 ? 0 : 1;
       this.updateToggleButton();
@@ -211,17 +211,13 @@ export class SimulationApp {
     };
 
     // 按下时激活重置
-    this.btnReset.addEventListener("mousedown", activateReset);
+    this.btnReset.addEventListener("pointerdown", activateReset);
 
     // 松开时释放重置
-    this.btnReset.addEventListener("mouseup", deactivateReset);
+    this.btnReset.addEventListener("pointerup", deactivateReset);
 
-    // 鼠标移出时也释放（防止卡住）
-    this.btnReset.addEventListener("mouseleave", deactivateReset);
-
-    // 触摸屏支持
-    this.btnReset.addEventListener("touchstart", activateReset);
-    this.btnReset.addEventListener("touchend", deactivateReset);
+    // 移出时也释放（防止卡住）
+    this.btnReset.addEventListener("pointerleave", deactivateReset);
   }
 
   /**
@@ -334,5 +330,32 @@ export class SimulationApp {
     const data = this.updatePhysics(deltaTime);
     this.updateUI(data);
     requestAnimationFrame((t) => this.loop(t));
+  }
+
+  refresh() {
+    this.scope.destroy();
+
+    this.signalD = new Signal(
+      (VoltageSpecs.logicHighMin + VoltageSpecs.systemMax) / 2, // ~1.75V
+      VoltageSpecs.logicLowMax / 2, // ~0.3V
+    );
+
+    this.signalClk = new Signal(VoltageSpecs.outputHighMax, 0.0);
+
+    this.dff = new DFlipFlop();
+
+    this.scope = new Oscilloscope("waveform-canvas");
+
+    this.clockPhase = 0;
+    this.resetActive = false;
+    this._lastFrameTime = 0;
+    this._cache = {
+      voltD: "",
+      voltClk: "",
+      voltQ: "",
+      pinDActive: false,
+      pinClkActive: false,
+      pinQActive: false,
+    };
   }
 }

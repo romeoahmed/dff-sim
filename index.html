@@ -37,10 +37,20 @@
       <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
     </button>
 
+    <!-- 设置按钮（固定在右上角） -->
+    <button
+      id="btn-settings"
+      class="btn-settings"
+      type="button"
+      aria-label="设置"
+    >
+      <i class="fa-solid fa-gear" aria-hidden="true"></i>
+    </button>
+
     <!-- 侧边栏遮罩 -->
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-    <!-- 侧边栏面板 -->
+    <!-- 侧边栏面板-关于 -->
     <aside id="sidebar-about" class="sidebar" aria-hidden="true">
       <header class="sidebar-header">
         <h2>
@@ -169,6 +179,79 @@
           Romeo Ahmed &lt;ahmedorqwn@gmail.com&gt;
         </p>
       </footer>
+    </aside>
+
+    <!-- 侧边栏面板-设置 -->
+    <aside id="sidebar-settings" class="sidebar" aria-hidden="true">
+      <header class="sidebar-header">
+        <h2><i class="fa-solid fa-gear" aria-hidden="true"></i> 仿真设置</h2>
+        <button
+          id="btn-close-settings"
+          class="btn-close"
+          type="button"
+          aria-label="关闭"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+      <div class="sidebar-content">
+        <form id="settings-form">
+          <div class="form-group">
+            <label for="logicHighMin">Logic 1 Min (V)</label>
+            <input
+              type="number"
+              step="0.01"
+              id="logicHighMin"
+              name="logicHighMin"
+            />
+          </div>
+          <div class="form-group">
+            <label for="logicLowMax">Logic 0 Max (V)</label>
+            <input
+              type="number"
+              step="0.01"
+              id="logicLowMax"
+              name="logicLowMax"
+            />
+          </div>
+          <div class="form-group">
+            <label for="outputHighMin">Output 1 Min (V)</label>
+            <input
+              type="number"
+              step="0.01"
+              id="outputHighMin"
+              name="outputHighMin"
+            />
+          </div>
+          <div class="form-group">
+            <label for="outputHighMax">Output 1 Max (V)</label>
+            <input
+              type="number"
+              step="0.01"
+              id="outputHighMax"
+              name="outputHighMax"
+            />
+          </div>
+          <div class="form-group">
+            <label for="outputLowMax">Output 0 Max (V)</label>
+            <input
+              type="number"
+              step="0.01"
+              id="outputLowMax"
+              name="outputLowMax"
+            />
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="btn-save-settings" class="btn">
+              <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>保存设置
+            </button>
+            <button type="button" id="btn-reset-settings" class="btn">
+              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>恢复默认
+            </button>
+          </div>
+          <div id="settings-error" class="error-msg"></div>
+        </form>
+      </div>
     </aside>
 
     <div class="container">
