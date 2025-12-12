@@ -34,22 +34,22 @@ export class Oscilloscope {
   /**
    * Canvas 元素
    */
-  canvas: HTMLCanvasElement;
+  canvas: OffscreenCanvas;
 
   /**
    * 绘图上下文
    */
-  ctx: CanvasRenderingContext2D;
+  ctx: OffscreenCanvasRenderingContext2D;
 
   /**
    * 数字逻辑视图 Canvas 元素
    */
-  digitalCanvas: HTMLCanvasElement;
+  digitalCanvas: OffscreenCanvas;
 
   /**
    * 数字逻辑视图绘图上下文
    */
-  digitalCtx: CanvasRenderingContext2D;
+  digitalCtx: OffscreenCanvasRenderingContext2D;
 
   /**
    * 数字通道配置缓存
@@ -58,46 +58,23 @@ export class Oscilloscope {
   private digitalChannels: DigitalChannelConfig[];
 
   /**
-   * 监听父容器大小变化的观察者
-   */
-  private observer: ResizeObserver;
-
-  /**
    * 初始化示波器实例
    * @param canvasId - DOM 中 Canvas 元素的 ID
    * @param digitalCanvasId - DOM 中数字逻辑视图 Canvas 元素的 ID
    */
-  constructor(canvasId: string, digitalCanvasId: string) {
-    // 辅助函数：获取并验证 Canvas 元素
-    const getCanvas = (id: string) => {
-      const el = document.getElementById(id);
-      if (!(el instanceof HTMLCanvasElement))
-        throw new Error(`#${id} not canvas`);
-      return el;
-    };
-
-    this.canvas = getCanvas(canvasId);
+  constructor(canvas: OffscreenCanvas, digitalCanvas: OffscreenCanvas) {
+    this.canvas = canvas;
+    // OffscreenCanvas 的 getContext 不需要参数，或者参数不同，TS 需要断言
     this.ctx = this.canvas.getContext("2d")!;
 
-    this.digitalCanvas = getCanvas(digitalCanvasId);
+    this.digitalCanvas = digitalCanvas;
     this.digitalCtx = this.digitalCanvas.getContext("2d")!;
 
     // 初始化数字通道配置
     this.digitalChannels = [];
 
     // 初始化尺寸
-    this.resize();
-
-    // 创建 ResizeObserver
-    // parentElement 尺寸变化时触发
-    this.observer = new ResizeObserver(() => {
-      this.resize();
-    });
-
-    // 开始监听父容器
-    if (this.canvas.parentElement) {
-      this.observer.observe(this.canvas.parentElement);
-    }
+    // this.resize();
   }
 
   setData(source: WaveformDataSource) {
@@ -112,94 +89,32 @@ export class Oscilloscope {
   }
 
   /**
-   * 辅助方法：更新 Canvas 尺寸与缩放
-   * @param canvas - Canvas 元素
-   * @param ctx - 绘图上下文
-   * @param width - 逻辑宽度 (CSS 像素)
-   * @param height - 逻辑高度 (CSS 像素)
+   * 通知示波器尺寸变化
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字逻辑视图高度
    * @param dpr - 设备像素比
    */
-  private updateCanvasSize(
-    canvas: HTMLCanvasElement,
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    dpr: number,
-  ) {
-    // 设置 CSS 尺寸
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+  setSize(width: number, height: number, digitalHeight: number, dpr: number) {
+    this.width = width;
+    this.height = height;
 
-    // 设置物理缓冲区尺寸
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
+    // 设置物理尺寸
+    this.canvas.width = Math.floor(width * dpr);
+    this.canvas.height = Math.floor(height * dpr);
 
-    // 缩放绘图上下文
-    ctx.resetTransform();
-    ctx.scale(dpr, dpr);
+    this.digitalCanvas.width = Math.floor(width * dpr);
+    this.digitalCanvas.height = Math.floor(digitalHeight * dpr);
 
-    // 偏移 0.5 像素以获得更清晰的 1px 线条 (全局)
-    ctx.translate(0.5, 0.5);
+    // 缩放上下文
+    this.ctx.resetTransform();
+    this.ctx.scale(dpr, dpr);
+    this.ctx.translate(0.5, 0.5);
+
+    this.digitalCtx.resetTransform();
+    this.digitalCtx.scale(dpr, dpr);
+    this.digitalCtx.translate(0.5, 0.5);
   }
-
-  /**
-   * 处理 Canvas 的高分屏 (Retina) 适配
-   *
-   * 调整 canvas.width (物理像素) 与 canvas.style.width (CSS 像素) 的比例
-   *
-   * @remarks
-   * DPI 适配方案参考 AI 辅助建议
-   */
-  private resize() {
-    const parent = this.canvas.parentElement;
-    if (!parent) return;
-
-    const { canvasHeight, digitalScopeHeight, canvasPadding } = Layout;
-
-    // 获取父容器尺寸（逻辑像素）
-    const rect = parent.getBoundingClientRect();
-    const w = rect.width - canvasPadding; // 减去 CSS padding
-
-    // 获取设备像素比
-    const dpr = window.devicePixelRatio || 1;
-
-    // 更新内部逻辑宽高
-    this.width = w;
-    this.height = canvasHeight;
-
-    // 更新模拟示波器
-    this.updateCanvasSize(this.canvas, this.ctx, w, canvasHeight, dpr);
-    // 更新数字示波器
-    this.updateCanvasSize(
-      this.digitalCanvas,
-      this.digitalCtx,
-      w,
-      digitalScopeHeight,
-      dpr,
-    );
-  }
-
-  /**
-   * 推入新的电压采样点，并移除最早的数据 (Ring Buffer)
-   * @param d - 输入 D 电压
-   * @param clk - 时钟 CLK 电压
-   * @param q - 输出 Q 电压
-   */
-  // pushData(d: number, clk: number, q: number) {
-  //   // 直接覆盖当前位置
-  //   this.data.d[this.writePointer] = d;
-  //   this.data.clk[this.writePointer] = clk;
-  //   this.data.q[this.writePointer] = q;
-
-  //   // 指针后移，如果到了末尾则自动回到 0
-  //   // 指针回绕优化：使用位运算 & 代替 %
-  //   // 前提：this.bufferLength 必须是 2 的幂 (256, 512, 1024, 2048...)
-  //   // 1024 的二进制是 10000000000
-  //   // 1023 的二进制是 01111111111 (掩码)
-  //   // 任何数 & 1023，结果一定在 0~1023 之间
-  //   // this.writePointer = (this.writePointer + 1) % this.bufferLength;
-  //   this.writePointer = (this.writePointer + 1) & (this.bufferLength - 1);
-  // }
 
   /**
    * 执行单帧渲染
@@ -315,7 +230,7 @@ export class Oscilloscope {
    * @param lineWidth - 线条宽度 (像素)
    */
   private drawDigitalChannelPath(
-    ctx: CanvasRenderingContext2D,
+    ctx: OffscreenCanvasRenderingContext2D,
     data: Float32Array,
     color: string,
     width: number,
@@ -503,9 +418,6 @@ export class Oscilloscope {
    * 销毁实例，移除事件监听
    */
   destroy() {
-    // 断开 ResizeObserver 监听
-    this.observer.disconnect();
-
     // 清空数据源引用
     this.dataSource = null;
 

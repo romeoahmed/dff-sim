@@ -16,11 +16,11 @@ export class WaveformBuffer implements WaveformDataSource {
   // 内部指针
   private _writePointer: number = 0;
 
-  constructor(length: number = Simulation.bufferLength) {
+  constructor(length: number = Simulation.bufferLength, fillValue: number = 0) {
     this.length = length;
-    this.d = new Float32Array(length).fill(0);
-    this.clk = new Float32Array(length).fill(0);
-    this.q = new Float32Array(length).fill(0);
+    this.d = new Float32Array(length).fill(fillValue);
+    this.clk = new Float32Array(length).fill(fillValue);
+    this.q = new Float32Array(length).fill(fillValue);
   }
 
   /**
@@ -45,10 +45,10 @@ export class WaveformBuffer implements WaveformDataSource {
   /**
    * 重置数据
    */
-  reset() {
-    this.d.fill(0);
-    this.clk.fill(0);
-    this.q.fill(0);
+  reset(fillValue: number = 0) {
+    this.d.fill(fillValue);
+    this.clk.fill(fillValue);
+    this.q.fill(fillValue);
     this._writePointer = 0;
   }
 }

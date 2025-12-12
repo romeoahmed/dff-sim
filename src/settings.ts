@@ -4,6 +4,7 @@
 
 import { VoltageSpecs } from "./constants";
 import type { VoltageSpecConfig } from "./types";
+import { SimulationApp } from "./simulator";
 
 // 可编辑的设置项
 const editableKeys: (keyof VoltageSpecConfig)[] = [
@@ -14,8 +15,11 @@ const editableKeys: (keyof VoltageSpecConfig)[] = [
   "outputLowMax",
 ];
 
+// 保存默认值用于重置 (浅拷贝)
+const defaultSpecs = { ...VoltageSpecs };
+
 // 设置侧边栏初始化
-export function initSettingsSidebar() {
+export function initSettingsSidebar(app: SimulationApp) {
   const btnSettings = document.getElementById("btn-settings");
   const btnClose = document.getElementById("btn-close-settings");
   const sideBar = document.getElementById("sidebar-settings");
@@ -47,9 +51,6 @@ export function initSettingsSidebar() {
   if (!(btnReset instanceof HTMLButtonElement)) {
     throw new Error("Reset button is not an HTMLButtonElement");
   }
-
-  // --- 默认配置 ---
-  const defaultSpecs = { ...VoltageSpecs };
 
   // 打开/关闭逻辑
   const openSidebar = () => {
@@ -100,6 +101,19 @@ export function initSettingsSidebar() {
     } = values;
     const { clampMin, systemMax } = defaultSpecs;
 
+    // 辅助函数：检查数值有效性
+    const isInvalid = (v: number | undefined) => v === undefined || isNaN(v);
+
+    if (
+      isInvalid(logicHighMin) ||
+      isInvalid(logicLowMax) ||
+      isInvalid(outputHighMin) ||
+      isInvalid(outputHighMax) ||
+      isInvalid(outputLowMax)
+    ) {
+      return "数值不能为空";
+    }
+
     if (
       logicLowMax! < clampMin ||
       outputLowMax! < clampMin ||
@@ -110,7 +124,7 @@ export function initSettingsSidebar() {
       logicLowMax! >= logicHighMin! ||
       outputLowMax! >= logicLowMax!
     ) {
-      return "参数范围不合法，请检查各项关系。";
+      return "参数范围冲突，请检查逻辑电平的高低关系";
     }
     return null;
   }
@@ -147,20 +161,13 @@ export function initSettingsSidebar() {
       }
     });
 
-    // 有点多余，但防止用户绕过 input 事件直接提交
     const err = validate(values);
     if (err) return;
 
     // 应用设置
     Object.assign(VoltageSpecs, values);
 
-    // 刷新仿真器
-    if (
-      window.simulationApp &&
-      typeof window.simulationApp.refresh === "function"
-    ) {
-      window.simulationApp.refresh();
-    }
+    app.updateSettings(values);
   });
 
   // 恢复默认
@@ -178,5 +185,7 @@ export function initSettingsSidebar() {
     errorMsg.textContent = "";
     errorMsg.classList.remove("active");
     btnSave.disabled = false;
+
+    app.updateSettings(defaultSpecs);
   });
 }

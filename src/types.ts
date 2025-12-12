@@ -205,3 +205,89 @@ export interface WaveformDataSource {
   readonly clk: Float32Array;
   readonly q: Float32Array;
 }
+
+/**
+ * DOM 元素字典类型定义
+ */
+export interface UIElements {
+  volts: {
+    d: HTMLElement;
+    clk: HTMLElement;
+    q: HTMLElement;
+  };
+  pins: {
+    d: Element;
+    clk: Element;
+    q: Element;
+  };
+  controls: {
+    btnToggleD: HTMLElement;
+    btnReset: HTMLElement;
+    sldNoise: HTMLInputElement;
+    sldSpeed: HTMLInputElement;
+    valNoise: HTMLElement;
+    valSpeed: HTMLElement;
+  };
+}
+
+/**
+ * Worker 初始化消息
+ */
+export interface WorkerInitMessage {
+  type: "INIT";
+  canvasWaveform: OffscreenCanvas;
+  canvasDigital: OffscreenCanvas;
+  dpr: number;
+  width: number;
+  height: number;
+  digitalHeight: number;
+}
+
+/**
+ * 尺寸变更消息
+ */
+export interface WorkerResizeMessage {
+  type: "RESIZE";
+  width: number;
+  height: number;
+  digitalHeight: number;
+  dpr: number;
+}
+
+/**
+ * 参数更新消息 (UI -> Worker)
+ */
+export interface WorkerParamMessage {
+  type: "PARAM_UPDATE";
+  key: "noise" | "speed" | "toggleD" | "reset";
+  value: number | boolean;
+}
+
+/**
+ * 数据回传消息 (Worker -> UI)
+ *
+ * 用于更新页面上的电压数值文字
+ */
+export interface WorkerStatusMessage {
+  type: "STATUS_UPDATE";
+  d: number;
+  clk: number;
+  q: number;
+}
+
+/**
+ * 设置更新消息 (UI -> Worker)
+ */
+export interface WorkerSettingsMessage {
+  type: "SETTINGS_UPDATE";
+  settings: Partial<VoltageSpecConfig>;
+}
+
+/**
+ * Worker 消息类型合集
+ */
+export type WorkerMessage =
+  | WorkerInitMessage
+  | WorkerResizeMessage
+  | WorkerParamMessage
+  | WorkerSettingsMessage;

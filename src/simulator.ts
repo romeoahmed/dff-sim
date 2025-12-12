@@ -1,473 +1,266 @@
 /**
- * 仿真控制器：UI 交互、物理循环调度与数据绑定
+ * 仿真控制器 (主线程)
+ *
+ * 职责：
+ * 1. 负责 UI 交互与 DOM 更新
+ * 2. 负责 Worker 线程的生命周期管理
+ * 3. 监听布局变化并通知 Worker
+ * 4. 接收 Worker 的状态回传并显示
  */
 
-import { Signal, DFlipFlop } from "./physics";
-import { Oscilloscope } from "./renderer";
-import { VoltageSpecs, Simulation } from "./constants";
-import { WaveformBuffer } from "./buffer";
-import type { SignalSample } from "./types";
+import { Layout, Simulation, VoltageSpecs } from "./constants";
+import SimulationWorker from "./simulation.worker?worker";
+import type {
+  VoltageSpecConfig,
+  UIElements,
+  WorkerInitMessage,
+  WorkerParamMessage,
+  WorkerResizeMessage,
+  WorkerStatusMessage,
+} from "./types";
 
 /**
  * 仿真应用主类
  */
 export class SimulationApp {
-  // --- 物理组件 ---
+  // --- 核心组件 ---
+  private worker: Worker;
+  private resizeObserver: ResizeObserver | null = null;
 
-  /**
-   * 输入信号 D
-   */
-  private signalD: Signal = new Signal(
-    (VoltageSpecs.logicHighMin + VoltageSpecs.systemMax) / 2, // ~1.75V
-    VoltageSpecs.logicLowMax / 2, // ~0.3V
-  );
+  // --- UI 缓存 ---
+  // 将 DOM 元素结构化分组，避免散乱的属性
+  private ui: UIElements;
 
-  /**
-   * 时钟信号 CLK
-   */
-  private signalClk: Signal = new Signal(VoltageSpecs.outputHighMax, 0.0);
+  // --- 本地状态 ---
+  // 用于 Optimistic UI 更新 (点击即响应，无需等待 Worker 回传)
+  private localTargetLogicD: 0 | 1 = 0;
 
-  /**
-   * D 触发器实例
-   */
-  private dff: DFlipFlop = new DFlipFlop();
-
-  /**
-   * 波形数据缓冲区
-   */
-  private waveformBuffer: WaveformBuffer = new WaveformBuffer(
-    Simulation.bufferLength,
-  );
-
-  /**
-   * 示波器
-   */
-  private scope: Oscilloscope = new Oscilloscope(
-    "waveform-canvas",
-    "digital-canvas",
-  );
-
-  // --- 仿真状态 ---
-
-  /**
-   * 时钟相位累加器
-   */
-  private clockPhase: number = 0;
-
-  /**
-   * 时钟频率步进速度
-   */
-  private clockSpeed: number =
-    Simulation.defaultSpeed * Simulation.clockSpeedFactor; // ~0.06
-
-  // --- DOM 元素缓存 ---
-
-  /**
-   * D 输入电压显示 DOM
-   */
-  private elVoltD = document.getElementById("volt-d");
-
-  /**
-   * CLK 电压显示 DOM
-   */
-  private elVoltClk = document.getElementById("volt-clk");
-
-  /**
-   * Q 输出电压显示 DOM
-   */
-  private elVoltQ = document.getElementById("volt-q");
-
-  /**
-   * D 引脚 DOM
-   */
-  private elPinD = document.querySelector(".pin.input-d");
-
-  /**
-   * CLK 引脚 DOM
-   */
-  private elPinClk = document.querySelector(".pin.input-clk");
-
-  /**
-   * Q 引脚 DOM
-   */
-  private elPinQ = document.querySelector(".pin.output-q");
-
-  /**
-   * D 输入切换按钮
-   */
-  private btnToggleD = document.getElementById("btn-toggle-d");
-
-  /**
-   * 重置按钮
-   */
-  private btnReset = document.getElementById("btn-reset");
-
-  /**
-   * 重置信号激活状态
-   */
-  private resetActive: boolean = false;
-
-  /**
-   * 噪声滑块
-   */
-  private sldNoise = document.getElementById("noiseSlider");
-
-  /**
-   * 速度滑块
-   */
-  private sldSpeed = document.getElementById("speedSlider");
-
-  /**
-   * 噪声数值显示
-   */
-  private elNoiseVal = document.getElementById("noiseVal");
-
-  /**
-   * 速度数值显示
-   */
-  private elSpeedVal = document.getElementById("speedVal");
-
-  /**
-   * 上一帧的时间戳
-   */
-  private lastFrameTime: number = 0;
-
-  /**
-   * 帧计数器
-   */
-  private frameCount: number = 0;
-
-  // --- 脏检查缓存 (Dirty Check Cache) ---
-
-  // 用于存储上一帧渲染的值，避免重复操作 DOM
-  private cache = {
-    voltD: "",
-    voltClk: "",
-    voltQ: "",
-    pinDActive: false,
-    pinClkActive: false,
-    pinQActive: false,
-  };
-
-  /**
-   * 初始化仿真应用，绑定 DOM 并启动主循环
-   */
   constructor() {
-    // 数据源绑定到示波器
-    this.scope.setData(this.waveformBuffer);
+    // 1. 缓存 DOM 元素
+    this.ui = this.cacheDomElements();
 
-    // 初始化事件监听器
-    this.initListeners();
+    // 2. 初始化 Worker
+    this.worker = new SimulationWorker();
+    this.initWorkerBridge();
 
-    // 启动循环
-    this.loop();
+    // 3. 绑定交互事件
+    this.bindEvents();
   }
 
   /**
-   * 初始化 DOM 事件监听器
+   * 缓存所有需要的 DOM 元素，并进行非空检查
    */
-  private initListeners() {
-    if (!this.btnToggleD) {
-      throw new Error("Required element #btn-toggle-d not found");
-    }
-    if (!this.btnReset) {
-      throw new Error("Required element #btn-reset not found");
-    }
-    if (!(this.sldNoise instanceof HTMLInputElement)) {
-      throw new Error("Required element #noiseSlider is not an input");
-    }
-    if (!(this.sldSpeed instanceof HTMLInputElement)) {
-      throw new Error("Required element #speedSlider is not an input");
-    }
-
-    // 1. 输入 D 切换按钮
-    this.btnToggleD.addEventListener("pointerdown", () => {
-      const current = this.signalD.targetLogic;
-      this.signalD.targetLogic = current === 1 ? 0 : 1;
-      this.updateToggleButton();
-    });
-
-    // 2. 噪声滑块控制
-    this.sldNoise.addEventListener("input", (e) => {
-      if (!this.elNoiseVal) {
-        throw new Error("Required element #noiseVal not found");
-      }
-
-      const target = e.target;
-      if (!(target instanceof HTMLInputElement)) {
-        throw new Error(`Element #${target} is not a input`);
-      }
-      const percent = parseInt(target.value);
-
-      // 使用常量计算噪声
-      const noiseVolts = (percent / 100) * Simulation.maxNoiseLevel;
-
-      this.signalD.noiseLevel = noiseVolts;
-      this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
-
-      this.elNoiseVal.textContent = `${percent} %`;
-    });
-
-    // 3. 时钟速度控制
-    this.sldSpeed.addEventListener("input", (e) => {
-      if (!this.elSpeedVal) {
-        throw new Error("Required element #speedVal not found");
-      }
-
-      const target = e.target;
-      if (!(target instanceof HTMLInputElement)) {
-        throw new Error(`Element #${target} is not a input`);
-      }
-      const val = parseInt(target.value);
-
-      this.clockSpeed = val * Simulation.clockSpeedFactor;
-
-      // 计算实际频率: f = (baseFrameRate * clockSpeed) / (2π)
-      const freqHz =
-        (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
-
-      this.elSpeedVal.textContent = `${freqHz.toFixed(2)} Hz`;
-    });
-
-    // 4. 异步重置按钮
-
-    const activateReset = () => {
-      this.resetActive = true;
-      this.btnReset?.classList.add("active");
+  private cacheDomElements(): UIElements {
+    const getEl = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) throw new Error(`Element #${id} not found`);
+      return el;
     };
-
-    const deactivateReset = () => {
-      this.resetActive = false;
-      this.btnReset?.classList.remove("active");
+    const getPin = (sel: string) => {
+      const el = document.querySelector(sel);
+      if (!el) throw new Error(`Selector ${sel} not found`);
+      return el;
     };
-
-    // 按下时激活重置
-    this.btnReset.addEventListener("pointerdown", activateReset);
-
-    // 松开时释放重置
-    this.btnReset.addEventListener("pointerup", deactivateReset);
-
-    // 移出时也释放（防止卡住）
-    this.btnReset.addEventListener("pointerleave", deactivateReset);
-  }
-
-  /**
-   * 更新按钮状态
-   */
-  private updateToggleButton() {
-    if (!this.btnToggleD) {
-      throw new Error("Required element #btn-toggle-d not found");
-    }
-
-    const iconOff = this.btnToggleD.querySelector(".icon-off");
-    const iconOn = this.btnToggleD.querySelector(".icon-on");
-    const textSpan = this.btnToggleD.querySelector(".btn-text");
-
-    if (
-      !(iconOff instanceof HTMLElement) ||
-      !(iconOn instanceof HTMLElement) ||
-      !(textSpan instanceof HTMLElement)
-    ) {
-      throw new Error("Required #btn-toggle-d child elements not found");
-    }
-
-    if (this.signalD.targetLogic === 1) {
-      this.btnToggleD.classList.add("active");
-      iconOff.style.display = "none";
-      iconOn.style.display = "inline";
-      textSpan.textContent = "Input D: HIGH";
-    } else {
-      this.btnToggleD.classList.remove("active");
-      iconOff.style.display = "inline";
-      iconOn.style.display = "none";
-      textSpan.textContent = "Input D: LOW";
-    }
-  }
-
-  /**
-   * 物理计算步进 (Physics Step)
-   * @returns 当前电压快照
-   */
-  private updatePhysics(deltaTime: number): SignalSample {
-    this.clockPhase += this.clockSpeed * deltaTime * Simulation.baseFrameRate; // 归一化到 60fps 基准
-
-    // 防止 phase 无限增长导致浮点数精度问题
-    // 2 * PI 是一个完整周期
-    if (this.clockPhase > Math.PI * 2) {
-      this.clockPhase -= Math.PI * 2;
-    }
-
-    // 生成方波
-    this.signalClk.targetLogic = Math.sin(this.clockPhase) > 0 ? 1 : 0;
-
-    // 更新各端口电压物理值（含噪声计算）
-    this.signalClk.update(deltaTime);
-    this.signalD.update(deltaTime);
-
-    // 核心：执行 D 触发器逻辑
-    const qVolts = this.dff.process(
-      this.signalD.currentValue,
-      this.signalClk.currentValue,
-      this.resetActive,
-      deltaTime,
-    );
 
     return {
-      d: this.signalD.currentValue,
-      clk: this.signalClk.currentValue,
-      q: qVolts,
+      volts: {
+        d: getEl("volt-d"),
+        clk: getEl("volt-clk"),
+        q: getEl("volt-q"),
+      },
+      pins: {
+        d: getPin(".pin.input-d"),
+        clk: getPin(".pin.input-clk"),
+        q: getPin(".pin.output-q"),
+      },
+      controls: {
+        btnToggleD: getEl("btn-toggle-d"),
+        btnReset: getEl("btn-reset"),
+        sldNoise: getEl("noiseSlider") as HTMLInputElement,
+        sldSpeed: getEl("speedSlider") as HTMLInputElement,
+        valNoise: getEl("noiseVal"),
+        valSpeed: getEl("speedVal"),
+      },
     };
   }
 
   /**
-   * UI 渲染更新 (UI Step)
-   * @param data - 当前帧的电压数据对象
+   * 初始化 Worker 通信桥接
+   * 移交 Canvas 控制权 (OffscreenCanvas)
    */
-  private updateUI(data: SignalSample) {
-    if (!this.elVoltD || !this.elVoltClk || !this.elVoltQ) {
-      throw new Error("Required voltage display elements not found");
+  private initWorkerBridge() {
+    const canvasWaveform = document.getElementById(
+      "waveform-canvas",
+    ) as HTMLCanvasElement;
+    const canvasDigital = document.getElementById(
+      "digital-canvas",
+    ) as HTMLCanvasElement;
+
+    if (!canvasWaveform || !canvasDigital) {
+      throw new Error("Canvas elements missing");
     }
-    if (!this.elPinD || !this.elPinClk || !this.elPinQ) {
-      throw new Error("Required pin elements not found");
-    }
 
-    this.frameCount++;
+    // 1. 控制权移交：主线程不再拥有绘图上下文
+    const offscreenWaveform = canvasWaveform.transferControlToOffscreen();
+    const offscreenDigital = canvasDigital.transferControlToOffscreen();
 
-    const updateText = (
-      el: HTMLElement | null,
-      val: number,
-      cacheKey: "voltD" | "voltClk" | "voltQ",
-    ) => {
-      if (!el) return;
-      const newText = val.toFixed(2) + "V";
+    // 2. 获取初始尺寸
+    const parent = canvasWaveform.parentElement;
+    const width = parent
+      ? parent.getBoundingClientRect().width - Layout.canvasPadding
+      : 800;
+    const dpr = window.devicePixelRatio || 1;
 
-      // 脏检查：如果新文本和缓存的一样，直接跳过
-      if (this.cache[cacheKey] !== newText) {
-        el.textContent = newText;
-        this.cache[cacheKey] = newText; // 更新缓存
+    // 3. 发送初始化消息
+    const initMsg: WorkerInitMessage = {
+      type: "INIT",
+      canvasWaveform: offscreenWaveform,
+      canvasDigital: offscreenDigital,
+      width,
+      height: Layout.canvasHeight,
+      digitalHeight: Layout.digitalScopeHeight,
+      dpr,
+    };
+
+    // 注意：OffscreenCanvas 必须在第二个参数中列出以进行 Transfer
+    this.worker.postMessage(initMsg, [offscreenWaveform, offscreenDigital]);
+
+    // 4. 监听 Worker 回传 (更新 UI 数值)
+    this.worker.onmessage = (e) => {
+      const msg = e.data as WorkerStatusMessage;
+      if (msg.type === "STATUS_UPDATE") {
+        this.updateVoltageDisplay(msg.d, msg.clk, msg.q);
       }
     };
 
-    const updateActive = (
-      el: Element | null,
-      isActive: boolean,
-      cacheKey: "pinDActive" | "pinClkActive" | "pinQActive",
-    ) => {
-      if (!el) return;
+    // 5. 监听容器 Resize (更新 Worker 内的 Canvas 尺寸)
+    this.initResizeObserver(canvasWaveform);
+  }
 
-      // 脏检查
-      if (this.cache[cacheKey] !== isActive) {
-        el.classList.toggle("active", isActive);
-        this.cache[cacheKey] = isActive; // 更新缓存
+  private initResizeObserver(target: HTMLElement) {
+    if (!target.parentElement) return;
+
+    this.resizeObserver = new ResizeObserver(() => {
+      const parent = target.parentElement;
+      if (parent) {
+        const w = parent.getBoundingClientRect().width - Layout.canvasPadding;
+        const resizeMsg: WorkerResizeMessage = {
+          type: "RESIZE",
+          width: w,
+          height: Layout.canvasHeight,
+          digitalHeight: Layout.digitalScopeHeight,
+          dpr: window.devicePixelRatio || 1,
+        };
+        this.worker.postMessage(resizeMsg);
       }
+    });
+    this.resizeObserver.observe(target.parentElement);
+  }
+
+  /**
+   * 绑定所有交互事件
+   */
+  private bindEvents() {
+    const { controls } = this.ui;
+
+    // 1. 切换 Input D
+    controls.btnToggleD.addEventListener("click", () => {
+      // 乐观更新 (Optimistic Update)
+      this.localTargetLogicD = this.localTargetLogicD === 1 ? 0 : 1;
+      this.renderToggleBtnState();
+      this.sendParam("toggleD", this.localTargetLogicD === 1);
+    });
+
+    // 2. 噪声控制
+    controls.sldNoise.addEventListener("input", (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value);
+      controls.valNoise.textContent = `${val} %`;
+      this.sendParam("noise", val);
+    });
+
+    // 3. 速度控制
+    controls.sldSpeed.addEventListener("input", (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value);
+      const freqHz =
+        (Simulation.baseFrameRate * val * Simulation.clockSpeedFactor) /
+        (2 * Math.PI);
+      controls.valSpeed.textContent = `${freqHz.toFixed(2)} Hz`;
+      this.sendParam("speed", val);
+    });
+
+    // 4. 重置 (Hold)
+    const setReset = (active: boolean) => {
+      controls.btnReset.classList.toggle("active", active);
+      this.sendParam("reset", active);
     };
+    controls.btnReset.addEventListener("pointerdown", () => setReset(true));
+    controls.btnReset.addEventListener("pointerup", () => setReset(false));
+    controls.btnReset.addEventListener("pointerleave", () => setReset(false));
+  }
 
-    if (this.frameCount % 10 === 0) {
-      // 更新芯片管脚旁的数字电压显示
-      updateText(this.elVoltD, data.d, "voltD");
-      updateText(this.elVoltClk, data.clk, "voltClk");
-      updateText(this.elVoltQ, data.q, "voltQ");
+  /**
+   * 辅助：向 Worker 发送参数更新
+   */
+  private sendParam(key: WorkerParamMessage["key"], value: number | boolean) {
+    this.worker.postMessage({ type: "PARAM_UPDATE", key, value });
+  }
 
-      // 重置帧计数器
-      this.frameCount = 0;
-    }
+  /**
+   * 渲染 Toggle 按钮的视觉状态 (纯 DOM 操作)
+   */
+  private renderToggleBtnState() {
+    const btn = this.ui.controls.btnToggleD;
+    const isHigh = this.localTargetLogicD === 1;
 
-    // 更新引脚高亮状态
+    // 使用 CSS 类控制图标显隐，避免 innerHTML 重排
+    btn.classList.toggle("active", isHigh);
+
+    const iconOff = btn.querySelector(".icon-off") as HTMLElement;
+    const iconOn = btn.querySelector(".icon-on") as HTMLElement;
+    const textSpan = btn.querySelector(".btn-text") as HTMLElement;
+
+    if (iconOff) iconOff.style.display = isHigh ? "none" : "inline";
+    if (iconOn) iconOn.style.display = isHigh ? "inline" : "none";
+    if (textSpan)
+      textSpan.textContent = isHigh ? "Input D: HIGH" : "Input D: LOW";
+  }
+
+  /**
+   * 更新电压数值显示与引脚高亮
+   *
+   * 此方法由 Worker 消息驱动 (约 20fps)
+   */
+  private updateVoltageDisplay(d: number, clk: number, q: number) {
+    const { volts, pins } = this.ui;
     const threshold = VoltageSpecs.logicHighMin;
-    updateActive(this.elPinD, data.d > threshold, "pinDActive");
-    updateActive(this.elPinClk, data.clk > threshold, "pinClkActive");
-    updateActive(this.elPinQ, data.q > threshold, "pinQActive");
 
-    // 更新波形图数据缓冲区
-    this.waveformBuffer.push(data.d, data.clk, data.q);
+    // 更新文本 (使用了 textContent，性能略优于 innerText)
+    volts.d.textContent = d.toFixed(2) + "V";
+    volts.clk.textContent = clk.toFixed(2) + "V";
+    volts.q.textContent = q.toFixed(2) + "V";
 
-    // 重绘波形图
-    this.scope.draw();
-    this.scope.drawDigital();
+    // 更新高亮 (classList.toggle 极其高效)
+    pins.d.classList.toggle("active", d > threshold);
+    pins.clk.classList.toggle("active", clk > threshold);
+    pins.q.classList.toggle("active", q > threshold);
   }
 
   /**
-   * 动画主循环
+   * 更新仿真电压参数
+   * 将新设置发送给 Worker 线程
    */
-  private loop(timestamp: number = 0) {
-    // 第一帧时间或间跳变过大时重置时间基准
-    if (!this.lastFrameTime || timestamp - this.lastFrameTime > 1000) {
-      this.lastFrameTime = timestamp;
-    }
-
-    // 2. 计算原始 deltaTime
-    let deltaTime = (timestamp - this.lastFrameTime) / 1000;
-
-    // 3. 钳位 deltaTime
-    // 强制每帧最大只模拟 0.1 秒的物理时间（即使实际卡顿了 0.5 秒）
-    // 这样波形虽然会变慢，但绝不会瞬移或乱跳
-    const MAX_DELTA_TIME = 0.1;
-    if (deltaTime > MAX_DELTA_TIME) {
-      deltaTime = MAX_DELTA_TIME;
-    }
-
-    this.lastFrameTime = timestamp;
-
-    const data = this.updatePhysics(deltaTime);
-    this.updateUI(data);
-    requestAnimationFrame((t) => this.loop(t));
+  public updateSettings(settings: Partial<VoltageSpecConfig>) {
+    this.worker.postMessage({
+      type: "SETTINGS_UPDATE",
+      settings,
+    });
   }
 
-  refresh() {
-    this.signalD = new Signal(
-      (VoltageSpecs.logicHighMin + VoltageSpecs.systemMax) / 2, // ~1.75V
-      VoltageSpecs.logicLowMax / 2, // ~0.3V
-    );
-
-    this.signalClk = new Signal(VoltageSpecs.outputHighMax, 0.0);
-
-    this.dff = new DFlipFlop();
-
-    this.waveformBuffer.reset();
-
-    // 可以选择销毁并重建示波器实例，但目前看没必要
-    // this.scope.destroy();
-    // this.scope = new Oscilloscope("waveform-canvas", "digital-canvas");
-    // this.scope.setData(this.waveformBuffer);
-
-    this.clockPhase = 0;
-    this.resetActive = false;
-    this.lastFrameTime = 0;
-    this.cache = {
-      voltD: "",
-      voltClk: "",
-      voltQ: "",
-      pinDActive: false,
-      pinClkActive: false,
-      pinQActive: false,
-    };
-
-    // 关键：同步 UI 控件的当前值到仿真参数
-    if (!this.elNoiseVal) {
-      throw new Error("Required element #noiseVal not found");
-    }
-    if (!this.elSpeedVal) {
-      throw new Error("Required element #speedVal not found");
-    }
-    if (!(this.sldNoise instanceof HTMLInputElement)) {
-      throw new Error("Required element #noiseSlider is not an input");
-    }
-    if (!(this.sldSpeed instanceof HTMLInputElement)) {
-      throw new Error("Required element #speedSlider is not an input");
-    }
-
-    const percent = parseInt(this.sldNoise.value);
-    const noiseVolts = (percent / 100) * Simulation.maxNoiseLevel;
-    this.signalD.noiseLevel = noiseVolts;
-    this.dff.qSignal.noiseLevel = noiseVolts * Simulation.outputNoiseRatio;
-    this.elNoiseVal.textContent = `${percent} %`;
-
-    const val = parseInt(this.sldSpeed.value);
-    this.clockSpeed = val * Simulation.clockSpeedFactor;
-    const freqHz = (Simulation.baseFrameRate * this.clockSpeed) / (2 * Math.PI);
-    this.elSpeedVal.textContent = `${freqHz.toFixed(2)} Hz`;
-
-    // 更新按钮状态
-    this.updateToggleButton();
+  /**
+   * 销毁应用 (清理 Worker 和 观察者)
+   */
+  public destroy() {
+    this.resizeObserver?.disconnect();
+    this.worker.terminate();
   }
 }
