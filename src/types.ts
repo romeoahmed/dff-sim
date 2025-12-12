@@ -84,8 +84,14 @@ export interface LayoutConfig {
   /** Canvas 高度 (px) */
   canvasHeight: number;
 
+  /** 数字逻辑视图 Canvas 高度 (px) */
+  digitalScopeHeight: number;
+
   /** Canvas 内边距 (px) */
   canvasPadding: number;
+
+  /** 数字逻辑垂直阶跃高度 (px) */
+  digitalLogicStep: number;
 
   /** 波形线宽 (px) */
   waveformLineWidth: number;
@@ -148,17 +154,26 @@ export interface SimulationConfig {
 }
 
 /**
+ * 数字通道配置
+ */
+export interface DigitalChannelConfig {
+  data: Float32Array;
+  color: string;
+  label: string;
+}
+
+/**
  * 各通道历史电压数据
  */
 export interface VoltageData {
   /** 输入电压 */
-  d: Array<number>;
+  d: Float32Array;
 
   /** 时钟电路电压 */
-  clk: Array<number>;
+  clk: Float32Array;
 
   /** 输出电压 */
-  q: Array<number>;
+  q: Float32Array;
 }
 
 /**
@@ -173,4 +188,20 @@ export interface SignalSample {
 
   /** 输出信号 */
   q: number;
+}
+
+/**
+ * 示波器数据源接口
+ */
+export interface WaveformDataSource {
+  /** 缓冲区长度 (必须是 2 的幂) */
+  readonly length: number;
+
+  /** 当前写入指针的位置 (0 ~ length-1) */
+  readonly writePointer: number;
+
+  /** 原始数据数组 (Float32Array) */
+  readonly d: Float32Array;
+  readonly clk: Float32Array;
+  readonly q: Float32Array;
 }

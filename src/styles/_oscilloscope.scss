@@ -13,6 +13,25 @@
   box-shadow: $shadow-md;
 }
 
+.digital-scope-header {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  color: $ctp-green;
+  margin-bottom: 2px;
+  font-size: 1rem;
+  gap: 6px;
+}
+
+canvas#digital-canvas {
+  background-color: $ctp-crust;
+  border: 1px solid $ctp-surface1;
+  border-radius: $radius-sm;
+  width: 100%;
+  margin-bottom: 8px;
+  cursor: crosshair;
+}
+
 .scope-header {
   display: flex;
   justify-content: space-between;

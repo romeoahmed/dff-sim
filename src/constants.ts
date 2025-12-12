@@ -48,7 +48,7 @@ export const Simulation = {
   defaultSpeed: 30,
   defaultNoise: 10,
   baseFrameRate: 60,
-  bufferLength: 500,
+  bufferLength: 1024, // 环形缓冲区长度, 应为2的幂次方以优化性能
   outputNoiseRatio: 0.5,
 } as const satisfies SimulationConfig;
 
@@ -61,7 +61,9 @@ export const Layout = {
   qOffset: 180,
   scaleY: 30,
   canvasHeight: 300,
+  digitalScopeHeight: 150,
   canvasPadding: 32,
+  digitalLogicStep: 30,
   waveformLineWidth: 2,
   thresholdLineWidth: 1,
   voltageHeadroom: 2.5,

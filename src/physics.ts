@@ -29,7 +29,7 @@ export class Signal {
   /**
    * 缓存的下一个高斯随机数
    */
-  private _noiseCache: number | null = null;
+  private noiseCache: number | null = null;
 
   /**
    * 创建一个电压信号源
@@ -41,9 +41,7 @@ export class Signal {
     public baseHigh: number = VoltageSpecs.outputHighMin,
     public baseLow: number = VoltageSpecs.outputLowMax,
     public smoothingFactor: number = VoltageSpecs.smoothingFactor,
-  ) {
-    this.currentValue = baseLow;
-  }
+  ) {}
 
   /**
    * 计算下一帧的电压值
@@ -53,7 +51,7 @@ export class Signal {
    * @remarks
    * Marsaglia Polar Method 参考 AI 辅助建议
    */
-  update() {
+  update(deltaTime: number) {
     const { targetLogic, baseHigh, baseLow, noiseLevel, smoothingFactor } =
       this;
 
@@ -62,7 +60,7 @@ export class Signal {
 
     // 2. 生成高斯噪声 (Marsaglia Polar Method - 双缓冲优化)
     let noise: number;
-    if (this._noiseCache === null) {
+    if (this.noiseCache === null) {
       let u: number, v: number, s: number;
 
       // 拒绝采样：直到点落在单位圆内
@@ -76,17 +74,29 @@ export class Signal {
 
       // 生成两个独立的正态分布值
       noise = u * mul;
-      this._noiseCache = v * mul;
+      this.noiseCache = v * mul;
     } else {
-      noise = this._noiseCache;
-      this._noiseCache = null; // 清空缓存
+      noise = this.noiseCache;
+      this.noiseCache = null; // 清空缓存
     }
 
     // 3. 叠加噪声
     const noisyVoltage = targetVoltage + noise * noiseLevel;
 
-    // 4. RC 低通滤波
-    this.currentValue += (noisyVoltage - this.currentValue) * smoothingFactor;
+    // 4. RC 低通滤波 (线性插值，依赖调用频率)
+    // this.currentValue += (noisyVoltage - this.currentValue) * smoothingFactor;
+
+    // 时间无关的指数衰减模型：
+    // newFactor = 1 - (1 - baseFactor) ^ (deltaTime / targetFrameTime)
+    // targetFrameTime = 1 / Simulation.baseFrameRate;
+    // timeRatio = deltaTime / targetFrameTime;
+    const timeRatio = deltaTime * Simulation.baseFrameRate;
+
+    // 计算适应当前 deltaTime 的平滑系数
+    // 如果 deltaTime 很大，adjustedFactor 会接近 1 (瞬间到达)
+    const adjustedFactor = 1 - Math.pow(1 - smoothingFactor, timeRatio);
+
+    this.currentValue += (noisyVoltage - this.currentValue) * adjustedFactor;
 
     // 5. 物理限制
     this.currentValue = Math.max(
@@ -125,11 +135,16 @@ export class DFlipFlop {
    * @param resetActive - 异步重置信号是否激活 (低电平有效时传 false)
    * @returns 计算后的 Q 输出端电压
    */
-  process(dVoltage: number, clkVoltage: number, resetActive: boolean) {
+  process(
+    dVoltage: number,
+    clkVoltage: number,
+    resetActive: boolean,
+    deltaTime: number,
+  ): number {
     // 0. 异步重置优先级最高
     if (resetActive) {
       this.qSignal.targetLogic = 0;
-      this.qSignal.update();
+      this.qSignal.update(deltaTime);
       return this.qSignal.currentValue;
     }
 
@@ -166,7 +181,7 @@ export class DFlipFlop {
     this.lastClkState = clkLogic;
 
     // 更新输出引脚的物理电压
-    this.qSignal.update();
+    this.qSignal.update(deltaTime);
 
     return this.qSignal.currentValue;
   }
