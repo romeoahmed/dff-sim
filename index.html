@@ -8,7 +8,7 @@
     <title>D触发器物理仿真 | D-FlipFlop Simulation</title>
     <meta
       name="description"
-      content="基于 Web 的 D 触发器物理行为仿真，模拟电压噪声、RC 延迟与亚稳态现象"
+      content="基于 Web Workers 的高性能 D 触发器物理行为仿真，模拟电压噪声、RC 延迟与亚稳态现象"
     />
     <meta name="author" content="Romeo Ahmed" />
 
@@ -16,7 +16,7 @@
     <meta property="og:title" content="D-FlipFlop Simulation" />
     <meta
       property="og:description"
-      content="电压浮动、工程鲁棒性与时钟同步演示"
+      content="多线程架构、电压浮动、工程鲁棒性与时钟同步演示"
     />
     <meta property="og:type" content="website" />
 
@@ -67,6 +67,31 @@
       </header>
 
       <div class="sidebar-content">
+        <!-- 核心架构 -->
+        <section class="about-section">
+          <h3>
+            <i class="fa-solid fa-microchip" aria-hidden="true"></i> 核心架构
+          </h3>
+          <p>
+            本项目采用了先进的 <strong>Actor 模型</strong> 架构，将 UI
+            交互与物理计算完全分离，确保在任何负载下都能保持丝滑的 60FPS 体验。
+          </p>
+          <ul>
+            <li>
+              <strong>Web Workers</strong>：物理引擎与主线程隔离，避免 UI
+              阻塞导致仿真卡顿。
+            </li>
+            <li>
+              <strong>OffscreenCanvas</strong>：图形渲染直接在 Worker
+              线程完成，利用 GPU 并行处理能力。
+            </li>
+            <li>
+              <strong>Ring Buffer</strong>：使用位运算优化的环形缓冲区，实现
+              O(1) 复杂度的实时数据写入。
+            </li>
+          </ul>
+        </section>
+
         <!-- 物理原理 -->
         <section class="about-section">
           <h3>
@@ -75,20 +100,20 @@
           <ul>
             <li>
               <strong>Marsaglia Polar Method</strong
-              >：将均匀分布随机数转换为高斯分布，
+              >：在独立线程中生成高斯分布随机数，
               模拟真实电路中的热噪声（Johnson-Nyquist noise）。
             </li>
             <li>
-              <strong>RC 低通滤波</strong>：使用一阶差分方程模拟电容充放电效应，
-              信号跳变呈指数曲线而非瞬间阶跃。
+              <strong>RC 低通滤波</strong>：使用帧率无关（Frame-Rate
+              Independent）的指数衰减模型，模拟电容充放电效应。
             </li>
             <li>
               <strong>施密特触发器</strong>：通过滞回区间（0.6V -
               1.0V）实现抗抖动， 避免噪声导致的逻辑误判。
             </li>
             <li>
-              <strong>亚稳态模拟</strong>：当 D 输入在时钟边沿处于未定义区间时，
-              输出随机坍缩，演示建立/保持时间违例的后果。
+              <strong>亚稳态模拟</strong
+              >：模拟建立/保持时间违例时的输出不确定性。
             </li>
           </ul>
         </section>
@@ -101,6 +126,10 @@
           <ul>
             <li><strong>TypeScript</strong> — 严格类型检查，提升代码可靠性</li>
             <li><strong>Vite</strong> — 现代化构建工具，极速热更新</li>
+            <li>
+              <strong>Web Workers & OffscreenCanvas</strong> —
+              高性能多线程图形编程
+            </li>
             <li>
               <strong>Sass (SCSS)</strong> — 模块化样式，变量与 Mixin 复用
             </li>
@@ -116,6 +145,11 @@
             这个项目见证了我从传统前端开发到现代化工程实践的转变。
             最初只是一个简单的 HTML + CSS + JavaScript 演示页面，后来逐步迁移到
             <strong>Vite + TypeScript + SCSS</strong> 技术栈。
+          </p>
+          <p>
+            最初的单线程版本在复杂 DOM 操作下存在卡顿，经过重构引入
+            <strong>Web Worker</strong> 和 <strong>OffscreenCanvas</strong>，
+            实现流畅的多线程渲染与计算分离。
           </p>
           <p>
             在这个过程中，我学会了：模块化架构设计、类型安全编程、
@@ -143,14 +177,14 @@
                 rel="noopener"
                 >Google Gemini</a
               >
-              — AI 编程助手，协助代码优化
+              — AI 编程助手，架构优化顾问
             </li>
             <li>
               <i class="fa-solid fa-brain" aria-hidden="true"></i>
               <a href="https://claude.ai/" target="_blank" rel="noopener"
                 >Anthropic Claude</a
               >
-              — AI 编程助手，提供架构建议
+              — AI 编程助手，排查 Bug 先锋
             </li>
             <li>
               <i class="fa-brands fa-github" aria-hidden="true"></i>
@@ -175,9 +209,8 @@
             aria-hidden="true"
           ></i>
           by 王宇轩
-          <br />
-          Romeo Ahmed &lt;ahmedorqwn@gmail.com&gt;
         </p>
+        <p>Romeo Ahmed &lt;ahmedorqwn@gmail.com&gt;</p>
       </footer>
     </aside>
 
