@@ -2,7 +2,7 @@ import { defineConfig, UserConfig } from "vite";
 
 export default defineConfig({
   build: {
-    sourcemap: "hidden",
+    sourcemap: false,
   },
   base: "/dff-sim/",
 }) satisfies UserConfig;
