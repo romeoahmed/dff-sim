@@ -8,7 +8,7 @@
     <title>D触发器物理仿真 | D-FlipFlop Simulation</title>
     <meta
       name="description"
-      content="基于 Web Workers 的高性能 D 触发器物理行为仿真，模拟电压噪声、RC 延迟与亚稳态现象"
+      content="基于 PixiJS v8 (WebGPU) 与 Web Workers 的高性能 D 触发器物理仿真，模拟电压噪声、RC 延迟与亚稳态现象"
     />
     <meta name="author" content="Romeo Ahmed" />
 
@@ -16,7 +16,7 @@
     <meta property="og:title" content="D-FlipFlop Simulation" />
     <meta
       property="og:description"
-      content="多线程架构、电压浮动、工程鲁棒性与时钟同步演示"
+      content="WebGPU 渲染、多线程架构、电压浮动与工程鲁棒性演示"
     />
     <meta property="og:type" content="website" />
 
@@ -73,17 +73,18 @@
             <i class="fa-solid fa-microchip" aria-hidden="true"></i> 核心架构
           </h3>
           <p>
-            本项目采用了先进的 <strong>Actor 模型</strong> 架构，将 UI
-            交互与物理计算完全分离，确保在任何负载下都能保持丝滑的 60FPS 体验。
+            本项目采用了先进的
+            <strong>Actor 模型</strong> 架构与下一代图形技术，
+            确保在任何负载下都能保持丝滑的体验。
           </p>
           <ul>
             <li>
-              <strong>Web Workers</strong>：物理引擎与主线程隔离，避免 UI
-              阻塞导致仿真卡顿。
+              <strong>PixiJS v8 (WebGPU)</strong>：优先使用 WebGPU
+              进行批处理渲染，在保证方波垂直边缘抗锯齿的同时，维持极低的资源开销。
             </li>
             <li>
-              <strong>OffscreenCanvas</strong>：图形渲染直接在 Worker
-              线程完成，利用 GPU 并行处理能力。
+              <strong>Web Workers</strong>：物理引擎与渲染循环完全隔离，
+              主线程的复杂 DOM 操作（如侧边栏动画）不会阻塞示波器渲染。
             </li>
             <li>
               <strong>Ring Buffer</strong>：使用位运算优化的环形缓冲区，实现
@@ -104,12 +105,12 @@
               模拟真实电路中的热噪声（Johnson-Nyquist noise）。
             </li>
             <li>
-              <strong>RC 低通滤波</strong>：使用帧率无关（Frame-Rate
-              Independent）的指数衰减模型，模拟电容充放电效应。
+              <strong>帧率无关 RC 低通滤波</strong>：基于 Delta Time
+              的指数衰减模型。无论帧率波动或卡顿，电压充放电速度始终符合物理时间，无波形变形。
             </li>
             <li>
               <strong>施密特触发器</strong>：通过滞回区间（0.6V -
-              1.0V）实现抗抖动， 避免噪声导致的逻辑误判。
+              1.0V）实现抗抖动。
             </li>
             <li>
               <strong>亚稳态模拟</strong
@@ -127,13 +128,12 @@
             <li><strong>TypeScript</strong> — 严格类型检查，提升代码可靠性</li>
             <li><strong>Vite</strong> — 现代化构建工具，极速热更新</li>
             <li>
-              <strong>Web Workers & OffscreenCanvas</strong> —
-              高性能多线程图形编程
+              <strong>PixiJS v8</strong> — 下一代 2D 渲染引擎 (WebGPU/WebGL)
             </li>
+            <li><strong>Web Workers</strong> — 高性能多线程编程</li>
             <li>
               <strong>Sass (SCSS)</strong> — 模块化样式，变量与 Mixin 复用
             </li>
-            <li><strong>Canvas API</strong> — 高性能实时波形渲染</li>
             <li><strong>Catppuccin Macchiato</strong> — 优雅的配色主题</li>
           </ul>
         </section>
@@ -147,14 +147,14 @@
             <strong>Vite + TypeScript + SCSS</strong> 技术栈。
           </p>
           <p>
-            最初的单线程版本在复杂 DOM 操作下存在卡顿，经过重构引入
-            <strong>Web Worker</strong> 和 <strong>OffscreenCanvas</strong>，
-            实现流畅的多线程渲染与计算分离。
+            后续重构引入了
+            <strong>Web Worker</strong> 隔离物理计算，并最终迁移至
+            <strong>PixiJS v8</strong>，利用 <strong>WebGPU</strong>
+            的批处理能力实现了极致的性能表现，这也是我前端工程化能力的一次完整实践。
           </p>
           <p>
-            在这个过程中，我学会了：模块化架构设计、类型安全编程、
-            ESLint/Prettier 代码规范、以及如何用 Sass 组织复杂样式。
-            这不仅是一个仿真项目，更是我前端工程化能力的一次完整实践。
+            在这个过程中，我学会了：模块化架构设计、Actor 模型、 ESLint/Prettier
+            代码规范，以及如何用 Sass 组织复杂样式。
           </p>
         </section>
 
@@ -162,6 +162,13 @@
         <section class="about-section">
           <h3><i class="fa-solid fa-heart" aria-hidden="true"></i> 致谢</h3>
           <ul class="thanks-list">
+            <li>
+              <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+              <a href="https://pixijs.com/" target="_blank" rel="noopener"
+                >PixiJS</a
+              >
+              — 强悍的 2D 渲染引擎
+            </li>
             <li>
               <i class="fa-brands fa-font-awesome" aria-hidden="true"></i>
               <a href="https://fontawesome.com/" target="_blank" rel="noopener"

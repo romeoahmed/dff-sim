@@ -46,7 +46,7 @@ export class Signal {
   /**
    * 计算下一帧的电压值
    *
-   * 包含高斯白噪声注入和低通滤波（模拟 Slew Rate）
+   * 包含高斯白噪声注入和 RC 低通滤波
    *
    * @remarks
    * Marsaglia Polar Method 参考 AI 辅助建议

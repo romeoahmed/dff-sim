@@ -2,55 +2,52 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.1-646cff)
+![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.2-646cff)
+![PixiJS](<https://img.shields.io/badge/PixiJS-v8_(WebGPU)-e72264>)
 
 这是一个基于 Web 的 D 触发器 (D Flip-Flop) 物理行为仿真项目。
 
 与传统的逻辑门模拟器不同，本项目**模拟了数字电路背后的模拟特性**，包括电压波动、高斯白噪声、RC 延迟（压摆率）以及亚稳态（Metastability）现象。
 
-为了实现极致的性能和鲁棒性，项目采用了 **Web Workers + OffscreenCanvas** 的多线程架构，将繁重的物理计算与渲染逻辑与 UI 主线程完全隔离。
+在渲染层，项目已全面升级至 **PixiJS v8**，优先使用 **WebGPU** 后端，并配合 **Web Workers + OffscreenCanvas** 多线程架构，实现了逻辑计算与图形渲染的完全隔离。
 
 ## ✨ 核心特性
 
-### 1. 极致性能的多线程架构
+### 1. 下一代图形渲染架构 (PixiJS v8)
 
-- **UI/渲染隔离**：采用 **Actor 模型**，主线程仅负责 DOM 交互和状态同步。
-- **Web Workers**：物理引擎和渲染循环在独立线程中运行，**即使主线程因复杂 DOM 操作卡顿，示波器波形依然保持丝滑 60FPS**。
-- **OffscreenCanvas**：利用离屏画布技术，直接在 Worker 线程中对接 GPU 进行渲染。
+- **WebGPU 优先**：渲染核心采用 PixiJS v8，优先调用 WebGPU API，在不支持的环境下自动回退至 WebGL。
+- **Web Worker 渲染**：利用 `OffscreenCanvas` 将 PixiJS 实例完全运行在 Worker 线程中。**主线程的 DOM 操作（如侧边栏动画、复杂的 CSS 重排）完全不会阻塞示波器的 60FPS/144FPS 渲染循环**。
+- **Graphics 批处理优化**：采用 PixiJS 的 `Graphics` API 配合 WebGPU 的批处理能力，在保证**方波垂直边缘抗锯齿**的同时，依然维持极低的 CPU/GPU 开销。
+- **动静分离**：将网格、标签等静态元素与波形动态元素分层管理，大幅减少每帧的 Draw Call。
 
 ### 2. 硬核物理模拟引擎 (`src/physics.ts`)
 
 不仅仅是 0 和 1 的逻辑变换，而是基于电压的连续模拟：
 
 - **真实噪声模拟**：使用 **Marsaglia Polar Method** 生成符合正态分布的高斯白噪声。
-- **RC 延迟与压摆率**：实现**帧率无关 (Frame-Rate Independent)** 的指数衰减模型，无论帧率如何波动，电压充放电速度始终符合物理时间。
-- **亚稳态 (Metastability)**：精确模拟时钟沿触发时的建立/保持时间违例。
+- **帧率无关的 RC 滤波**：实现了**基于时间步进 (Delta Time) 的指数衰减模型**。无论浏览器帧率波动还是卡顿，电压充放电的物理速度始终恒定，不会出现“波形变短”或“动画变慢”的现象。
+- **亚稳态 (Metastability)**：精确模拟时钟沿触发时，输入信号处于未定义电压区间（0.6V~1.0V）时的随机坍缩行为。
 
-### 3. 实时虚拟示波器 (`src/renderer.ts`)
+### 3. 高鲁棒性的工程实践
 
-- 基于 HTML5 Canvas 的高性能波形渲染。
-- 支持高分屏 (Retina/HiDPI) 自动适配。
-- 实时绘制 **D (输入)**、**CLK (时钟)** 和 **Q (输出)** 三路信号。
-- 动态阈值线显示，辅助观察逻辑电平判定。
-- **Ring Buffer 优化**：使用位运算 (`&`) 代替取模运算，配合 `Float32Array` 实现 O(1) 复杂度的实时数据写入。
-- **双循环遍历**：直接操作内存指针，避免了数组拷贝和迭代器开销。
+- **Actor 模型架构**：主线程与 Worker 线程通过严格定义的消息协议（Message Passing）通信，解耦了 UI 逻辑与仿真核心。
+- **手动渲染循环**：在 Worker 中接管了渲染主循环，**关闭 PixiJS 默认 Ticker**，确保物理计算与图形绘制的严格同步，消除画面撕裂。
+- **Ring Buffer 优化**：使用位运算 (`&`) 代替取模运算，配合 `Float32Array` 实现 O(1) 复杂度的实时数据写入与回绕。
 
-### 4. 交互式控制
+### 4. 交互式控制与配置
 
 - **Input D 控制**：手动切换输入信号的高低电平。
-- **噪声注入**：动态调节信号中的噪声强度，观察高噪声下的逻辑错误。
-- **仿真速度**：调节时钟频率，慢放观察信号跳变细节。
-- **动态参数**：实时调节输入噪声、时钟频率和电压阈值。
-- **工程鲁棒性**：包含完整的输入校验和错误边界处理。
+- **参数动态调节**：实时调节输入噪声强度、时钟频率。
+- **设置侧边栏**：支持动态修改物理电压规范（如逻辑高/低阈值），修改后 Worker 会自动重置缓冲区并重新校准基准线，实现无缝切换。
 
 ## 🛠️ 技术栈
 
 - **语言**：[TypeScript](https://www.typescriptlang.org/) (全类型覆盖，严格模式)
+- **渲染引擎**：[PixiJS v8](https://pixijs.com/) (WebGPU / WebGL)
+- **多线程**：Web Workers + OffscreenCanvas
 - **构建工具**：[Vite](https://vitejs.dev/)
-- **图形核心**：Canvas API + OffscreenCanvas
-- **多线程**：Web Workers
-- **代码规范**：ESLint + Prettier (配置了针对 TypeScript 的严格检查)
-- **样式**：[Sass](https://sass-lang.com/) (Dart Sass) + Catppuccin 主题 + FontAwesome
+- **样式**：[Sass](https://sass-lang.com/) (Dart Sass) + Catppuccin 主题
+- **图标**：FontAwesome
 
 ## 🚀 快速开始
 
@@ -58,6 +55,7 @@
 
 - Node.js (推荐 v18+)
 - pnpm (推荐) 或 npm/yarn
+- 支持 WebGPU 或 WebGL 的现代浏览器 (Chrome 113+ 体验最佳)
 
 ### 安装依赖
 
@@ -83,25 +81,19 @@ pnpm build
 
 ```plain
 src/
-├── main.ts                 # 主入口：初始化样式与应用
+├── main.ts                 # 主入口：负责组装 App 与 UI 组件，处理全局异常
+├── simulator.ts            # [主线程] 仿真控制器：管理 DOM、侧边栏，负责与 Worker 通信
+├── simulation.worker.ts    # [Worker线程] 核心引擎：运行物理循环，驱动 PixiJS 渲染
+├── renderer.ts             # [核心] 基于 PixiJS v8 Graphics 的高性能渲染器
+├── physics.ts              # 物理引擎：Signal 类与 DFlipFlop 逻辑实现
+├── buffer.ts               # 数据层：管理环形缓冲区 (Ring Buffer)
 ├── constants.ts            # 常量定义：电压标准、颜色配置、仿真参数
-├── physics.ts              # 物理模拟引擎：处理电压、噪声与逻辑门行为
-├── renderer.ts             # 渲染器：基于 Canvas 的示波器波形绘制
-├── simulator.ts            # 仿真控制器：主线程与 Worker 通信
-├── simulation.worker.ts    # 仿真 Worker：运行物理模拟循环
+├── types.ts                # TypeScript 类型定义与消息协议
+├── settings.ts             # 设置侧边栏逻辑
 ├── about.ts                # 关于页面逻辑
-├── settings.ts             # 设置页面逻辑
-├── types.ts                # TypeScript 类型定义
-└── styles/
-    ├── main.scss           # 样式主入口文件
-    ├── _variables.scss     # 变量定义（颜色、阴影、字体、动画时长）
-    ├── _reset.scss         # 基础重置和滚动条样式
-    ├── _layout.scss        # 容器、header、main 布局
-    ├── _sidebar.scss       # 侧边栏样式
-    ├── _oscilloscope.scss  # 示波器面板和图例
-    ├── _chip.scss          # 芯片可视化、引脚、发光效果（含 @mixin glow）
-    ├── _controls.scss      # 控制面板、滑块、按钮、信息框
-    └── _responsive.scss    # 响应式媒体查询
+├── renderer-meshrope.ts    # [归档] 基于 MeshRope 的实验性渲染器 (已弃用)
+├── renderer-old.ts         # [归档] 原生 Canvas 2D 渲染器 (Legacy)
+└── styles/                 # SCSS 样式文件
 ```
 
 ## 📝 许可证

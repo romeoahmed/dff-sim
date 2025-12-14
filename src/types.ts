@@ -154,10 +154,9 @@ export interface SimulationConfig {
 }
 
 /**
- * 数字通道配置
+ * 通道配置
  */
-export interface DigitalChannelConfig {
-  data: Float32Array;
+export interface ChannelConfig {
   color: string;
   label: string;
 }

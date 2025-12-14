@@ -86,6 +86,7 @@ export class SimulationApp {
 
   /**
    * 初始化 Worker 通信桥接
+   *
    * 移交 Canvas 控制权 (OffscreenCanvas)
    */
   private initWorkerBridge() {

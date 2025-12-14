@@ -40,8 +40,10 @@ class SimulationEngine {
 
   constructor() {
     // 初始化物理实体
-    // 预填充 buffer 以避免初始时刻的视觉跳变
-    this.buffer = new WaveformBuffer(Simulation.bufferLength);
+    this.buffer = new WaveformBuffer(
+      Simulation.bufferLength,
+      VoltageSpecs.outputLowMax,
+    );
 
     // 初始化信号源
     this.signalD = new Signal(
@@ -53,10 +55,9 @@ class SimulationEngine {
   }
 
   /**
-   * 初始化渲染器与尺寸
-   * (必须在接收到主线程的 OffscreenCanvas 后调用)
+   * 异步初始化渲染器
    */
-  public initRenderer(
+  public async initRenderer(
     canvasWaveform: OffscreenCanvas,
     canvasDigital: OffscreenCanvas,
     width: number,
@@ -64,9 +65,17 @@ class SimulationEngine {
     digitalHeight: number,
     dpr: number,
   ) {
-    this.scope = new Oscilloscope(canvasWaveform, canvasDigital);
+    this.scope = new Oscilloscope();
     this.scope.setData(this.buffer);
-    this.scope.setSize(width, height, digitalHeight, dpr);
+
+    await this.scope.init(
+      canvasWaveform,
+      canvasDigital,
+      width,
+      height,
+      digitalHeight,
+      dpr,
+    );
   }
 
   /**
@@ -79,7 +88,7 @@ class SimulationEngine {
     dpr: number,
   ) {
     if (this.scope) {
-      this.scope.setSize(width, height, digitalHeight, dpr);
+      this.scope.resize(width, height, digitalHeight, dpr);
     }
   }
 
@@ -107,6 +116,48 @@ class SimulationEngine {
   }
 
   /**
+   * 应用新的电压设置
+   *
+   * 需要同步更新全局配置和物理实例参数
+   */
+  public applySettings(settings: Partial<VoltageSpecConfig>) {
+    // 1. 更新 Worker 线程内的全局常量副本
+    Object.assign(VoltageSpecs, settings);
+
+    // 2. 重新计算信号源的基准电压
+    this.signalD.baseHigh =
+      (VoltageSpecs.logicHighMin + VoltageSpecs.systemMax) / 2;
+    this.signalD.baseLow = VoltageSpecs.logicLowMax / 2;
+
+    this.signalClk.baseHigh = VoltageSpecs.outputHighMax;
+
+    this.dff.qSignal.baseHigh =
+      (VoltageSpecs.outputHighMin + VoltageSpecs.outputHighMax) / 2;
+    this.dff.qSignal.baseLow = VoltageSpecs.outputLowMax / 2;
+
+    // 3. 重置缓冲区 (物理层)
+    const baselineVolt = VoltageSpecs.outputLowMax;
+    this.buffer.reset(baselineVolt);
+
+    // 4. 强制修正当前信号电压 (物理层)
+    const snapSignal = (sig: Signal) => {
+      // 如果当前目标是高，直接设为新的 baseHigh；否则设为新的 baseLow
+      sig.currentValue = sig.targetLogic === 1 ? sig.baseHigh : sig.baseLow;
+    };
+    snapSignal(this.signalD);
+    snapSignal(this.signalClk);
+    snapSignal(this.dff.qSignal);
+
+    // 5. 重绘静态元素 (渲染层)
+    if (this.scope) {
+      this.scope.redrawStaticElements();
+    }
+
+    // 6. 重置时钟相位
+    this.clockPhase = 0;
+  }
+
+  /**
    * 启动仿真循环
    */
   public start() {
@@ -117,6 +168,7 @@ class SimulationEngine {
 
   /**
    * 主循环 (High Frequency Loop)
+   *
    * 目标：60fps 或更高 (取决于显示器刷新率)
    */
   private loop = (timestamp: number) => {
@@ -125,9 +177,9 @@ class SimulationEngine {
     if (!this.lastFrameTime) this.lastFrameTime = timestamp;
     let dt = (timestamp - this.lastFrameTime) / 1000;
 
-    // 【重要】钳位 (Clamping):
-    // 防止因浏览器卡顿、Tab 休眠导致 dt 过大，进而破坏物理稳定性
-    // 0.1s 意味着最低容忍 10fps，低于此帧率则物理时间变慢 ("子弹时间")
+    // 钳位 (Clamping):
+    // 防止因浏览器卡顿、Tab 休眠导致 dt 过大
+    // 最大允许单帧模拟 0.1秒
     if (dt > 0.1) dt = 0.1;
 
     this.lastFrameTime = timestamp;
@@ -136,10 +188,10 @@ class SimulationEngine {
     this.stepPhysics(dt);
 
     // 3. 渲染 (Rendering)
-    // 直接操作 OffscreenCanvas，不阻塞主线程
     if (this.scope) {
       this.scope.draw();
       this.scope.drawDigital();
+      this.scope.render();
     }
 
     // 4. UI 状态同步 (Throttling)
@@ -159,6 +211,7 @@ class SimulationEngine {
   private stepPhysics(dt: number) {
     // 更新时钟相位
     this.clockPhase += this.clockSpeed * dt * Simulation.baseFrameRate;
+
     // 防止浮点数精度溢出，限制在 0 ~ 2PI
     if (this.clockPhase > Math.PI * 2) this.clockPhase -= Math.PI * 2;
 
@@ -196,65 +249,18 @@ class SimulationEngine {
       q: this.dff.qSignal.currentValue,
     });
   }
-
-  /**
-   * 应用新的电压设置
-   *
-   * 需要同步更新全局配置和物理实例参数
-   */
-  public applySettings(settings: Partial<VoltageSpecConfig>) {
-    // 1. 更新 Worker 线程内的全局常量副本
-    Object.assign(VoltageSpecs, settings);
-
-    // 2. 重新计算信号源的基准电压
-    // 输入 D 的高电平基准 = (逻辑高阈值 + 系统最大值) / 2
-    this.signalD.baseHigh =
-      (VoltageSpecs.logicHighMin + VoltageSpecs.systemMax) / 2;
-    // 输入 D 的低电平基准 = 逻辑低阈值 / 2
-    this.signalD.baseLow = VoltageSpecs.logicLowMax / 2;
-
-    // 时钟 CLK 的高电平基准
-    this.signalClk.baseHigh = VoltageSpecs.outputHighMax;
-    // 时钟 CLK 的低电平基准通常是 0.0，如果 outputLowMax 变了也可以微调，这里暂且不变
-
-    // D触发器输出 Q 的基准
-    this.dff.qSignal.baseHigh =
-      (VoltageSpecs.outputHighMin + VoltageSpecs.outputHighMax) / 2;
-    this.dff.qSignal.baseLow = VoltageSpecs.outputLowMax / 2;
-
-    // 3. 示波器重绘
-
-    // 计算新的静默电压
-    const baselineVolt = VoltageSpecs.outputLowMax;
-
-    // 清空历史波形
-    this.buffer.reset(baselineVolt);
-
-    // 强制修正当前信号的物理电压 (Snap to new levels)
-    const snapSignal = (sig: Signal) => {
-      // 如果当前目标是高，直接设为新的 baseHigh；否则设为新的 baseLow
-      sig.currentValue = sig.targetLogic === 1 ? sig.baseHigh : sig.baseLow;
-    };
-
-    snapSignal(this.signalD);
-    snapSignal(this.signalClk);
-    snapSignal(this.dff.qSignal);
-
-    // 重置时钟相位
-    this.clockPhase = 0;
-  }
 }
 
 // --- Worker 入口 ---
 
 const engine = new SimulationEngine();
 
-self.onmessage = (e: MessageEvent<WorkerMessage>) => {
+self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
   const msg = e.data;
 
   switch (msg.type) {
     case "INIT":
-      engine.initRenderer(
+      await engine.initRenderer(
         msg.canvasWaveform,
         msg.canvasDigital,
         msg.width,

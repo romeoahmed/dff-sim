@@ -48,7 +48,7 @@ export const Simulation = {
   defaultSpeed: 30,
   defaultNoise: 10,
   baseFrameRate: 60,
-  bufferLength: 1024, // 环形缓冲区长度, 应为2的幂次方以优化性能
+  bufferLength: 2048, // 环形缓冲区长度, 应为2的幂次方以优化性能
   outputNoiseRatio: 0.5,
 } as const satisfies SimulationConfig;
 

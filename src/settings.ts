@@ -60,13 +60,13 @@ export function initSettingsSidebar(app: SimulationApp) {
     document.body.style.overflow = "hidden";
 
     // 初始化表单值
-    editableKeys.forEach((key) => {
+    for (const key of editableKeys) {
       const input = form.elements.namedItem(key);
       if (input instanceof HTMLInputElement) {
         input.value = String(VoltageSpecs[key]);
         input.placeholder = String(defaultSpecs[key]); // 设置淡色默认值
       }
-    });
+    }
 
     errorMsg.textContent = "";
     btnSave.disabled = false;
@@ -132,12 +132,12 @@ export function initSettingsSidebar(app: SimulationApp) {
   // 表单输入事件，实时校验
   form.addEventListener("input", () => {
     const values: Partial<VoltageSpecConfig> = {};
-    editableKeys.forEach((key) => {
+    for (const key of editableKeys) {
       const input = form.elements.namedItem(key);
       if (input instanceof HTMLInputElement) {
         values[key] = parseFloat(input.value);
       }
-    });
+    }
 
     const err = validate(values);
     errorMsg.textContent = err || "";
@@ -154,12 +154,12 @@ export function initSettingsSidebar(app: SimulationApp) {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const values: Partial<VoltageSpecConfig> = {};
-    editableKeys.forEach((key) => {
+    for (const key of editableKeys) {
       const input = form.elements.namedItem(key);
       if (input instanceof HTMLInputElement) {
         values[key] = parseFloat(input.value);
       }
-    });
+    }
 
     const err = validate(values);
     if (err) return;
@@ -175,12 +175,12 @@ export function initSettingsSidebar(app: SimulationApp) {
     // 恢复默认值到表单
     Object.assign(VoltageSpecs, defaultSpecs);
 
-    editableKeys.forEach((key) => {
+    for (const key of editableKeys) {
       const input = form.elements.namedItem(key);
       if (input instanceof HTMLInputElement) {
         input.value = String(defaultSpecs[key]);
       }
-    });
+    }
 
     errorMsg.textContent = "";
     errorMsg.classList.remove("active");

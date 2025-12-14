@@ -1,5 +1,6 @@
 /**
- * 示波器渲染器: 使用 PixiJS 进行高性能绘图
+ * renderer.ts
+ * 基于 PixiJS v8 MeshRope 的高性能示波器渲染器
  */
 
 import {
@@ -7,63 +8,101 @@ import {
   Container,
   Graphics,
   Text,
+  Color,
+  MeshRope,
+  Texture,
+  Point,
   DOMAdapter,
   WebWorkerAdapter,
 } from "pixi.js";
 import { Colors, VoltageSpecs, Simulation, Layout } from "./constants";
-import type { WaveformDataSource, ChannelConfig } from "./types";
+import type { WaveformDataSource } from "./types";
 
-// 注册 Web Worker 适配器
+// 使用 Web Worker 适配器
 DOMAdapter.set(WebWorkerAdapter);
+
+/**
+ * 渲染资源 (GPU 相关)
+ */
+interface ChannelRenderResource {
+  rope: MeshRope;
+  points: Point[];
+}
+
+/**
+ * 通道配置 (元数据)
+ */
+interface ChannelConfig {
+  color: string;
+  label: string;
+}
 
 export class Oscilloscope {
   private app: Application | null = null;
   private digitalApp: Application | null = null;
 
-  // 容器与画笔
+  // 容器
   private staticLayer = new Container();
   private dynamicLayer = new Container();
   private digitalStaticLayer = new Container();
   private digitalDynamicLayer = new Container();
 
+  // 文字容器 (用于批量销毁文字)
   private staticLabelContainer = new Container();
   private digitalLabelContainer = new Container();
 
-  // 复用 Graphics 实例
-  private waveformGraphics = new Graphics();
-  private digitalGraphics = new Graphics();
+  // 静态绘图画笔 (避免重复创建)
   private staticGraphics = new Graphics();
   private digitalStaticGraphics = new Graphics();
 
-  // 配置与数据
+  // --- 资源与配置分离 ---
+  // 配置：存储颜色、标签 (由 setData 设置)
   private waveformConfigs: ChannelConfig[] = [];
   private digitalConfigs: ChannelConfig[] = [];
+
+  // 资源：存储 Pixi 对象 (由 init 创建)
+  private waveformResources: ChannelRenderResource[] = [];
+  private digitalResources: ChannelRenderResource[] = [];
+
   private dataSource: WaveformDataSource | null = null;
 
-  // 状态
-  private isInitialized = false;
-  private width = 0;
-  private height = 0;
-  private digitalHeight = 0;
-  private readonly bufferLength = Simulation.bufferLength;
+  private isInitialized: boolean = false;
+  private width: number = 0;
+  private height: number = 0;
+  private digitalHeight: number = 0;
+  private readonly bufferLength: number = Simulation.bufferLength;
+
+  // 纹理缩放计算
+  private readonly waveformLineWidth = Layout.waveformLineWidth;
+  private readonly textureBaseHeight = 16; // Texture.WHITE 默认高度
+  private get ropeScaleY() {
+    return this.waveformLineWidth / this.textureBaseHeight;
+  }
 
   constructor() {}
 
+  /**
+   * 绑定数据源与配置
+   */
   setData(source: WaveformDataSource) {
     this.dataSource = source;
-    // 静态配置
+
+    // 1. 保存配置 (颜色/标签)
     this.waveformConfigs = [
       { color: Colors.clk, label: "CLK" },
       { color: Colors.d, label: "D" },
       { color: Colors.q, label: "Q" },
     ];
+
     this.digitalConfigs = [
       { color: Colors.clk, label: "CLK" },
       { color: Colors.d, label: "D" },
       { color: Colors.q, label: "Q" },
     ];
 
+    // 2. 如果资源已经初始化 (比如运行时切换数据源)，需要立即应用颜色
     if (this.isInitialized) {
+      this.applyStyles();
       this.redrawStaticElements();
     }
   }
@@ -80,13 +119,12 @@ export class Oscilloscope {
     this.height = height;
     this.digitalHeight = digitalHeight;
 
-    // 初始化 PixiJS 应用
     const appConfig = {
       resolution: dpr,
       backgroundAlpha: 0,
       preference: "webgpu" as const,
       antialias: true,
-      autoStart: false,
+      autoStart: false, // 手动渲染
     };
 
     this.app = new Application();
@@ -105,10 +143,9 @@ export class Oscilloscope {
       height: digitalHeight,
     });
 
-    // 组装 Stage
+    // 组装场景
     this.staticLayer.addChild(this.staticGraphics, this.staticLabelContainer);
     this.app.stage.addChild(this.staticLayer, this.dynamicLayer);
-    this.dynamicLayer.addChild(this.waveformGraphics);
 
     this.digitalStaticLayer.addChild(
       this.digitalStaticGraphics,
@@ -118,39 +155,117 @@ export class Oscilloscope {
       this.digitalStaticLayer,
       this.digitalDynamicLayer,
     );
-    this.digitalDynamicLayer.addChild(this.digitalGraphics);
+
+    // 初始化渲染资源
+    this.initMeshResources();
 
     this.isInitialized = true;
+
+    // 应用颜色配置并绘制静态 UI
+    this.applyStyles();
     this.redrawStaticElements();
+  }
+
+  /**
+   * 创建 MeshRope 和 Point 对象
+   */
+  private initMeshResources() {
+    // 辅助函数
+    const createResource = (layer: Container): ChannelRenderResource => {
+      const points = Array.from(
+        { length: this.bufferLength },
+        () => new Point(0, 0),
+      );
+
+      const rope = new MeshRope({
+        texture: Texture.WHITE,
+        points: points,
+      });
+
+      // Y 轴 scale 控制线宽
+      rope.scale.set(1, this.ropeScaleY);
+
+      layer.addChild(rope);
+      return { rope, points };
+    };
+
+    // 创建资源，不包含颜色信息
+    this.waveformResources = [
+      createResource(this.dynamicLayer),
+      createResource(this.dynamicLayer),
+      createResource(this.dynamicLayer),
+    ];
+
+    this.digitalResources = [
+      createResource(this.digitalDynamicLayer),
+      createResource(this.digitalDynamicLayer),
+      createResource(this.digitalDynamicLayer),
+    ];
+  }
+
+  /**
+   * 将 Config 中的颜色应用到 Resource 上
+   *
+   * 修复了颜色被覆盖重置的 Bug
+   */
+  private applyStyles() {
+    const apply = (res: ChannelRenderResource[], conf: ChannelConfig[]) => {
+      res.forEach((item, i) => {
+        if (conf[i]) {
+          item.rope.tint = new Color(conf[i].color);
+        }
+      });
+    };
+
+    apply(this.waveformResources, this.waveformConfigs);
+    apply(this.digitalResources, this.digitalConfigs);
   }
 
   resize(width: number, height: number, digitalHeight: number, dpr: number) {
     if (!this.isInitialized || !this.app || !this.digitalApp) return;
+
     this.width = width;
     this.height = height;
     this.digitalHeight = digitalHeight;
 
-    // 重新调整尺寸
     this.app.renderer.resize(width, height, dpr);
     this.digitalApp.renderer.resize(width, digitalHeight, dpr);
 
-    // 重新绘制静态元素
+    // 更新 MeshRope 点的 X 轴分布
+    const updateX = (resources: ChannelRenderResource[]) => {
+      const stepX = width / (this.bufferLength - 1);
+      for (const res of resources) {
+        for (let i = 0; i < this.bufferLength; i++) {
+          res.points[i]!.x = i * stepX;
+        }
+      }
+    };
+
+    updateX(this.waveformResources);
+    updateX(this.digitalResources);
+
     this.redrawStaticElements();
   }
 
-  // --- 静态绘制 (低频) ---
   redrawStaticElements() {
     if (!this.isInitialized) return;
 
-    // 清理
+    // --- 模拟示波器静态层 ---
     const g = this.staticGraphics;
     g.clear();
-    this.staticLabelContainer.removeChildren().forEach((c) => c.destroy(true));
 
+    // 彻底销毁旧文字
+    this.staticLabelContainer
+      .removeChildren()
+      .forEach((child) => child.destroy(true));
+
+    this.staticLayer.addChild(g);
     const { dOffset, clkOffset, qOffset } = Layout;
+
     this.drawThreshold(g, VoltageSpecs.logicHighMin, dOffset, false);
     this.drawThreshold(g, VoltageSpecs.logicLowMax, dOffset, true);
 
+    // 使用 Config 里的数据绘制标签
     const drawLabels = (
       container: Container,
       configs: ChannelConfig[],
@@ -160,21 +275,29 @@ export class Oscilloscope {
         this.drawLabel(container, conf.label, conf.color, offsets[i]!);
       });
     };
+
     drawLabels(this.staticLabelContainer, this.waveformConfigs, [
       clkOffset,
       dOffset,
       qOffset,
     ]);
 
-    // 数字层静态
+    // --- 数字示波器静态层 ---
     const gd = this.digitalStaticGraphics;
     gd.clear();
-    this.digitalLabelContainer.removeChildren().forEach((c) => c.destroy(true));
 
+    // 彻底销毁旧文字
+    this.digitalLabelContainer
+      .removeChildren()
+      .forEach((child) => child.destroy(true));
+
+    this.digitalStaticLayer.addChild(gd);
     const rowHeight = this.digitalHeight / this.digitalConfigs.length;
+
     this.digitalConfigs.forEach((conf, i) => {
       const cy = rowHeight * i + rowHeight / 2;
 
+      // 标签
       const text = new Text({
         text: conf.label,
         style: {
@@ -183,144 +306,119 @@ export class Oscilloscope {
           fontWeight: "bold",
           fill: conf.color,
         },
-        anchor: { x: 0, y: 0.5 }, // 垂直居中
+        anchor: { x: 0, y: 0.5 },
         x: Layout.labelOffsetX,
         y: cy,
       });
       this.digitalLabelContainer.addChild(text);
 
+      // 分隔线
       if (i < this.digitalConfigs.length - 1) {
         const sepY = cy + rowHeight / 2;
-        gd.stroke({
-          width: Layout.thresholdLineWidth,
-          color: Colors.grid,
-          alpha: 1.0,
-        });
-        // 虚线
-        for (let x = 0; x < this.width; x += 6) {
-          gd.moveTo(x, sepY).lineTo(Math.min(x + 2, this.width), sepY);
+        gd.stroke({ width: 1, color: Colors.grid, alpha: 1.0 });
+        const [dash, gap] = Layout.dashPattern;
+        for (let x = 0; x < this.width; x += dash + gap) {
+          gd.moveTo(x, sepY).lineTo(Math.min(x + dash, this.width), sepY);
         }
         gd.stroke();
       }
     });
   }
 
-  // --- 动态绘制 (高频 - 每帧调用) ---
   draw() {
     if (!this.isInitialized || !this.dataSource) return;
-
-    const g = this.waveformGraphics;
-    g.clear();
 
     const { dOffset, clkOffset, qOffset } = Layout;
     const { clk, d, q } = this.dataSource;
 
-    // 绘制波形
-    this.drawPolyLine(g, clk, Colors.clk, clkOffset);
-    this.drawPolyLine(g, d, Colors.d, dOffset);
-    this.drawPolyLine(g, q, Colors.q, qOffset);
+    // 更新模拟波形
+    this.updateRopePoints(this.waveformResources[0]!, clk, clkOffset);
+    this.updateRopePoints(this.waveformResources[1]!, d, dOffset);
+    this.updateRopePoints(this.waveformResources[2]!, q, qOffset);
   }
 
   drawDigital() {
     if (!this.isInitialized || !this.dataSource) return;
 
-    const g = this.digitalGraphics;
-    g.clear();
-
     const { digitalLogicStep } = Layout;
     const rowHeight = this.digitalHeight / 3;
     const { clk, d, q } = this.dataSource;
 
-    // 绘制数字波形
-    this.drawDigitalLine(g, clk, Colors.clk, digitalLogicStep, rowHeight * 0.5);
-    this.drawDigitalLine(g, d, Colors.d, digitalLogicStep, rowHeight * 1.5);
-    this.drawDigitalLine(g, q, Colors.q, digitalLogicStep, rowHeight * 2.5);
+    // 更新数字波形
+    this.updateDigitalRope(
+      this.digitalResources[0]!,
+      clk,
+      digitalLogicStep,
+      rowHeight * 0.5,
+    );
+    this.updateDigitalRope(
+      this.digitalResources[1]!,
+      d,
+      digitalLogicStep,
+      rowHeight * 1.5,
+    );
+    this.updateDigitalRope(
+      this.digitalResources[2]!,
+      q,
+      digitalLogicStep,
+      rowHeight * 2.5,
+    );
   }
 
-  private drawPolyLine(
-    g: Graphics,
+  private updateRopePoints(
+    res: ChannelRenderResource,
     data: Float32Array,
-    color: string,
     yOffset: number,
   ) {
-    const { voltageHeadroom, scaleY, waveformLineWidth } = Layout;
+    const { voltageHeadroom, scaleY } = Layout;
+    const points = res.points;
     const len = this.bufferLength;
     const ptr = this.dataSource!.writePointer;
-    const stepX = this.width / len;
     const baseY = yOffset + voltageHeadroom * scaleY;
+    const invScaleY = 1 / this.ropeScaleY; // 反向缩放以抵消 MeshRope 的 scale.y
 
-    // 设置一次样式
-    g.stroke({
-      width: waveformLineWidth,
-      color,
-      join: "round",
-      cap: "round",
-      alpha: 1.0,
-    });
-    g.beginPath();
+    let pointIdx = 0;
 
-    let x = 0;
-    // 双循环遍历 Ring Buffer
+    // 逻辑：[ptr...end] -> [0...ptr] 映射到 points[0...len]
     for (let i = ptr; i < len; i++) {
-      const y = baseY - data[i]! * scaleY;
-      if (i === ptr) g.moveTo(x, y);
-      else g.lineTo(x, y);
-      x += stepX;
+      points[pointIdx]!.y = (baseY - data[i]! * scaleY) * invScaleY;
+      pointIdx++;
     }
     for (let i = 0; i < ptr; i++) {
-      const y = baseY - data[i]! * scaleY;
-      g.lineTo(x, y);
-      x += stepX;
+      points[pointIdx]!.y = (baseY - data[i]! * scaleY) * invScaleY;
+      pointIdx++;
     }
-    g.stroke();
   }
 
-  // 绘制数字波形 (方波)
-  private drawDigitalLine(
-    g: Graphics,
+  private updateDigitalRope(
+    res: ChannelRenderResource,
     data: Float32Array,
-    color: string,
     step: number,
     centerY: number,
   ) {
+    const points = res.points;
     const len = this.bufferLength;
     const ptr = this.dataSource!.writePointer;
     const threshold = VoltageSpecs.logicHighMin;
-    const stepX = this.width / len;
-    const yHigh = centerY - step / 2;
-    const yLow = centerY + step / 2;
 
-    g.stroke({ width: Layout.waveformLineWidth, color, join: "round" });
-    g.beginPath();
+    const invScale = 1 / this.ropeScaleY;
+    // 预计算缩放后的 Y 坐标
+    const yHigh = (centerY - step / 2) * invScale;
+    const yLow = (centerY + step / 2) * invScale;
 
-    let lastLogic = data[ptr]! > threshold;
-    let curY = lastLogic ? yHigh : yLow;
+    let pointIdx = 0;
 
-    // 起点
-    g.moveTo(0, curY);
-
-    let x = 0;
-    const process = (val: number) => {
-      const isHigh = val > threshold;
-      if (isHigh !== lastLogic) {
-        const nextY = isHigh ? yHigh : yLow;
-        g.lineTo(x, curY); // 水平
-        g.lineTo(x, nextY); // 垂直 (方波特性)
-        lastLogic = isHigh;
-        curY = nextY;
-      }
-      x += stepX;
-    };
-
-    for (let i = ptr; i < len; i++) process(data[i]!);
-    for (let i = 0; i < ptr; i++) process(data[i]!);
-
-    // 收尾
-    g.lineTo(this.width, curY);
-    g.stroke();
+    // 逻辑：[ptr...end] -> [0...ptr] 映射到 points[0...len]
+    for (let i = ptr; i < len; i++) {
+      points[pointIdx]!.y = data[i]! > threshold ? yHigh : yLow;
+      pointIdx++;
+    }
+    for (let i = 0; i < ptr; i++) {
+      points[pointIdx]!.y = data[i]! > threshold ? yHigh : yLow;
+      pointIdx++;
+    }
   }
 
-  // 绘制阈值线
   private drawThreshold(
     g: Graphics,
     val: number,
@@ -329,17 +427,14 @@ export class Oscilloscope {
   ) {
     const { scaleY, voltageHeadroom, dashPattern, thresholdLineWidth } = Layout;
     const y = offset + voltageHeadroom * scaleY - val * scaleY;
-
     g.stroke({ width: thresholdLineWidth, color: Colors.stroke, alpha: 1.0 });
 
-    // 绘制虚线
     const [dash, gap] = dashPattern;
     for (let x = 0; x < this.width; x += dash + gap) {
       g.moveTo(x, y).lineTo(Math.min(x + dash, this.width), y);
     }
     g.stroke();
 
-    // 绘制标签
     const label = below
       ? `Low Level (${val.toFixed(1)}V)`
       : `High Level (${val.toFixed(1)}V)`;
@@ -349,14 +444,13 @@ export class Oscilloscope {
     const text = new Text({
       text: label,
       style: { fontFamily: "Segoe UI", fontSize: 12, fill: Colors.fill },
-      anchor: { x: 1, y: below ? 0 : 1 }, // 右对齐
+      anchor: { x: 1, y: below ? 0 : 1 },
       x: this.width - Layout.thresholdLabelMargin,
       y: textY,
     });
     this.staticLabelContainer.addChild(text);
   }
 
-  // 绘制通道标签
   private drawLabel(
     container: Container,
     str: string,
@@ -371,7 +465,7 @@ export class Oscilloscope {
         fontWeight: "bold",
         fill: color,
       },
-      anchor: { x: 0, y: 0.5 }, // 垂直居中
+      anchor: { x: 0, y: 0.5 },
       x: Layout.labelOffsetX,
       y: Layout.labelOffsetY + yOffset,
     });
@@ -388,8 +482,15 @@ export class Oscilloscope {
     this.isInitialized = false;
     this.app?.destroy(true, true);
     this.digitalApp?.destroy(true, true);
+
     this.app = null;
     this.digitalApp = null;
+
     this.dataSource = null;
+
+    this.waveformConfigs = [];
+    this.digitalConfigs = [];
+    this.waveformResources = [];
+    this.digitalResources = [];
   }
 }
