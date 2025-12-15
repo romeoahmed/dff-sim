@@ -21,9 +21,9 @@ export class Oscilloscope {
   private digitalApp: Application | null = null;
 
   // 容器与画笔
-  private staticLayer = new Container();
+  private staticLayer = new Container({ isRenderGroup: true });
   private dynamicLayer = new Container();
-  private digitalStaticLayer = new Container();
+  private digitalStaticLayer = new Container({ isRenderGroup: true });
   private digitalDynamicLayer = new Container();
 
   private staticLabelContainer = new Container();

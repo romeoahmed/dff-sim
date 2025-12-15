@@ -17,7 +17,6 @@ import type { VoltageSpecConfig, WorkerMessage } from "./types";
 
 /**
  * 仿真引擎类
- * 封装所有物理实体与渲染器，避免全局变量污染
  */
 class SimulationEngine {
   // --- 核心组件 ---

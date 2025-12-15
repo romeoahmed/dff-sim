@@ -44,8 +44,8 @@ export class Oscilloscope {
   // 容器
   private staticLayer = new Container();
   private dynamicLayer = new Container();
-  private digitalStaticLayer = new Container();
-  private digitalDynamicLayer = new Container();
+  private digitalStaticLayer = new Container({ isRenderGroup: true });
+  private digitalDynamicLayer = new Container({ isRenderGroup: true });
 
   // 文字容器 (用于批量销毁文字)
   private staticLabelContainer = new Container();
