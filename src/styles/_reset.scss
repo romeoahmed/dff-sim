@@ -20,10 +20,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-
-  // 字体抗锯齿，文字更清晰
-  // -webkit-font-smoothing: antialiased;
-  // -moz-osx-font-smoothing: grayscale;
 }
 
 // 自定义滚动条 (针对 Webkit 浏览器)

@@ -2,6 +2,8 @@
  * 接口类型定义：颜色配置、电压规范、布局配置、仿真参数、历史数据与瞬时信号
  */
 
+import type { Application } from "pixi.js";
+
 /**
  * 颜色配置
  */
@@ -206,6 +208,50 @@ export interface WaveformDataSource {
 }
 
 /**
+ * 渲染器策略接口
+ */
+export interface IRenderer {
+  /**
+   * 挂载到 Pixi 应用
+   * @param appW - 模拟波形 Pixi 应用实例
+   * @param appD - 数字波形 Pixi 应用实例
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字高度
+   */
+  attach(
+    appW: Application,
+    appD: Application,
+    width: number,
+    height: number,
+    digitalHeight: number,
+  ): void;
+
+  /**
+   * 注入数据源
+   */
+  setData(source: WaveformDataSource): void;
+
+  /**
+   * 响应尺寸变化
+   */
+  resize(width: number, height: number, digitalHeight: number): void;
+
+  /**
+   * 执行绘制逻辑
+   */
+  draw(): void;
+  drawDigital(): void;
+  redrawStaticElements(): void;
+
+  /**
+   * 卸载资源
+   * 清理自己创建的 Container/Graphics，但绝不能销毁 App
+   */
+  detach(): void;
+}
+
+/**
  * DOM 元素字典类型定义
  */
 export interface UIElements {
@@ -221,6 +267,8 @@ export interface UIElements {
   };
   controls: {
     btnToggleD: HTMLElement;
+    btnStd: HTMLElement;
+    btnCyber: HTMLElement;
     btnReset: HTMLElement;
     sldNoise: HTMLInputElement;
     sldSpeed: HTMLInputElement;
@@ -283,10 +331,19 @@ export interface WorkerSettingsMessage {
 }
 
 /**
+ * 渲染器切换消息
+ */
+export interface WorkerSwitchRendererMessage {
+  type: "SWITCH_RENDERER";
+  mode: "standard" | "cyberpunk";
+}
+
+/**
  * Worker 消息类型合集
  */
 export type WorkerMessage =
   | WorkerInitMessage
   | WorkerResizeMessage
   | WorkerParamMessage
-  | WorkerSettingsMessage;
+  | WorkerSettingsMessage
+  | WorkerSwitchRendererMessage;

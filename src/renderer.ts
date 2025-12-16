@@ -2,146 +2,125 @@
  * 示波器渲染器: 使用 PixiJS 进行高性能绘图
  */
 
-import {
-  Application,
-  Container,
-  Graphics,
-  Text,
-  DOMAdapter,
-  WebWorkerAdapter,
-} from "pixi.js";
+import { Container, Graphics, Text, Application } from "pixi.js";
 import { Colors, VoltageSpecs, Simulation, Layout } from "./constants";
-import type { WaveformDataSource, ChannelConfig } from "./types";
+import type { IRenderer, WaveformDataSource, ChannelConfig } from "./types";
 
-// 注册 Web Worker 适配器
-DOMAdapter.set(WebWorkerAdapter);
+export class StandardRenderer implements IRenderer {
+  // 舞台
+  private waveformStage: Container | null = null;
+  private digitalStage: Container | null = null;
 
-export class Oscilloscope {
-  private app: Application | null = null;
-  private digitalApp: Application | null = null;
-
-  // 容器与画笔
+  // 容器
   private staticLayer = new Container({ isRenderGroup: true });
   private dynamicLayer = new Container();
   private digitalStaticLayer = new Container({ isRenderGroup: true });
   private digitalDynamicLayer = new Container();
-
   private staticLabelContainer = new Container();
   private digitalLabelContainer = new Container();
 
-  // 复用 Graphics 实例
+  // 资源
   private waveformGraphics = new Graphics();
   private digitalGraphics = new Graphics();
   private staticGraphics = new Graphics();
   private digitalStaticGraphics = new Graphics();
 
-  // 配置与数据
-  private waveformConfigs: ChannelConfig[] = [];
-  private digitalConfigs: ChannelConfig[] = [];
+  // 数据源
   private dataSource: WaveformDataSource | null = null;
-
-  // 状态
-  private isInitialized = false;
   private width = 0;
   private height = 0;
   private digitalHeight = 0;
   private readonly bufferLength = Simulation.bufferLength;
 
+  // 缓存配置
+  private readonly waveformConfigs: ChannelConfig[] = [
+    { color: Colors.clk, label: "CLK" },
+    { color: Colors.d, label: "D" },
+    { color: Colors.q, label: "Q" },
+  ];
+  private readonly digitalConfigs: ChannelConfig[] = [
+    { color: Colors.clk, label: "CLK" },
+    { color: Colors.d, label: "D" },
+    { color: Colors.q, label: "Q" },
+  ];
+
   constructor() {}
 
-  setData(source: WaveformDataSource) {
-    this.dataSource = source;
-    // 静态配置
-    this.waveformConfigs = [
-      { color: Colors.clk, label: "CLK" },
-      { color: Colors.d, label: "D" },
-      { color: Colors.q, label: "Q" },
-    ];
-    this.digitalConfigs = [
-      { color: Colors.clk, label: "CLK" },
-      { color: Colors.d, label: "D" },
-      { color: Colors.q, label: "Q" },
-    ];
-
-    if (this.isInitialized) {
-      this.redrawStaticElements();
-    }
-  }
-
-  async init(
-    canvasWaveform: OffscreenCanvas,
-    canvasDigital: OffscreenCanvas,
+  /**
+   * 挂载到宿主 App
+   */
+  attach(
+    appW: Application,
+    appD: Application,
     width: number,
     height: number,
     digitalHeight: number,
-    dpr: number,
   ) {
+    this.waveformStage = appW.stage;
+    this.digitalStage = appD.stage;
     this.width = width;
     this.height = height;
     this.digitalHeight = digitalHeight;
 
-    // 初始化 PixiJS 应用
-    const appConfig = {
-      resolution: dpr,
-      backgroundAlpha: 0,
-      preference: "webgpu" as const,
-      antialias: true,
-      autoStart: false,
-    };
-
-    this.app = new Application();
-    await this.app.init({
-      ...appConfig,
-      canvas: canvasWaveform,
-      width,
-      height,
-    });
-
-    this.digitalApp = new Application();
-    await this.digitalApp.init({
-      ...appConfig,
-      canvas: canvasDigital,
-      width,
-      height: digitalHeight,
-    });
-
-    // 组装 Stage
+    // 1. 组装自己的层级
     this.staticLayer.addChild(this.staticGraphics, this.staticLabelContainer);
-    this.app.stage.addChild(this.staticLayer, this.dynamicLayer);
     this.dynamicLayer.addChild(this.waveformGraphics);
 
     this.digitalStaticLayer.addChild(
       this.digitalStaticGraphics,
       this.digitalLabelContainer,
     );
-    this.digitalApp.stage.addChild(
+    this.digitalDynamicLayer.addChild(this.digitalGraphics);
+
+    // 2. 挂载到 App 的 Stage 上
+    this.waveformStage.addChild(this.staticLayer, this.dynamicLayer);
+    this.digitalStage.addChild(
       this.digitalStaticLayer,
       this.digitalDynamicLayer,
     );
-    this.digitalDynamicLayer.addChild(this.digitalGraphics);
 
-    this.isInitialized = true;
+    // 3. 初次绘制
     this.redrawStaticElements();
   }
 
-  resize(width: number, height: number, digitalHeight: number, dpr: number) {
-    if (!this.isInitialized || !this.app || !this.digitalApp) return;
+  setData(source: WaveformDataSource) {
+    if (!this.digitalStage) return;
+
+    this.dataSource = source;
+    this.redrawStaticElements();
+  }
+
+  resize(width: number, height: number, digitalHeight: number) {
     this.width = width;
     this.height = height;
     this.digitalHeight = digitalHeight;
-
-    // 重新调整尺寸
-    this.app.renderer.resize(width, height, dpr);
-    this.digitalApp.renderer.resize(width, digitalHeight, dpr);
-
-    // 重新绘制静态元素
     this.redrawStaticElements();
+  }
+
+  /**
+   * 卸载 (切换时调用)
+   */
+  detach() {
+    // 1. 从舞台移除
+    this.waveformStage?.removeChild(this.staticLayer, this.dynamicLayer);
+    this.digitalStage?.removeChild(
+      this.digitalStaticLayer,
+      this.digitalDynamicLayer,
+    );
+
+    // 2. 销毁自己的资源
+    this.staticLayer.destroy({ children: true });
+    this.dynamicLayer.destroy({ children: true });
+    this.digitalStaticLayer.destroy({ children: true });
+    this.digitalDynamicLayer.destroy({ children: true });
+
+    // 3. 断开引用
+    this.waveformStage = null;
+    this.digitalStage = null;
   }
 
   // --- 静态绘制 (低频) ---
   redrawStaticElements() {
-    if (!this.isInitialized) return;
-
     // 清理
     const g = this.staticGraphics;
     g.clear();
@@ -191,23 +170,21 @@ export class Oscilloscope {
 
       if (i < this.digitalConfigs.length - 1) {
         const sepY = cy + rowHeight / 2;
+        for (let x = 0; x < this.width; x += 6) {
+          gd.moveTo(x, sepY).lineTo(Math.min(x + 2, this.width), sepY);
+        }
         gd.stroke({
           width: Layout.thresholdLineWidth,
           color: Colors.grid,
           alpha: 1.0,
         });
-        // 虚线
-        for (let x = 0; x < this.width; x += 6) {
-          gd.moveTo(x, sepY).lineTo(Math.min(x + 2, this.width), sepY);
-        }
-        gd.stroke();
       }
     });
   }
 
   // --- 动态绘制 (高频 - 每帧调用) ---
   draw() {
-    if (!this.isInitialized || !this.dataSource) return;
+    if (!this.dataSource) return;
 
     const g = this.waveformGraphics;
     g.clear();
@@ -222,7 +199,7 @@ export class Oscilloscope {
   }
 
   drawDigital() {
-    if (!this.isInitialized || !this.dataSource) return;
+    if (!this.dataSource) return;
 
     const g = this.digitalGraphics;
     g.clear();
@@ -246,17 +223,9 @@ export class Oscilloscope {
     const { voltageHeadroom, scaleY, waveformLineWidth } = Layout;
     const len = this.bufferLength;
     const ptr = this.dataSource!.writePointer;
-    const stepX = this.width / len;
+    const stepX = this.width / (len - 1);
     const baseY = yOffset + voltageHeadroom * scaleY;
 
-    // 设置一次样式
-    g.stroke({
-      width: waveformLineWidth,
-      color,
-      join: "round",
-      cap: "round",
-      alpha: 1.0,
-    });
     g.beginPath();
 
     let x = 0;
@@ -272,7 +241,13 @@ export class Oscilloscope {
       g.lineTo(x, y);
       x += stepX;
     }
-    g.stroke();
+    g.stroke({
+      width: waveformLineWidth,
+      color,
+      join: "round",
+      cap: "round",
+      alpha: 1.0,
+    });
   }
 
   // 绘制数字波形 (方波)
@@ -286,11 +261,10 @@ export class Oscilloscope {
     const len = this.bufferLength;
     const ptr = this.dataSource!.writePointer;
     const threshold = VoltageSpecs.logicHighMin;
-    const stepX = this.width / len;
+    const stepX = this.width / (len - 1);
     const yHigh = centerY - step / 2;
     const yLow = centerY + step / 2;
 
-    g.stroke({ width: Layout.waveformLineWidth, color, join: "round" });
     g.beginPath();
 
     let lastLogic = data[ptr]! > threshold;
@@ -317,7 +291,9 @@ export class Oscilloscope {
 
     // 收尾
     g.lineTo(this.width, curY);
-    g.stroke();
+
+    // 提交绘制
+    g.stroke({ width: Layout.waveformLineWidth, color, join: "round" });
   }
 
   // 绘制阈值线
@@ -330,14 +306,13 @@ export class Oscilloscope {
     const { scaleY, voltageHeadroom, dashPattern, thresholdLineWidth } = Layout;
     const y = offset + voltageHeadroom * scaleY - val * scaleY;
 
-    g.stroke({ width: thresholdLineWidth, color: Colors.stroke, alpha: 1.0 });
-
+    g.beginPath();
     // 绘制虚线
     const [dash, gap] = dashPattern;
     for (let x = 0; x < this.width; x += dash + gap) {
       g.moveTo(x, y).lineTo(Math.min(x + dash, this.width), y);
     }
-    g.stroke();
+    g.stroke({ width: thresholdLineWidth, color: Colors.stroke, alpha: 1.0 });
 
     // 绘制标签
     const label = below
@@ -376,20 +351,5 @@ export class Oscilloscope {
       y: Layout.labelOffsetY + yOffset,
     });
     container.addChild(text);
-  }
-
-  render() {
-    if (!this.isInitialized || !this.app || !this.digitalApp) return;
-    this.app.renderer.render(this.app.stage);
-    this.digitalApp.renderer.render(this.digitalApp.stage);
-  }
-
-  destroy() {
-    this.isInitialized = false;
-    this.app?.destroy(true, true);
-    this.digitalApp?.destroy(true, true);
-    this.app = null;
-    this.digitalApp = null;
-    this.dataSource = null;
   }
 }

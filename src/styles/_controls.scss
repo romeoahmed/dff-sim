@@ -27,6 +27,12 @@
     font-size: 0.9rem;
     font-weight: 500;
   }
+
+  p {
+    color: $ctp-subtext0;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
 }
 
 // 滑块样式
@@ -49,7 +55,7 @@ button:focus-visible {
 .btn {
   background-color: $ctp-blue;
   color: $ctp-base;
-  border: none;
+  border: 1px solid transparent;
   padding: 12px;
   border-radius: $radius-md;
   cursor: pointer;
@@ -77,11 +83,70 @@ button:focus-visible {
 }
 
 .btn-reset {
-  &:active,
   &.active {
     background: $ctp-red;
     border-color: $ctp-red;
   }
+}
+
+#btn-mode-std,
+#btn-mode-cyber {
+  // 未选中状态
+  &:not(.active) {
+    background-color: $ctp-surface0;
+    color: $ctp-subtext0;
+    border-color: $ctp-surface1;
+
+    &:hover {
+      background-color: $ctp-surface1;
+      color: $ctp-text;
+    }
+  }
+}
+
+// 工程模式激活：蓝色
+#btn-mode-std.active {
+  background-color: $ctp-blue;
+  color: $ctp-base;
+  border-color: $ctp-blue;
+}
+
+// 赛博模式激活：紫色 + 发光特效
+#btn-mode-cyber.active {
+  background-color: $ctp-mauve;
+  color: $ctp-base;
+  border-color: $ctp-mauve;
+  box-shadow: 0 0 12px rgba($ctp-mauve, 0.6); // 霓虹光晕
+  text-shadow: 0 0 5px rgb(255 255 255 / 50%);
+  animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from {
+    box-shadow: 0 0 8px rgba($ctp-mauve, 0.5);
+  }
+
+  to {
+    box-shadow: 0 0 16px rgba($ctp-mauve, 0.8);
+  }
+}
+
+// 按钮组 (用于横向排列按钮)
+.button-group {
+  display: flex;
+  gap: 10px;
+
+  .btn {
+    flex: 1; // 平分宽度
+    justify-content: center;
+    padding: 10px; // 稍微紧凑一点
+    font-size: 0.9rem;
+  }
+}
+
+// 默认隐藏 (On)
+.icon-on {
+  display: none;
 }
 
 // 信息框

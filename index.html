@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- SEO & 社交分享优化 -->
@@ -19,9 +19,6 @@
       content="WebGPU 渲染、多线程架构、电压浮动与工程鲁棒性演示"
     />
     <meta property="og:type" content="website" />
-
-    <!-- 主题色（浏览器地址栏/PWA） -->
-    <meta name="theme-color" content="#24273a" />
 
     <!-- 图标 -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -44,34 +41,30 @@
       type="button"
       aria-label="设置"
     >
-      <i class="fa-solid fa-gear" aria-hidden="true"></i>
+      <i class="fa-solid fa-gear"></i>
     </button>
 
     <!-- 侧边栏遮罩 -->
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
     <!-- 侧边栏面板-关于 -->
-    <aside id="sidebar-about" class="sidebar" aria-hidden="true">
+    <aside id="sidebar-about" class="sidebar">
       <header class="sidebar-header">
-        <h2>
-          <i class="fa-solid fa-book-open" aria-hidden="true"></i> 关于本项目
-        </h2>
+        <h2><i class="fa-solid fa-book-open"></i> 关于本项目</h2>
         <button
           id="btn-close-sidebar"
           class="btn-close"
           type="button"
           aria-label="关闭"
         >
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </header>
 
       <div class="sidebar-content">
         <!-- 核心架构 -->
         <section class="about-section">
-          <h3>
-            <i class="fa-solid fa-microchip" aria-hidden="true"></i> 核心架构
-          </h3>
+          <h3><i class="fa-solid fa-microchip"></i> 核心架构</h3>
           <p>
             本项目采用了先进的
             <strong>Actor 模型</strong> 架构与下一代图形技术，
@@ -95,9 +88,7 @@
 
         <!-- 物理原理 -->
         <section class="about-section">
-          <h3>
-            <i class="fa-solid fa-atom" aria-hidden="true"></i> 物理与数学原理
-          </h3>
+          <h3><i class="fa-solid fa-atom"></i> 物理与数学原理</h3>
           <ul>
             <li>
               <strong>Marsaglia Polar Method</strong
@@ -121,9 +112,7 @@
 
         <!-- 技术栈 -->
         <section class="about-section">
-          <h3>
-            <i class="fa-solid fa-layer-group" aria-hidden="true"></i> 技术栈
-          </h3>
+          <h3><i class="fa-solid fa-layer-group"></i> 技术栈</h3>
           <ul>
             <li><strong>TypeScript</strong> — 严格类型检查，提升代码可靠性</li>
             <li><strong>Vite</strong> — 现代化构建工具，极速热更新</li>
@@ -140,7 +129,7 @@
 
         <!-- 开发历程 -->
         <section class="about-section">
-          <h3><i class="fa-solid fa-road" aria-hidden="true"></i> 开发历程</h3>
+          <h3><i class="fa-solid fa-road"></i> 开发历程</h3>
           <p>
             这个项目见证了我从传统前端开发到现代化工程实践的转变。
             最初只是一个简单的 HTML + CSS + JavaScript 演示页面，后来逐步迁移到
@@ -160,7 +149,7 @@
 
         <!-- 致谢 -->
         <section class="about-section">
-          <h3><i class="fa-solid fa-heart" aria-hidden="true"></i> 致谢</h3>
+          <h3><i class="fa-solid fa-heart"></i> 致谢</h3>
           <ul class="thanks-list">
             <li>
               <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
@@ -210,11 +199,7 @@
       <footer class="sidebar-footer">
         <p>
           Made with
-          <i
-            class="fa-solid fa-heart"
-            style="color: #ed8796"
-            aria-hidden="true"
-          ></i>
+          <i class="fa-solid fa-heart" aria-hidden="true"></i>
           by 王宇轩
         </p>
         <p>Romeo Ahmed &lt;ahmedorqwn@gmail.com&gt;</p>
@@ -222,7 +207,7 @@
     </aside>
 
     <!-- 侧边栏面板-设置 -->
-    <aside id="sidebar-settings" class="sidebar" aria-hidden="true">
+    <aside id="sidebar-settings" class="sidebar">
       <header class="sidebar-header">
         <h2><i class="fa-solid fa-gear" aria-hidden="true"></i> 仿真设置</h2>
         <button
@@ -360,6 +345,23 @@
 
           <!-- 控制器 -->
           <div class="controls">
+            <!-- 渲染模式切换 -->
+            <div class="control-group">
+              <p>
+                <i class="fa-solid fa-paintbrush" aria-hidden="true"></i>
+                渲染模式 (Render Mode)
+              </p>
+
+              <div class="button-group">
+                <button id="btn-mode-std" class="btn active" type="button">
+                  <i class="fa-solid fa-drafting-compass"></i>Engineering
+                </button>
+                <button id="btn-mode-cyber" class="btn" type="button">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>Cyberpunk
+                </button>
+              </div>
+            </div>
+
             <div class="control-group">
               <label for="noiseSlider"
                 ><i class="fa-solid fa-bolt" aria-hidden="true"></i> 输入噪声
@@ -391,21 +393,21 @@
               <span id="speedVal">0.57 Hz</span>
             </div>
 
-            <div class="control-group button-group">
+            <div class="control-group">
               <button id="btn-toggle-d" class="btn" type="button">
                 <!-- 状态 0：Low -->
                 <span class="state-icon icon-off">
                   <i class="fa-solid fa-toggle-off"></i>
                 </span>
                 <!-- 状态 1：High -->
-                <span class="state-icon icon-on" style="display: none">
+                <span class="state-icon icon-on">
                   <i class="fa-solid fa-toggle-on"></i>
                 </span>
                 <span class="btn-text">Input D: LOW</span>
               </button>
               <button id="btn-reset" class="btn btn-reset" type="button">
-                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Reset
-                (Hold)
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                Reset (Hold)
               </button>
             </div>
 

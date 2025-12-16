@@ -75,6 +75,8 @@ export class SimulationApp {
       },
       controls: {
         btnToggleD: getEl("btn-toggle-d"),
+        btnStd: getEl("btn-mode-std"),
+        btnCyber: getEl("btn-mode-cyber"),
         btnReset: getEl("btn-reset"),
         sldNoise: getEl("noiseSlider") as HTMLInputElement,
         sldSpeed: getEl("speedSlider") as HTMLInputElement,
@@ -197,6 +199,19 @@ export class SimulationApp {
     controls.btnReset.addEventListener("pointerdown", () => setReset(true));
     controls.btnReset.addEventListener("pointerup", () => setReset(false));
     controls.btnReset.addEventListener("pointerleave", () => setReset(false));
+
+    // 5. 切换渲染模式
+    controls.btnStd.addEventListener("click", () => {
+      controls.btnStd.classList.add("active");
+      controls.btnCyber.classList.remove("active");
+      this.worker.postMessage({ type: "SWITCH_RENDERER", mode: "standard" });
+    });
+
+    controls.btnCyber.addEventListener("click", () => {
+      controls.btnCyber.classList.add("active");
+      controls.btnStd.classList.remove("active");
+      this.worker.postMessage({ type: "SWITCH_RENDERER", mode: "cyberpunk" });
+    });
   }
 
   /**

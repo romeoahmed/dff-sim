@@ -11,16 +11,23 @@
 
 import { Signal, DFlipFlop } from "./physics";
 import { WaveformBuffer } from "./buffer";
-import { Oscilloscope } from "./renderer";
+import { PixiHost } from "./pixi-host";
+import { StandardRenderer } from "./renderer";
+import { CyberpunkRenderer } from "./renderer-meshrope";
 import { Simulation, VoltageSpecs } from "./constants";
-import type { VoltageSpecConfig, WorkerMessage } from "./types";
+import type { VoltageSpecConfig, IRenderer, WorkerMessage } from "./types";
 
 /**
  * 仿真引擎类
  */
 class SimulationEngine {
   // --- 核心组件 ---
-  private scope: Oscilloscope | null = null;
+  private pixiHost = new PixiHost();
+  private renderer: IRenderer | null = null;
+
+  // 状态
+  private isSwitching: boolean = false;
+
   private buffer: WaveformBuffer;
   private signalD: Signal;
   private signalClk: Signal;
@@ -57,38 +64,63 @@ class SimulationEngine {
    * 异步初始化渲染器
    */
   public async initRenderer(
-    canvasWaveform: OffscreenCanvas,
-    canvasDigital: OffscreenCanvas,
-    width: number,
-    height: number,
-    digitalHeight: number,
+    cw: OffscreenCanvas,
+    cd: OffscreenCanvas,
+    w: number,
+    h: number,
+    dh: number,
     dpr: number,
   ) {
-    this.scope = new Oscilloscope();
-    this.scope.setData(this.buffer);
+    // 初始化 Pixi 环境
+    await this.pixiHost.init(cw, cd, w, h, dh, dpr);
 
-    await this.scope.init(
-      canvasWaveform,
-      canvasDigital,
+    // 挂载默认渲染器
+    this.switchRenderer("standard", w, h, dh);
+  }
+
+  /**
+   * 切换渲染器
+   */
+  public switchRenderer(
+    mode: "standard" | "cyberpunk",
+    w?: number,
+    h?: number,
+    dh?: number,
+  ) {
+    // 如果没有传入尺寸，使用当前 app 的尺寸
+    const width = w ?? this.pixiHost.appWaveform.screen.width;
+    const height = h ?? this.pixiHost.appWaveform.screen.height;
+    const digiHeight = dh ?? this.pixiHost.appDigital.screen.height;
+
+    // 1. 卸载旧的 (清理 Graphics/Mesh，保留 App)
+    if (this.renderer) {
+      this.renderer.detach();
+      this.renderer = null;
+    }
+
+    // 2. 创建新的
+    this.renderer =
+      mode === "cyberpunk" ? new CyberpunkRenderer() : new StandardRenderer();
+
+    // 3. 挂载到现有的 App 上 (极快，无上下文重建)
+    this.renderer.attach(
+      this.pixiHost.appWaveform,
+      this.pixiHost.appDigital,
       width,
       height,
-      digitalHeight,
-      dpr,
+      digiHeight,
     );
+
+    // 4. 注入数据
+    this.renderer.setData(this.buffer);
   }
 
   /**
    * 调整视口尺寸
    */
-  public resize(
-    width: number,
-    height: number,
-    digitalHeight: number,
-    dpr: number,
-  ) {
-    if (this.scope) {
-      this.scope.resize(width, height, digitalHeight, dpr);
-    }
+  public resize(w: number, h: number, dh: number, dpr: number) {
+    this.pixiHost.resize(w, h, dh, dpr);
+    this.renderer?.resize(w, h, dh);
   }
 
   /**
@@ -148,8 +180,8 @@ class SimulationEngine {
     snapSignal(this.dff.qSignal);
 
     // 5. 重绘静态元素 (渲染层)
-    if (this.scope) {
-      this.scope.redrawStaticElements();
+    if (this.renderer) {
+      this.renderer.redrawStaticElements();
     }
 
     // 6. 重置时钟相位
@@ -187,10 +219,10 @@ class SimulationEngine {
     this.stepPhysics(dt);
 
     // 3. 渲染 (Rendering)
-    if (this.scope) {
-      this.scope.draw();
-      this.scope.drawDigital();
-      this.scope.render();
+    if (this.renderer && !this.isSwitching) {
+      this.renderer.draw();
+      this.renderer.drawDigital();
+      this.pixiHost.render();
     }
 
     // 4. UI 状态同步 (Throttling)
@@ -280,6 +312,10 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
     case "SETTINGS_UPDATE":
       engine.applySettings(msg.settings);
+      break;
+
+    case "SWITCH_RENDERER":
+      engine.switchRenderer(msg.mode);
       break;
   }
 };
