@@ -4,5 +4,5 @@ export default defineConfig({
   build: {
     sourcemap: false,
   },
-  base: "/dff-sim/",
+  base: "/",
 }) satisfies UserConfig;
