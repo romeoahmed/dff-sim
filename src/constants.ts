@@ -35,8 +35,8 @@ export const VoltageSpecs = {
   outputLowMax: 0.2,
   systemMax: 2.5,
   clampMin: -0.5,
-  smoothingFactor: 0.5,
-  outputSmoothingFactor: 0.8,
+  smoothingFactor: 0.2,
+  outputSmoothingFactor: 0.4,
 } as const satisfies VoltageSpecConfig;
 
 /**

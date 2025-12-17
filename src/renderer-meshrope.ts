@@ -329,7 +329,7 @@ export class CyberpunkRenderer implements IRenderer {
       // 分隔线
       if (i < this.digitalConfigs.length - 1) {
         const sepY = cy + rowHeight / 2;
-        g.beginPath();
+        gd.beginPath();
         for (let x = 0; x < this.width; x += 6) {
           gd.moveTo(x, sepY).lineTo(Math.min(x + 2, this.width), sepY);
         }
