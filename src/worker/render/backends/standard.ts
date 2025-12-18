@@ -3,10 +3,16 @@
  */
 
 import { Container, Graphics, Text, Application } from "pixi.js";
-import { Colors, VoltageSpecs, Simulation, Layout } from "./constants";
-import type { IRenderer, WaveformDataSource, ChannelConfig } from "./types";
+import {
+  Colors,
+  VoltageSpecs,
+  Simulation,
+  Layout,
+} from "../../../common/constants";
+import type { WaveformDataSource, ChannelConfig } from "../../../common/types";
+import type { IRenderer } from "./base";
 
-export class StandardRenderer implements IRenderer {
+export class StdRenderer implements IRenderer {
   // 舞台
   private waveformStage: Container | null = null;
   private digitalStage: Container | null = null;

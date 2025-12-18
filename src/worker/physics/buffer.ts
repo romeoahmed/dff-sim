@@ -2,8 +2,8 @@
  * 数据缓冲区：用于存储波形数据
  */
 
-import { Simulation } from "./constants";
-import type { WaveformDataSource } from "./types";
+import { Simulation } from "../../common/constants";
+import type { WaveformDataSource } from "../../common/types";
 
 // Ring Buffer 实现
 export class WaveformBuffer implements WaveformDataSource {

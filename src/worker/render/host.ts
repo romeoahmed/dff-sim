@@ -1,5 +1,4 @@
 /**
- * pixi-host.ts
  * 负责管理 PixiJS Application 的生命周期
  * 全局唯一，只初始化一次，永不销毁 (直到 Worker 终止)
  */

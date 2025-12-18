@@ -1,6 +1,4 @@
 /**
- * renderer-meshrope.ts
- *
  * 基于 PixiJS v8 MeshRope 的高性能示波器渲染器
  */
 
@@ -14,8 +12,14 @@ import {
   Graphics,
   Text,
 } from "pixi.js";
-import { Colors, VoltageSpecs, Simulation, Layout } from "./constants";
-import type { IRenderer, WaveformDataSource, ChannelConfig } from "./types";
+import {
+  Colors,
+  VoltageSpecs,
+  Simulation,
+  Layout,
+} from "../../../common/constants";
+import type { WaveformDataSource, ChannelConfig } from "../../../common/types";
+import type { IRenderer } from "./base";
 
 /**
  * 渲染资源 (GPU 相关)
@@ -25,7 +29,7 @@ interface ChannelResource {
   points: Point[];
 }
 
-export class CyberpunkRenderer implements IRenderer {
+export class ExpRenderer implements IRenderer {
   private waveformStage: Container | null = null;
   private digitalStage: Container | null = null;
 
@@ -43,7 +47,6 @@ export class CyberpunkRenderer implements IRenderer {
 
   private waveformRes: ChannelResource[] = [];
   private digitalRes: ChannelResource[] = [];
-  private glowTexture: Texture | null = null;
 
   private dataSource: WaveformDataSource | null = null;
   private width = 0;
@@ -69,8 +72,7 @@ export class CyberpunkRenderer implements IRenderer {
 
   private get ropeScaleY() {
     // 目标宽度 / 纹理高度 = 缩放比例
-    // 为了发光效果，我们通常希望光晕比实线宽一点，这里乘以 4
-    return (this.waveformLineWidth * 4) / this.textureHeight;
+    return (this.waveformLineWidth * 18) / this.textureHeight;
   }
 
   constructor() {}
@@ -88,14 +90,10 @@ export class CyberpunkRenderer implements IRenderer {
     this.height = height;
     this.digitalHeight = digitalHeight;
 
-    // 1. 生成纹理
-    if (!this.glowTexture)
-      this.glowTexture = this.createGlowTexture(this.textureHeight);
-
-    // 2. 初始化 Mesh 资源
+    // 1. 初始化 Mesh 资源
     this.initMeshResources();
 
-    // 3. 挂载容器
+    // 2. 挂载容器
     this.staticLayer.addChild(this.staticLabelContainer);
     this.digitalStaticLayer.addChild(this.digitalLabelContainer);
     this.waveformStage.addChild(this.staticLayer, this.dynamicLayer);
@@ -104,9 +102,8 @@ export class CyberpunkRenderer implements IRenderer {
       this.digitalDynamicLayer,
     );
 
-    // 4. 绘制静态背景
+    // 3. 初始绘制
     this.redrawStaticElements();
-
     this.resize(width, height, digitalHeight);
   }
 
@@ -135,50 +132,11 @@ export class CyberpunkRenderer implements IRenderer {
     this.digitalStaticLayer.destroy({ children: true });
     this.digitalDynamicLayer.destroy({ children: true });
 
-    // 3. 销毁纹理
-    this.glowTexture?.destroy(true);
-    this.glowTexture = null;
-
+    // 3. 清空引用
     this.waveformRes = [];
     this.digitalRes = [];
     this.waveformStage = null;
     this.digitalStage = null;
-  }
-
-  /**
-   * 程序化生成霓虹纹理
-   */
-  private createGlowTexture(height: number): Texture {
-    const width = 1;
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext("2d")!;
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-
-    // 模拟光管截面：
-    // 中心(0.5): 高亮核心 (Alpha 0.8) -> 稍微留点余地给 ADD 模式叠加
-    // 中间(0.4-0.6): 核心光晕 (Alpha 0.4)
-    // 边缘(0.2-0.8): 氛围光晕 (Alpha 0.05) -> 极低，只提供颜色氛围
-
-    gradient.addColorStop(0.0, "rgba(255, 255, 255, 0)");
-    gradient.addColorStop(0.2, "rgba(255, 255, 255, 0.02)"); // 几乎不可见的外沿
-
-    // 柔和的外部辉光
-    gradient.addColorStop(0.35, "rgba(255, 255, 255, 0.15)");
-
-    // 核心区域
-    gradient.addColorStop(0.45, "rgba(255, 255, 255, 0.6)");
-    gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.95)"); // 最亮处
-    gradient.addColorStop(0.55, "rgba(255, 255, 255, 0.6)");
-
-    // 镜像
-    gradient.addColorStop(0.65, "rgba(255, 255, 255, 0.15)");
-    gradient.addColorStop(0.8, "rgba(255, 255, 255, 0.02)");
-    gradient.addColorStop(1.0, "rgba(255, 255, 255, 0)");
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-
-    return Texture.from(canvas);
   }
 
   /**
@@ -193,12 +151,9 @@ export class CyberpunkRenderer implements IRenderer {
       );
 
       const rope = new MeshRope({
-        texture: this.glowTexture!,
+        texture: Texture.WHITE,
         points: points,
       });
-
-      // 混合模式：ADD (叠加发光效果)
-      rope.blendMode = "add";
 
       // 缩放纹理
       rope.scale.set(1, this.ropeScaleY);
@@ -231,9 +186,6 @@ export class CyberpunkRenderer implements IRenderer {
       res.forEach((item, i) => {
         if (conf[i]) {
           item.rope.tint = new Color(conf[i].color);
-          // 在 ADD (叠加) 模式下，Alpha 控制的是发光的强度
-          // 0.8 是个不错的平衡点，既有颜色，核心又足够白
-          item.rope.alpha = 0.8;
         }
       });
     };

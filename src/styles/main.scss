@@ -3,11 +3,11 @@
 // ==============================================
 // 导入顺序很重要：变量 -> 重置 -> 布局 -> 组件 -> 响应式
 
-@use "variables";
-@use "reset";
-@use "layout";
-@use "oscilloscope";
-@use "chip";
-@use "controls";
-@use "sidebar";
-@use "responsive";
+@use "./base/variables";
+@use "./base/reset";
+@use "./base/layout";
+@use "./components/oscilloscope";
+@use "./components/chip";
+@use "./components/controls";
+@use "./components/sidebar";
+@use "./base/responsive";

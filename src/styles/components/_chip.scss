@@ -1,7 +1,7 @@
 // ==============================================
 // Chip Visualizer & Pin Styles
 // ==============================================
-@use "variables" as *;
+@use "../base/variables" as *;
 
 // Mixin: 发光效果
 @mixin glow($color) {

@@ -1,7 +1,7 @@
 // ==============================================
 // Controls: Sliders, Buttons, Info Box
 // ==============================================
-@use "variables" as *;
+@use "../base/variables" as *;
 
 // 控制面板容器
 .controls {
@@ -90,7 +90,7 @@ button:focus-visible {
 }
 
 #btn-mode-std,
-#btn-mode-cyber {
+#btn-mode-exp {
   // 未选中状态
   &:not(.active) {
     background-color: $ctp-surface0;
@@ -104,15 +104,15 @@ button:focus-visible {
   }
 }
 
-// 工程模式激活：蓝色
+// 标准后端激活：蓝色
 #btn-mode-std.active {
   background-color: $ctp-blue;
   color: $ctp-base;
   border-color: $ctp-blue;
 }
 
-// 赛博模式激活：紫色 + 发光特效
-#btn-mode-cyber.active {
+// 实验性后端激活：紫色 + 发光特效
+#btn-mode-exp.active {
   background-color: $ctp-mauve;
   color: $ctp-base;
   border-color: $ctp-mauve;

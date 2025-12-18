@@ -1,7 +1,7 @@
 // ==============================================
 // Oscilloscope Panel Styles
 // ==============================================
-@use "variables" as *;
+@use "../base/variables" as *;
 
 .oscilloscope-panel {
   background-color: $ctp-mantle;

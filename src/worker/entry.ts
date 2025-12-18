@@ -9,13 +9,14 @@
  * 5. 向主线程同步低频状态数据
  */
 
-import { Signal, DFlipFlop } from "./physics";
-import { WaveformBuffer } from "./buffer";
-import { PixiHost } from "./pixi-host";
-import { StandardRenderer } from "./renderer";
-import { CyberpunkRenderer } from "./renderer-meshrope";
-import { Simulation, VoltageSpecs } from "./constants";
-import type { VoltageSpecConfig, IRenderer, WorkerMessage } from "./types";
+import { Signal, DFlipFlop } from "./physics/engine";
+import { WaveformBuffer } from "./physics/buffer";
+import { PixiHost } from "./render/host";
+import { StdRenderer } from "./render/backends/standard";
+import { ExpRenderer } from "./render/backends/experimental";
+import { Simulation, VoltageSpecs } from "../common/constants";
+import type { VoltageSpecConfig, WorkerMessage } from "../common/types";
+import type { IRenderer } from "./render/backends/base";
 
 /**
  * 仿真引擎类
@@ -82,7 +83,7 @@ class SimulationEngine {
    * 切换渲染器
    */
   public switchRenderer(
-    mode: "standard" | "cyberpunk",
+    mode: "standard" | "experimental",
     w?: number,
     h?: number,
     dh?: number,
@@ -100,7 +101,7 @@ class SimulationEngine {
 
     // 2. 创建新的
     this.renderer =
-      mode === "cyberpunk" ? new CyberpunkRenderer() : new StandardRenderer();
+      mode === "experimental" ? new ExpRenderer() : new StdRenderer();
 
     // 3. 挂载到现有的 App 上 (极快，无上下文重建)
     this.renderer.attach(

@@ -3,11 +3,11 @@
  */
 
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import "./styles/main.scss";
+import "../styles/main.scss";
 
-import { SimulationApp } from "./simulator";
-import { initSettingsSidebar } from "./settings";
-import { initAboutSidebar } from "./about";
+import { SimulationApp } from "./app";
+import { initSettingsSidebar } from "./ui/settings";
+import { initAboutSidebar } from "./ui/about";
 
 // DOM 加载完成后启动
 document.addEventListener("DOMContentLoaded", () => {

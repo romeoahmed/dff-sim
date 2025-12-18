@@ -8,8 +8,8 @@
  * 4. 接收 Worker 的状态回传并显示
  */
 
-import { Layout, Simulation, VoltageSpecs } from "./constants";
-import SimulationWorker from "./simulation.worker?worker";
+import { Layout, Simulation, VoltageSpecs } from "../common/constants";
+import SimulationWorker from "../worker/entry?worker";
 import type {
   VoltageSpecConfig,
   UIElements,
@@ -17,7 +17,7 @@ import type {
   WorkerParamMessage,
   WorkerResizeMessage,
   WorkerStatusMessage,
-} from "./types";
+} from "../common/types";
 
 /**
  * 仿真应用主类
@@ -76,7 +76,7 @@ export class SimulationApp {
       controls: {
         btnToggleD: getEl("btn-toggle-d"),
         btnStd: getEl("btn-mode-std"),
-        btnCyber: getEl("btn-mode-cyber"),
+        btnExp: getEl("btn-mode-exp"),
         btnReset: getEl("btn-reset"),
         sldNoise: getEl("noiseSlider") as HTMLInputElement,
         sldSpeed: getEl("speedSlider") as HTMLInputElement,
@@ -203,14 +203,17 @@ export class SimulationApp {
     // 5. 切换渲染模式
     controls.btnStd.addEventListener("click", () => {
       controls.btnStd.classList.add("active");
-      controls.btnCyber.classList.remove("active");
+      controls.btnExp.classList.remove("active");
       this.worker.postMessage({ type: "SWITCH_RENDERER", mode: "standard" });
     });
 
-    controls.btnCyber.addEventListener("click", () => {
-      controls.btnCyber.classList.add("active");
+    controls.btnExp.addEventListener("click", () => {
+      controls.btnExp.classList.add("active");
       controls.btnStd.classList.remove("active");
-      this.worker.postMessage({ type: "SWITCH_RENDERER", mode: "cyberpunk" });
+      this.worker.postMessage({
+        type: "SWITCH_RENDERER",
+        mode: "experimental",
+      });
     });
   }
 

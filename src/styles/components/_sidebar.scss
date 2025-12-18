@@ -2,7 +2,7 @@
 // Sidebar: About / Credits Panel
 // ==============================================
 @use "sass:color";
-@use "variables" as *;
+@use "../base/variables" as *;
 
 // 关于按钮（固定右上角）
 .btn-about {

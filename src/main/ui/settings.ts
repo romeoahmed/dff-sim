@@ -2,9 +2,9 @@
  * 设置侧边栏功能
  */
 
-import { VoltageSpecs } from "./constants";
-import type { VoltageSpecConfig } from "./types";
-import { SimulationApp } from "./simulator";
+import { VoltageSpecs } from "../../common/constants";
+import type { VoltageSpecConfig } from "../../common/types";
+import { SimulationApp } from "../app";
 
 // 可编辑的设置项
 const editableKeys: (keyof VoltageSpecConfig)[] = [
