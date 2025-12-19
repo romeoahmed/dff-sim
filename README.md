@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.2-646cff)
+![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.3-646cff)
 ![PixiJS](<https://img.shields.io/badge/PixiJS-v8_(WebGPU)-e72264>)
 
 这是一个基于 Web 的 D 触发器 (D Flip-Flop) 物理行为仿真项目。
@@ -17,7 +17,7 @@
 
 - **WebGPU 优先**：渲染核心采用 PixiJS v8，优先调用 WebGPU API，在不支持的环境下自动回退至 WebGL。
 - **Web Worker 渲染**：利用 `OffscreenCanvas` 将 PixiJS 实例完全运行在 Worker 线程中。**主线程的 DOM 操作（如侧边栏动画、复杂的 CSS 重排）完全不会阻塞示波器的 60FPS/144FPS 渲染循环**。
-- **Graphics 批处理优化**：采用 PixiJS 的 `Graphics` API 配合 WebGPU 的批处理能力，在保证**方波垂直边缘抗锯齿**的同时，依然维持极低的 CPU/GPU 开销。
+- **批处理优化**：采用 PixiJS 的 `Graphics` 与 `MeshRope` 配合 WebGPU 的批处理能力，在同时绘制上千个数据点时，依旧维持极低的 CPU/GPU 开销。
 - **动静分离**：将网格、标签等静态元素与波形动态元素分层管理，大幅减少每帧的 Draw Call。
 
 ### 2. 硬核物理模拟引擎 (`src/physics.ts`)
