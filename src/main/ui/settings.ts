@@ -15,7 +15,7 @@ const editableKeys: (keyof VoltageSpecConfig)[] = [
   "outputLowMax",
 ];
 
-// 保存默认值用于重置 (浅拷贝)
+// 保存默认值用于重置
 const defaultSpecs = { ...VoltageSpecs };
 
 // 设置侧边栏初始化

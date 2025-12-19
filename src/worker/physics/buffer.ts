@@ -16,6 +16,11 @@ export class WaveformBuffer implements WaveformDataSource {
   // 内部指针
   private _writePointer: number = 0;
 
+  /**
+   * 初始化缓冲区
+   * @param length - 缓冲区长度
+   * @param fillValue - 初始填充值
+   */
   constructor(length: number = Simulation.bufferLength, fillValue: number = 0) {
     this.length = length;
     this.d = new Float32Array(length).fill(fillValue);
@@ -32,6 +37,10 @@ export class WaveformBuffer implements WaveformDataSource {
 
   /**
    * 推入新数据
+   *
+   * @param dVal - D 引脚电压值
+   * @param clkVal - CLK 引脚电压值
+   * @param qVal - Q 引脚电压值
    */
   push(dVal: number, clkVal: number, qVal: number) {
     this.d[this._writePointer] = dVal;
@@ -44,6 +53,8 @@ export class WaveformBuffer implements WaveformDataSource {
 
   /**
    * 重置数据
+   *
+   * @param fillValue - 重置时的填充值
    */
   reset(fillValue: number = 0) {
     this.d.fill(fillValue);

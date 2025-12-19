@@ -1,7 +1,6 @@
 /**
  * 核心仿真引擎 (Worker 线程)
  *
- * 职责：
  * 1. 维护物理世界状态 (Signal, FlipFlop)
  * 2. 管理数据缓冲区 (WaveformBuffer)
  * 3. 执行 OffscreenCanvas 渲染 (Oscilloscope)
@@ -22,7 +21,7 @@ import type { IRenderer } from "./render/backends/base";
  * 仿真引擎类
  */
 class SimulationEngine {
-  // --- 核心组件 ---
+  // Pixi 主机
   private pixiHost = new PixiHost();
   private renderer: IRenderer | null = null;
 
@@ -34,17 +33,22 @@ class SimulationEngine {
   private signalClk: Signal;
   private dff: DFlipFlop;
 
-  // --- 仿真状态 ---
+  // 信号时钟控制
   private clockPhase: number = 0;
   private clockSpeed: number =
     Simulation.defaultSpeed * Simulation.clockSpeedFactor;
+
+  // 重置信号
   private resetActive: boolean = false;
 
-  // --- 循环控制 ---
+  // 循环控制
   private lastFrameTime: number = 0;
   private lastUiUpdateTime: number = 0;
   private animationFrameId: number | null = null;
 
+  /**
+   * 初始化仿真引擎
+   */
   constructor() {
     // 初始化物理实体
     this.buffer = new WaveformBuffer(
@@ -63,6 +67,12 @@ class SimulationEngine {
 
   /**
    * 异步初始化渲染器
+   * @param cw - 模拟波形画布
+   * @param cd - 数字波形画布
+   * @param w - 画布宽度
+   * @param h - 模拟波形画布高度
+   * @param dh - 数字波形画布高度
+   * @param dpr - 设备像素比
    */
   public async initRenderer(
     cw: OffscreenCanvas,
@@ -81,6 +91,10 @@ class SimulationEngine {
 
   /**
    * 切换渲染器
+   * @param mode - 渲染器模式
+   * @param w - 画布宽度
+   * @param h - 模拟波形画布高度
+   * @param dh - 数字波形画布高度
    */
   public switchRenderer(
     mode: "standard" | "experimental",
@@ -88,12 +102,12 @@ class SimulationEngine {
     h?: number,
     dh?: number,
   ) {
-    // 如果没有传入尺寸，使用当前 app 的尺寸
+    // 若无传入尺寸，使用当前 app 的尺寸
     const width = w ?? this.pixiHost.appWaveform.screen.width;
     const height = h ?? this.pixiHost.appWaveform.screen.height;
     const digiHeight = dh ?? this.pixiHost.appDigital.screen.height;
 
-    // 1. 卸载旧的 (清理 Graphics/Mesh，保留 App)
+    // 1. 卸载旧的
     if (this.renderer) {
       this.renderer.detach();
       this.renderer = null;
@@ -103,7 +117,7 @@ class SimulationEngine {
     this.renderer =
       mode === "experimental" ? new ExpRenderer() : new StdRenderer();
 
-    // 3. 挂载到现有的 App 上 (极快，无上下文重建)
+    // 3. 挂载到现有的 App 上
     this.renderer.attach(
       this.pixiHost.appWaveform,
       this.pixiHost.appDigital,
@@ -117,7 +131,11 @@ class SimulationEngine {
   }
 
   /**
-   * 调整视口尺寸
+   * 调整尺寸
+   * @param w - 新宽度
+   * @param h - 新高度
+   * @param dh - 数字波形新高度
+   * @param dpr - 设备像素比
    */
   public resize(w: number, h: number, dh: number, dpr: number) {
     this.pixiHost.resize(w, h, dh, dpr);
@@ -126,6 +144,8 @@ class SimulationEngine {
 
   /**
    * 更新仿真参数
+   * @param key - 参数键
+   * @param value - 参数值
    */
   public updateParam(key: string, value: number | boolean) {
     switch (key) {
@@ -150,7 +170,7 @@ class SimulationEngine {
   /**
    * 应用新的电压设置
    *
-   * 需要同步更新全局配置和物理实例参数
+   * @param settings - 部分电压规格配置
    */
   public applySettings(settings: Partial<VoltageSpecConfig>) {
     // 1. 更新 Worker 线程内的全局常量副本
@@ -167,20 +187,19 @@ class SimulationEngine {
       (VoltageSpecs.outputHighMin + VoltageSpecs.outputHighMax) / 2;
     this.dff.qSignal.baseLow = VoltageSpecs.outputLowMax / 2;
 
-    // 3. 重置缓冲区 (物理层)
+    // 3. 重置缓冲区
     const baselineVolt = VoltageSpecs.outputLowMax;
     this.buffer.reset(baselineVolt);
 
-    // 4. 强制修正当前信号电压 (物理层)
+    // 4. 强制修正当前信号电压
     const snapSignal = (sig: Signal) => {
-      // 如果当前目标是高，直接设为新的 baseHigh；否则设为新的 baseLow
       sig.currentValue = sig.targetLogic === 1 ? sig.baseHigh : sig.baseLow;
     };
     snapSignal(this.signalD);
     snapSignal(this.signalClk);
     snapSignal(this.dff.qSignal);
 
-    // 5. 重绘静态元素 (渲染层)
+    // 5. 重绘静态元素
     if (this.renderer) {
       this.renderer.redrawStaticElements();
     }
@@ -202,6 +221,8 @@ class SimulationEngine {
    * 主循环 (High Frequency Loop)
    *
    * 目标：60fps 或更高 (取决于显示器刷新率)
+   *
+   * @param timestamp - 当前时间戳
    */
   private loop = (timestamp: number) => {
     // 1. DeltaTime 计算与钳位
@@ -209,48 +230,49 @@ class SimulationEngine {
     if (!this.lastFrameTime) this.lastFrameTime = timestamp;
     let dt = (timestamp - this.lastFrameTime) / 1000;
 
-    // 钳位 (Clamping):
+    // 钳位:
     // 防止因浏览器卡顿、Tab 休眠导致 dt 过大
     // 最大允许单帧模拟 0.1秒
     if (dt > 0.1) dt = 0.1;
 
     this.lastFrameTime = timestamp;
 
-    // 2. 物理步进 (Physics Step)
+    // 2. 物理步进
     this.stepPhysics(dt);
 
-    // 3. 渲染 (Rendering)
+    // 3. 渲染
     if (this.renderer && !this.isSwitching) {
       this.renderer.draw();
       this.renderer.drawDigital();
       this.pixiHost.render();
     }
 
-    // 4. UI 状态同步 (Throttling)
-    // 降低 postMessage 频率，避免阻塞主线程的消息队列
-    // 每 50ms 同步一次 (20fps)，足够人眼阅读数值
+    // 4. UI 状态同步
+    // 每 50ms 同步一次 (20fps)
     if (timestamp - this.lastUiUpdateTime > 50) {
       this.syncUiStatus();
       this.lastUiUpdateTime = timestamp;
     }
 
+    // 5. 请求下一帧
     this.animationFrameId = requestAnimationFrame(this.loop);
   };
 
   /**
    * 执行单步物理计算
+   * @param dt - 时间增量 (秒)
    */
   private stepPhysics(dt: number) {
     // 更新时钟相位
     this.clockPhase += this.clockSpeed * dt * Simulation.baseFrameRate;
 
-    // 防止浮点数精度溢出，限制在 0 ~ 2PI
+    // 累加相位限制在 [0, 2PI]
     if (this.clockPhase > Math.PI * 2) this.clockPhase -= Math.PI * 2;
 
     // 生成时钟信号
     this.signalClk.targetLogic = Math.sin(this.clockPhase) > 0 ? 1 : 0;
 
-    // 更新各信号电压 (含噪声与 RC 滤波)
+    // 更新各信号电压
     this.signalClk.update(dt);
     this.signalD.update(dt);
 

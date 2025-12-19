@@ -53,7 +53,12 @@ export class StdRenderer implements IRenderer {
   constructor() {}
 
   /**
-   * 挂载到宿主 App
+   * 挂载到 Pixi 应用
+   * @param appW - 模拟波形 Pixi 应用实例
+   * @param appD - 数字波形 Pixi 应用实例
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字高度
    */
   attach(
     appW: Application,
@@ -89,6 +94,10 @@ export class StdRenderer implements IRenderer {
     this.redrawStaticElements();
   }
 
+  /**
+   * 注入数据源
+   * @param source - 波形数据源
+   */
   setData(source: WaveformDataSource) {
     if (!this.digitalStage) return;
 
@@ -96,6 +105,12 @@ export class StdRenderer implements IRenderer {
     this.redrawStaticElements();
   }
 
+  /**
+   * 响应尺寸变化
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字波形逻辑高度
+   */
   resize(width: number, height: number, digitalHeight: number) {
     this.width = width;
     this.height = height;
@@ -104,7 +119,7 @@ export class StdRenderer implements IRenderer {
   }
 
   /**
-   * 卸载 (切换时调用)
+   * 卸载资源
    */
   detach() {
     // 1. 从舞台移除
@@ -125,7 +140,9 @@ export class StdRenderer implements IRenderer {
     this.digitalStage = null;
   }
 
-  // --- 静态绘制 (低频) ---
+  /**
+   * 重绘静态元素 (网格线、标签等)
+   */
   redrawStaticElements() {
     // 清理
     const g = this.staticGraphics;
@@ -133,9 +150,12 @@ export class StdRenderer implements IRenderer {
     this.staticLabelContainer.removeChildren().forEach((c) => c.destroy(true));
 
     const { dOffset, clkOffset, qOffset } = Layout;
+
+    // 绘制阈值线
     this.drawThreshold(g, VoltageSpecs.logicHighMin, dOffset, false);
     this.drawThreshold(g, VoltageSpecs.logicLowMax, dOffset, true);
 
+    // 绘制标签
     const drawLabels = (
       container: Container,
       configs: ChannelConfig[],
@@ -151,7 +171,7 @@ export class StdRenderer implements IRenderer {
       qOffset,
     ]);
 
-    // 数字层静态
+    // 数字示波器部分
     const gd = this.digitalStaticGraphics;
     gd.clear();
     this.digitalLabelContainer.removeChildren().forEach((c) => c.destroy(true));
@@ -174,6 +194,7 @@ export class StdRenderer implements IRenderer {
       });
       this.digitalLabelContainer.addChild(text);
 
+      // 分割线
       if (i < this.digitalConfigs.length - 1) {
         const sepY = cy + rowHeight / 2;
         for (let x = 0; x < this.width; x += 6) {
@@ -188,7 +209,9 @@ export class StdRenderer implements IRenderer {
     });
   }
 
-  // --- 动态绘制 (高频 - 每帧调用) ---
+  /**
+   * 绘制模拟波形
+   */
   draw() {
     if (!this.dataSource) return;
 
@@ -204,6 +227,9 @@ export class StdRenderer implements IRenderer {
     this.drawPolyLine(g, q, Colors.q, qOffset);
   }
 
+  /**
+   * 绘制数字波形
+   */
   drawDigital() {
     if (!this.dataSource) return;
 
@@ -220,6 +246,13 @@ export class StdRenderer implements IRenderer {
     this.drawDigitalLine(g, q, Colors.q, digitalLogicStep, rowHeight * 2.5);
   }
 
+  /**
+   * 绘制模拟波形折线
+   * @param g - Graphics 对象
+   * @param data - 数据源
+   * @param color - 线条颜色
+   * @param yOffset - Y 轴偏移
+   */
   private drawPolyLine(
     g: Graphics,
     data: Float32Array,
@@ -256,7 +289,14 @@ export class StdRenderer implements IRenderer {
     });
   }
 
-  // 绘制数字波形 (方波)
+  /**
+   * 绘制数字波形折线
+   * @param g - Graphics 对象
+   * @param data - 数据源
+   * @param color - 线条颜色
+   * @param step - 步长
+   * @param centerY - 中心 Y 坐标
+   */
   private drawDigitalLine(
     g: Graphics,
     data: Float32Array,
@@ -302,7 +342,13 @@ export class StdRenderer implements IRenderer {
     g.stroke({ width: Layout.waveformLineWidth, color, join: "round" });
   }
 
-  // 绘制阈值线
+  /**
+   * 绘制阈值线
+   * @param g - Graphics 对象
+   * @param val - 阈值电压
+   * @param offset - Y 轴偏移
+   * @param below - 是否为低电平阈值
+   */
   private drawThreshold(
     g: Graphics,
     val: number,
@@ -337,7 +383,13 @@ export class StdRenderer implements IRenderer {
     this.staticLabelContainer.addChild(text);
   }
 
-  // 绘制通道标签
+  /**
+   * 绘制通道标签
+   * @param container - 容器
+   * @param str - 标签文本
+   * @param color - 文字颜色
+   * @param yOffset - Y 轴偏移
+   */
   private drawLabel(
     container: Container,
     str: string,

@@ -2,7 +2,6 @@
  * 关于侧边栏功能
  */
 
-// 关于侧边栏初始化
 export function initAboutSidebar() {
   const btnAbout = document.getElementById("btn-about");
   const btnClose = document.getElementById("btn-close-sidebar");

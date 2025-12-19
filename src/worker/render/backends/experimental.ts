@@ -30,6 +30,7 @@ interface ChannelResource {
 }
 
 export class ExpRenderer implements IRenderer {
+  // 舞台
   private waveformStage: Container | null = null;
   private digitalStage: Container | null = null;
 
@@ -48,6 +49,7 @@ export class ExpRenderer implements IRenderer {
   private waveformRes: ChannelResource[] = [];
   private digitalRes: ChannelResource[] = [];
 
+  // 状态
   private dataSource: WaveformDataSource | null = null;
   private width = 0;
   private height = 0;
@@ -67,6 +69,7 @@ export class ExpRenderer implements IRenderer {
     { color: Colors.q, label: "Q" },
   ];
 
+  // 纹理
   private readonly waveformLineWidth = Layout.waveformLineWidth; // 波形线条宽度
   private readonly textureHeight = 16; // 发光纹理高度，越大光晕越宽
 
@@ -77,6 +80,14 @@ export class ExpRenderer implements IRenderer {
 
   constructor() {}
 
+  /**
+   * 挂载到 Pixi 应用
+   * @param appW - 模拟波形 Pixi 应用实例
+   * @param appD - 数字波形 Pixi 应用实例
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字高度
+   */
   attach(
     appW: Application,
     appD: Application,
@@ -109,6 +120,7 @@ export class ExpRenderer implements IRenderer {
 
   /**
    * 绑定数据源与配置
+   * @param source - 波形数据源
    */
   setData(source: WaveformDataSource) {
     if (!this.digitalStage) return;
@@ -118,6 +130,9 @@ export class ExpRenderer implements IRenderer {
     this.redrawStaticElements();
   }
 
+  /**
+   * 卸载资源
+   */
   detach() {
     // 1. 移除
     this.waveformStage?.removeChild(this.staticLayer, this.dynamicLayer);
@@ -178,8 +193,6 @@ export class ExpRenderer implements IRenderer {
 
   /**
    * 将 Config 中的颜色应用到 Resource 上
-   *
-   * 修复了颜色被覆盖重置的 Bug
    */
   private applyStyles() {
     const apply = (res: ChannelResource[], conf: ChannelConfig[]) => {
@@ -194,6 +207,12 @@ export class ExpRenderer implements IRenderer {
     apply(this.digitalRes, this.digitalConfigs);
   }
 
+  /**
+   * 响应尺寸变化
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字波形逻辑高度
+   */
   resize(width: number, height: number, digitalHeight: number) {
     this.width = width;
     this.height = height;
@@ -215,6 +234,9 @@ export class ExpRenderer implements IRenderer {
     this.redrawStaticElements();
   }
 
+  /**
+   * 重绘静态元素 (网格线、标签等)
+   */
   redrawStaticElements() {
     // --- 模拟示波器静态层 ---
     const g = this.staticGraphics;
@@ -290,6 +312,9 @@ export class ExpRenderer implements IRenderer {
     });
   }
 
+  /**
+   * 绘制模拟波形
+   */
   draw() {
     if (!this.dataSource) return;
 
@@ -302,6 +327,9 @@ export class ExpRenderer implements IRenderer {
     this.updateRopePoints(this.waveformRes[2]!, q, qOffset);
   }
 
+  /**
+   * 绘制数字波形
+   */
   drawDigital() {
     if (!this.dataSource) return;
 
@@ -330,6 +358,9 @@ export class ExpRenderer implements IRenderer {
     );
   }
 
+  /**
+   * 更新模拟波形 Rope 点 Y 坐标
+   */
   private updateRopePoints(
     res: ChannelResource,
     data: Float32Array,
@@ -355,6 +386,13 @@ export class ExpRenderer implements IRenderer {
     }
   }
 
+  /**
+   * 更新数字波形 Rope 点 Y 坐标
+   * @param res - 渲染资源
+   * @param data - 数据源
+   * @param step - 逻辑高低电平间距
+   * @param centerY - 该通道中心 Y 坐标
+   */
   private updateDigitalRope(
     res: ChannelResource,
     data: Float32Array,
@@ -384,6 +422,13 @@ export class ExpRenderer implements IRenderer {
     }
   }
 
+  /**
+   * 绘制阈值线
+   * @param g - Graphics 对象
+   * @param val - 电压值
+   * @param offset - Y 偏移
+   * @param below - 是否为低电平线
+   */
   private drawThreshold(
     g: Graphics,
     val: number,
@@ -416,6 +461,13 @@ export class ExpRenderer implements IRenderer {
     this.staticLabelContainer.addChild(text);
   }
 
+  /**
+   * 绘制通道标签
+   * @param container - 容器
+   * @param str - 标签文本
+   * @param color - 文字颜色
+   * @param yOffset - Y 轴偏移
+   */
   private drawLabel(
     container: Container,
     str: string,

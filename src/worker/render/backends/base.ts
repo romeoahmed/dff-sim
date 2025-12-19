@@ -24,11 +24,15 @@ export interface IRenderer {
 
   /**
    * 注入数据源
+   * @param source - 波形数据源
    */
   setData(source: WaveformDataSource): void;
 
   /**
    * 响应尺寸变化
+   * @param width - 逻辑宽度
+   * @param height - 逻辑高度
+   * @param digitalHeight - 数字高度
    */
   resize(width: number, height: number, digitalHeight: number): void;
 
@@ -41,7 +45,6 @@ export interface IRenderer {
 
   /**
    * 卸载资源
-   * 清理自己创建的 Container/Graphics，但绝不能销毁 App
    */
   detach(): void;
 }

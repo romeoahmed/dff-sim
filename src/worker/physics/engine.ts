@@ -48,6 +48,8 @@ export class Signal {
    *
    * 包含高斯白噪声注入和 RC 低通滤波
    *
+   * @param deltaTime - 与上一帧的时间差 (秒)
+   *
    * @remarks
    * Marsaglia Polar Method 参考 AI 辅助建议
    */
@@ -93,7 +95,6 @@ export class Signal {
     const timeRatio = deltaTime * Simulation.baseFrameRate;
 
     // 计算适应当前 deltaTime 的平滑系数
-    // 如果 deltaTime 很大，adjustedFactor 会接近 1 (瞬间到达)
     const adjustedFactor = 1 - Math.pow(1 - smoothingFactor, timeRatio);
 
     this.currentValue += (noisyVoltage - this.currentValue) * adjustedFactor;
@@ -141,7 +142,7 @@ export class DFlipFlop {
     resetActive: boolean,
     deltaTime: number,
   ): number {
-    // 0. 异步重置优先级最高
+    // 0. 异步重置
     if (resetActive) {
       this.qSignal.targetLogic = 0;
       this.qSignal.update(deltaTime);
@@ -157,7 +158,7 @@ export class DFlipFlop {
     } else if (clkVoltage < logicLowMax) {
       clkLogic = 0;
     } else {
-      // 滞回区间/未定义区间：保持上一状态
+      // 滞回区间：保持上一状态
       clkLogic = this.lastClkState;
     }
 
@@ -165,7 +166,7 @@ export class DFlipFlop {
     const isRisingEdge = this.lastClkState === 0 && clkLogic === 1;
 
     if (isRisingEdge) {
-      // 在上升沿时刻采样 D
+      // 在上升沿时刻采样 D 输入电压
       if (dVoltage > logicHighMin) {
         this.qSignal.targetLogic = 1;
       } else if (dVoltage < logicLowMax) {
@@ -173,7 +174,6 @@ export class DFlipFlop {
       } else {
         // 3. 亚稳态/Undefined Zone 模拟
         // 当输入电压处于 0.6V-1.0V 之间时，触发器行为不可预测
-        // 这里为了演示鲁棒性问题，随机决定输出
         this.qSignal.targetLogic = Math.random() > 0.5 ? 1 : 0;
       }
     }

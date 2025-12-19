@@ -1,6 +1,5 @@
 /**
- * 负责管理 PixiJS Application 的生命周期
- * 全局唯一，只初始化一次，永不销毁 (直到 Worker 终止)
+ * 管理 PixiJS Application 的生命周期
  */
 
 import { Application, DOMAdapter, WebWorkerAdapter } from "pixi.js";
@@ -8,19 +7,33 @@ import { Application, DOMAdapter, WebWorkerAdapter } from "pixi.js";
 // 设置适配器
 DOMAdapter.set(WebWorkerAdapter);
 
+/**
+ * PixiJS 主机
+ */
 export class PixiHost {
+  // 模拟器波形和数字波形
   public appWaveform: Application;
   public appDigital: Application;
 
+  // 初始化状态
   private isReady = false;
 
+  /**
+   * 初始化 Application 实例
+   */
   constructor() {
     this.appWaveform = new Application();
     this.appDigital = new Application();
   }
 
   /**
-   * 初始化图形上下文 (只调用一次)
+   * 初始化图形上下文
+   * @param canvasW - 模拟波形画布
+   * @param canvasD - 数字波形画布
+   * @param width - 画布宽度
+   * @param height - 模拟波形画布高度
+   * @param digitalHeight - 数字波形画布高度
+   * @param dpr - 设备像素比
    */
   async init(
     canvasW: OffscreenCanvas,
@@ -32,6 +45,7 @@ export class PixiHost {
   ) {
     if (this.isReady) return;
 
+    // 基础配置
     const baseConfig = {
       resolution: dpr,
       backgroundAlpha: 0,
@@ -40,6 +54,7 @@ export class PixiHost {
       autoStart: false, // 手动控制渲染
     };
 
+    // 初始化两个 Application 实例
     await Promise.all([
       this.appWaveform.init({ ...baseConfig, canvas: canvasW, width, height }),
       this.appDigital.init({
@@ -55,6 +70,10 @@ export class PixiHost {
 
   /**
    * 调整渲染器尺寸
+   * @param width - 新宽度
+   * @param height - 新高度
+   * @param digitalHeight - 数字波形新高度
+   * @param dpr - 设备像素比
    */
   resize(width: number, height: number, digitalHeight: number, dpr: number) {
     if (!this.isReady) return;
@@ -70,7 +89,7 @@ export class PixiHost {
   }
 
   /**
-   * 执行渲染指令 (提交到 GPU)
+   * 执行渲染指令
    */
   render() {
     if (!this.isReady) return;

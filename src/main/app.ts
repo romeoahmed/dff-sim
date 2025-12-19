@@ -1,7 +1,6 @@
 /**
  * 仿真控制器 (主线程)
  *
- * 职责：
  * 1. 负责 UI 交互与 DOM 更新
  * 2. 负责 Worker 线程的生命周期管理
  * 3. 监听布局变化并通知 Worker
@@ -28,11 +27,9 @@ export class SimulationApp {
   private resizeObserver: ResizeObserver | null = null;
 
   // --- UI 缓存 ---
-  // 将 DOM 元素结构化分组，避免散乱的属性
   private ui: UIElements;
 
   // --- 本地状态 ---
-  // 用于 Optimistic UI 更新 (点击即响应，无需等待 Worker 回传)
   private localTargetLogicD: 0 | 1 = 0;
 
   constructor() {
@@ -54,6 +51,14 @@ export class SimulationApp {
     const getEl = (id: string) => {
       const el = document.getElementById(id);
       if (!el) throw new Error(`Element #${id} not found`);
+      return el;
+    };
+    const getInputEl = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) throw new Error(`Element #${id} not found`);
+      if (!(el instanceof HTMLInputElement)) {
+        throw new Error(`Element #${id} is not an input element`);
+      }
       return el;
     };
     const getPin = (sel: string) => {
@@ -78,8 +83,8 @@ export class SimulationApp {
         btnStd: getEl("btn-mode-std"),
         btnExp: getEl("btn-mode-exp"),
         btnReset: getEl("btn-reset"),
-        sldNoise: getEl("noiseSlider") as HTMLInputElement,
-        sldSpeed: getEl("speedSlider") as HTMLInputElement,
+        sldNoise: getInputEl("noiseSlider"),
+        sldSpeed: getInputEl("speedSlider"),
         valNoise: getEl("noiseVal"),
         valSpeed: getEl("speedVal"),
       },
@@ -92,15 +97,17 @@ export class SimulationApp {
    * 移交 Canvas 控制权 (OffscreenCanvas)
    */
   private initWorkerBridge() {
-    const canvasWaveform = document.getElementById(
-      "waveform-canvas",
-    ) as HTMLCanvasElement;
-    const canvasDigital = document.getElementById(
-      "digital-canvas",
-    ) as HTMLCanvasElement;
+    const canvasWaveform = document.getElementById("waveform-canvas");
+    const canvasDigital = document.getElementById("digital-canvas");
 
     if (!canvasWaveform || !canvasDigital) {
       throw new Error("Canvas elements missing");
+    }
+    if (!(canvasWaveform instanceof HTMLCanvasElement)) {
+      throw new Error("#waveform-canvas is not a canvas element");
+    }
+    if (!(canvasDigital instanceof HTMLCanvasElement)) {
+      throw new Error("#digital-canvas is not a canvas element");
     }
 
     // 1. 控制权移交：主线程不再拥有绘图上下文
@@ -125,7 +132,7 @@ export class SimulationApp {
       dpr,
     };
 
-    // 注意：OffscreenCanvas 必须在第二个参数中列出以进行 Transfer
+    // Transfer List
     this.worker.postMessage(initMsg, [offscreenWaveform, offscreenDigital]);
 
     // 4. 监听 Worker 回传 (更新 UI 数值)
@@ -136,10 +143,14 @@ export class SimulationApp {
       }
     };
 
-    // 5. 监听容器 Resize (更新 Worker 内的 Canvas 尺寸)
+    // 5. 监听容器 Resize
     this.initResizeObserver(canvasWaveform);
   }
 
+  /**
+   * 初始化 ResizeObserver 以监听父容器尺寸变化
+   * @param target - 目标元素
+   */
   private initResizeObserver(target: HTMLElement) {
     if (!target.parentElement) return;
 
@@ -168,7 +179,6 @@ export class SimulationApp {
 
     // 1. 切换 Input D
     controls.btnToggleD.addEventListener("click", () => {
-      // 乐观更新 (Optimistic Update)
       this.localTargetLogicD = this.localTargetLogicD === 1 ? 0 : 1;
       this.renderToggleBtnState();
       this.sendParam("toggleD", this.localTargetLogicD === 1);
@@ -219,19 +229,21 @@ export class SimulationApp {
 
   /**
    * 辅助：向 Worker 发送参数更新
+   * @param key - 参数键
+   * @param value - 参数值
    */
   private sendParam(key: WorkerParamMessage["key"], value: number | boolean) {
     this.worker.postMessage({ type: "PARAM_UPDATE", key, value });
   }
 
   /**
-   * 渲染 Toggle 按钮的视觉状态 (纯 DOM 操作)
+   * 渲染 Toggle 按钮的视觉状态
    */
   private renderToggleBtnState() {
     const btn = this.ui.controls.btnToggleD;
     const isHigh = this.localTargetLogicD === 1;
 
-    // 使用 CSS 类控制图标显隐，避免 innerHTML 重排
+    // 使用 CSS 类控制图标显隐
     btn.classList.toggle("active", isHigh);
 
     const iconOff = btn.querySelector(".icon-off") as HTMLElement;
@@ -247,18 +259,20 @@ export class SimulationApp {
   /**
    * 更新电压数值显示与引脚高亮
    *
-   * 此方法由 Worker 消息驱动 (约 20fps)
+   * @param d - D 引脚电压
+   * @param clk - CLK 引脚电压
+   * @param q - Q 引脚电压
    */
   private updateVoltageDisplay(d: number, clk: number, q: number) {
     const { volts, pins } = this.ui;
     const threshold = VoltageSpecs.logicHighMin;
 
-    // 更新文本 (使用了 textContent，性能略优于 innerText)
+    // 更新文本
     volts.d.textContent = d.toFixed(2) + "V";
     volts.clk.textContent = clk.toFixed(2) + "V";
     volts.q.textContent = q.toFixed(2) + "V";
 
-    // 更新高亮 (classList.toggle 极其高效)
+    // 更新高亮
     pins.d.classList.toggle("active", d > threshold);
     pins.clk.classList.toggle("active", clk > threshold);
     pins.q.classList.toggle("active", q > threshold);
@@ -266,6 +280,7 @@ export class SimulationApp {
 
   /**
    * 更新仿真电压参数
+   *
    * 将新设置发送给 Worker 线程
    */
   public updateSettings(settings: Partial<VoltageSpecConfig>) {
@@ -276,7 +291,7 @@ export class SimulationApp {
   }
 
   /**
-   * 销毁应用 (清理 Worker 和 观察者)
+   * 销毁应用
    */
   public destroy() {
     this.resizeObserver?.disconnect();
