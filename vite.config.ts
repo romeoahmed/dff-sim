@@ -4,5 +4,5 @@ export default defineConfig({
   build: {
     sourcemap: false,
   },
-  base: "/",
+  base: "./",
 }) satisfies UserConfig;
