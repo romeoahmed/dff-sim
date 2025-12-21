@@ -30,26 +30,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: latest
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-          cache: "pnpm"
+          bun-version: latest
+
       - name: Install dependencies
-        run: pnpm install
+        run: bun install
+
       - name: Build
-        run: pnpm run build
+        run: bun run build
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
           # Upload dist folder
           path: "./dist"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
