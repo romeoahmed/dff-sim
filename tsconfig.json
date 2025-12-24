@@ -12,7 +12,7 @@
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
-    "types": ["vite/client"],
+    "types": ["vite/client", "node", "bun"],
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
 
     // Other Outputs
