@@ -3,37 +3,45 @@
 // ==============================================
 @use "variables" as *;
 
+// 主布局容器
 .container {
-  width: 95%;
-  max-width: 1200px;
-  height: 90vh;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  width: min(96%, 1400px); // 限制最大宽度，同时保留左右边距
+  height: 92dvh; // 稍微留出空隙
+  display: grid;
+  grid-template-rows: auto 1fr; // Header 自适应，Main 占满剩余
+  grid-template-areas:
+    "header"
+    "main";
+  gap: 24px; // MD3 推荐间距
 }
 
 header {
+  grid-area: header;
   text-align: center;
-  border-bottom: 2px solid $ctp-surface0;
-  padding-bottom: 10px;
-  flex-shrink: 0; // 防止 Header 被压缩
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 
   h1 {
-    color: $ctp-mauve;
-    letter-spacing: 0.5px;
+    color: var(--md-sys-color-secondary);
+    font-size: 2rem; // Headline Small
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 2.5rem;
   }
 
   p {
-    color: $ctp-subtext0;
-    font-size: 0.9rem;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 1rem; // Body Large
+    letter-spacing: 0.5px;
   }
 }
 
 main {
+  grid-area: main;
   display: grid;
+
+  // 左侧 2份(可视化)，右侧 1份(控制)
   grid-template-columns: 2fr 1fr;
-  gap: 20px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden; // 防止内容撑爆 grid
+  gap: 24px;
+  min-height: 0; // 允许 Grid Item 滚动
 }

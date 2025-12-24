@@ -1,8 +1,10 @@
 // ==============================================
-// Catppuccin Macchiato Theme Variables
+// Material Design 3 Design Tokens
+// Theme: Catppuccin Macchiato Mapped to MD3
 // ==============================================
+@use "sass:color";
 
-// Sass 变量
+// 1. 基础调色板 (Primitives)
 $ctp-base: #24273a;
 $ctp-mantle: #1e2030;
 $ctp-crust: #181926;
@@ -10,46 +12,113 @@ $ctp-text: #cad3f5;
 $ctp-subtext0: #a5adcb;
 $ctp-surface0: #363a4f;
 $ctp-surface1: #494d64;
+$ctp-surface2: #5b6078;
 $ctp-blue: #8aadf4;
 $ctp-red: #ed8796;
 $ctp-green: #a6da95;
 $ctp-yellow: #eed49f;
 $ctp-mauve: #c6a0f6;
+$ctp-overlay0: #6e738d;
 
-// 阴影
-$shadow-md:
-  0 4px 6px -1px rgb(0 0 0 / 30%),
-  0 2px 4px -1px rgb(0 0 0 / 15%);
+// 预计算混合色 (Derived Colors)
+$color-primary-container: color.mix($ctp-blue, $ctp-base, 20%);
+$color-secondary-container: color.mix($ctp-mauve, $ctp-base, 20%);
+$color-error-container: color.mix($ctp-red, $ctp-base, 20%);
 
-// 字体
-$font-main: "Segoe UI", tahoma, geneva, verdana, sans-serif;
-$font-mono: consolas, monaco, monospace;
+// 字体定义
+$font-family-sans: "Segoe UI", roboto, system-ui, sans-serif;
+$font-family-mono: "JetBrains Mono", consolas, monospace;
 
-// 动画时长
-$transition-fast: 0.1s ease;
-$transition-normal: 0.2s ease;
-$transition-slow: 0.3s ease;
-
-// 圆角
-$radius-sm: 4px;
-$radius-md: 6px;
-$radius-lg: 12px;
-
-// CSS 自定义属性（运行时可用，方便 JS 访问或主题切换）
+// 2. 系统令牌 (System Tokens) - CSS Variables
 :root {
-  --ctp-base: #{$ctp-base};
-  --ctp-mantle: #{$ctp-mantle};
-  --ctp-crust: #{$ctp-crust};
-  --ctp-text: #{$ctp-text};
-  --ctp-subtext0: #{$ctp-subtext0};
-  --ctp-surface0: #{$ctp-surface0};
-  --ctp-surface1: #{$ctp-surface1};
-  --ctp-blue: #{$ctp-blue};
-  --ctp-red: #{$ctp-red};
-  --ctp-green: #{$ctp-green};
-  --ctp-yellow: #{$ctp-yellow};
-  --ctp-mauve: #{$ctp-mauve};
-  --shadow-md: #{$shadow-md};
-  --font-main: #{$font-main};
-  --font-mono: #{$font-mono};
+  // --- MD3 Color Roles ---
+
+  // Primary (主要操作): Blue
+  --md-sys-color-primary: #{$ctp-blue};
+  --md-sys-color-on-primary: #{$ctp-base};
+  --md-sys-color-primary-container: #{$color-primary-container};
+  --md-sys-color-on-primary-container: #{$ctp-blue};
+
+  // Secondary (次要/强调): Mauve
+  --md-sys-color-secondary: #{$ctp-mauve};
+  --md-sys-color-on-secondary: #{$ctp-base};
+  --md-sys-color-secondary-container: #{$color-secondary-container};
+  --md-sys-color-on-secondary-container: #{$ctp-mauve};
+
+  // Tertiary (装饰/状态): Green
+  --md-sys-color-tertiary: #{$ctp-green};
+  --md-sys-color-on-tertiary: #{$ctp-base};
+
+  // Error (错误): Red
+  --md-sys-color-error: #{$ctp-red};
+  --md-sys-color-on-error: #{$ctp-base};
+  --md-sys-color-error-container: #{$color-error-container};
+  --md-sys-color-on-error-container: #{$ctp-red};
+
+  // Surface (表面/背景)
+  --md-sys-color-background: #{$ctp-base};
+  --md-sys-color-on-background: #{$ctp-text};
+  --md-sys-color-surface: #{$ctp-base};
+  --md-sys-color-on-surface: #{$ctp-text};
+  --md-sys-color-on-surface-variant: #{$ctp-subtext0};
+
+  // Surface Containers (不同层级的背景)
+  --md-sys-color-surface-container-low: #{$ctp-mantle};
+  --md-sys-color-surface-container: #{$ctp-base};
+  --md-sys-color-surface-container-high: #{$ctp-surface0};
+  --md-sys-color-surface-container-highest: #{$ctp-surface1};
+
+  // Outline (边框)
+  --md-sys-color-outline: #{$ctp-surface1};
+  --md-sys-color-outline-variant: #{$ctp-surface0};
+
+  // --- MD3 Elevation (Shadows) ---
+  --md-sys-elevation-level1:
+    0 1px 2px 0 rgb(0 0 0 / 30%), 0 1px 3px 1px rgb(0 0 0 / 15%);
+  --md-sys-elevation-level2:
+    0 1px 2px 0 rgb(0 0 0 / 30%), 0 2px 6px 2px rgb(0 0 0 / 15%);
+  --md-sys-elevation-level3:
+    0 4px 8px 3px rgb(0 0 0 / 15%), 0 1px 3px 0 rgb(0 0 0 / 30%);
+
+  // --- MD3 Shape ---
+  --md-sys-shape-corner-small: 4px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px; // For Buttons
+  --md-sys-shape-corner-full: 9999px;
+
+  // --- MD3 State Layer Opacity ---
+  --md-sys-state-hover-state-layer-opacity: 0.08;
+  --md-sys-state-focus-state-layer-opacity: 0.12;
+  --md-sys-state-pressed-state-layer-opacity: 0.12;
+}
+
+// SCSS 辅助 Mixin: 状态层 (State Layer)
+// MD3 不改变颜色，而是在上方叠加半透明层
+@mixin state-layer($color-var) {
+  position: relative;
+  overflow: hidden; // 包含伪元素
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: var(#{$color-var});
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 0; // 位于内容之下
+    pointer-events: none;
+  }
+
+  &:hover::before {
+    opacity: var(--md-sys-state-hover-state-layer-opacity);
+  }
+
+  &:focus-visible::before {
+    opacity: var(--md-sys-state-focus-state-layer-opacity);
+  }
+
+  &:active::before {
+    opacity: var(--md-sys-state-pressed-state-layer-opacity);
+  }
 }

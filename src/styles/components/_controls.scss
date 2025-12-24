@@ -3,186 +3,203 @@
 // ==============================================
 @use "../base/variables" as *;
 
-// 控制面板容器
 .controls {
-  background-color: $ctp-mantle;
-  padding: 20px;
-  border-radius: $radius-lg;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  border: 1px solid $ctp-surface0;
-  box-shadow: $shadow-md;
+  background-color: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-large);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  padding: 24px;
+  display: grid; // 使用 Grid 布局内容
+  grid-template-rows: auto auto 1fr; // 自然堆叠
+  gap: 24px;
+  box-shadow: var(--md-sys-elevation-level1);
 }
 
-// 控制组（标签 + 滑块）
+// 控件组
 .control-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 8px;
 
   label {
-    color: $ctp-subtext0;
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-
-  p {
-    color: $ctp-subtext0;
-    font-size: 0.9rem;
+    color: var(--md-sys-color-on-surface);
+    font-size: 0.9rem; // Label Large
     font-weight: 500;
   }
 }
 
-// 滑块样式
+// --- MD3 Slider ---
 input[type="range"] {
+  appearance: none;
   width: 100%;
-  accent-color: $ctp-mauve;
+  height: 20px; // 触控区域
+  background: transparent;
   cursor: pointer;
-  height: 6px;
+
+  &:focus {
+    outline: none;
+  }
+
+  // 轨道 Mixin
+  @mixin track {
+    width: 100%;
+    height: 4px; // MD3 轨道高度
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: var(--md-sys-shape-corner-full);
+  }
+
+  // 滑块 Mixin
+  @mixin thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    border: none;
+    box-shadow: var(--md-sys-elevation-level1);
+    transition: transform 0.1s;
+    margin-top: -8px; // 垂直居中修正
+
+    &:hover {
+      transform: scale(1.2); // State Layer 模拟
+    }
+  }
+
+  // Webkit
+  &::-webkit-slider-runnable-track {
+    @include track;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none; // 修复: 移除 -webkit- 前缀
+
+    @include thumb;
+  }
+
+  // Firefox
+  &::-moz-range-track {
+    @include track;
+  }
+
+  &::-moz-range-thumb {
+    @include thumb;
+  }
 }
 
-// 无障碍：键盘聚焦时的样式
-input[type="range"]:focus-visible,
-button:focus-visible {
-  outline: 2px solid $ctp-blue;
-  outline-offset: 2px;
-  border-radius: $radius-sm;
-}
-
-// 按钮基础样式
+// --- MD3 Buttons ---
 .btn {
-  background-color: $ctp-blue;
-  color: $ctp-base;
-  border: 1px solid transparent;
-  padding: 12px;
-  border-radius: $radius-md;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 0.95rem;
-  transition: all $transition-normal;
-  display: flex;
+  position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  height: 40px;
+  padding: 0 24px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-extra-large); // Pill Shape
+  font-family: $font-family-sans;
+  font-size: 0.9rem; // Label Large
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    box-shadow 0.2s,
+    background-color 0.2s;
+
+  // 默认样式: Filled Button (Primary)
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+
+  @include state-layer(--md-sys-color-on-primary); // 白色遮罩层
 
   &:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
-    filter: brightness(0.9);
-  }
-
-  &.active {
-    background-color: $ctp-green;
+    box-shadow: var(--md-sys-elevation-level1);
   }
 }
 
-.btn-reset {
-  &.active {
-    background: $ctp-red;
-    border-color: $ctp-red;
+.button-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+%btn-outlined {
+  background-color: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+
+  @include state-layer(--md-sys-color-primary); // 蓝色遮罩层
+
+  &:hover {
+    border-color: var(--md-sys-color-primary);
+    background-color: transparent; // 颜色由 state layer 提供
   }
 }
 
+// Outlined Button Class (如果在 HTML 中直接使用)
+.btn-outlined {
+  @extend %btn-outlined;
+}
+
+// Mode Buttons Logic
 #btn-mode-std,
 #btn-mode-exp {
-  // 未选中状态
-  &:not(.active) {
-    background-color: $ctp-surface0;
-    color: $ctp-subtext0;
-    border-color: $ctp-surface1;
+  @extend %btn-outlined;
 
-    &:hover {
-      background-color: $ctp-surface1;
-      color: $ctp-text;
-    }
+  &.active {
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    border-color: transparent;
+
+    @include state-layer(--md-sys-color-on-secondary-container);
   }
 }
 
-// 标准后端激活：蓝色
-#btn-mode-std.active {
-  background-color: $ctp-blue;
-  color: $ctp-base;
-  border-color: $ctp-blue;
-}
+// Reset Button (Tonal Button 变体)
+.btn-reset {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+  width: 100%;
 
-// 实验性后端激活：紫色 + 发光特效
-#btn-mode-exp.active {
-  background-color: $ctp-mauve;
-  color: $ctp-base;
-  border-color: $ctp-mauve;
-  box-shadow: 0 0 12px rgba($ctp-mauve, 0.6); // 霓虹光晕
-  text-shadow: 0 0 5px rgb(255 255 255 / 50%);
-  animation: pulse-glow 2s infinite alternate;
-}
+  @include state-layer(--md-sys-color-on-error-container);
 
-@keyframes pulse-glow {
-  from {
-    box-shadow: 0 0 8px rgba($ctp-mauve, 0.5);
-  }
-
-  to {
-    box-shadow: 0 0 16px rgba($ctp-mauve, 0.8);
+  &.active {
+    background-color: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
   }
 }
 
-// 按钮组 (用于横向排列按钮)
-.button-group {
-  display: flex;
-  gap: 10px;
-
-  .btn {
-    flex: 1; // 平分宽度
-    justify-content: center;
-    padding: 10px; // 稍微紧凑一点
-    font-size: 0.9rem;
-  }
-}
-
-// 默认隐藏 (On)
 .icon-on {
   display: none;
 }
 
-// 信息框
+// --- Info Box (Card) ---
 .info-box {
   margin-top: auto;
-  background-color: $ctp-surface0;
-  padding: 12px;
-  border-radius: $radius-md;
+  background-color: var(--md-sys-color-surface-container);
+  padding: 16px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  border-left: 4px solid var(--md-sys-color-secondary);
   font-size: 0.85rem;
-  border-left: 4px solid $ctp-mauve; // 左侧强调线
 
   h4 {
     margin-bottom: 8px;
-    color: $ctp-mauve;
+    color: var(--md-sys-color-secondary);
   }
 
   ul {
+    display: grid;
+    gap: 4px;
     list-style: none;
-    padding-left: 0;
   }
 
   li {
-    margin-bottom: 4px;
     display: flex;
     justify-content: space-between;
+    color: var(--md-sys-color-on-surface-variant);
   }
 }
 
-// 高亮文字
 .highlight {
-  color: $ctp-green;
-  font-family: $font-mono;
+  color: var(--md-sys-color-tertiary);
 }
 
-// 警告文字
 .warn {
-  color: $ctp-red;
-  font-family: $font-mono;
+  color: var(--md-sys-color-error);
 }

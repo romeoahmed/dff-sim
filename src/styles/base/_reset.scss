@@ -3,7 +3,6 @@
 // ==============================================
 @use "variables" as *;
 
-// 更现代的 Reset
 *,
 *::before,
 *::after {
@@ -13,30 +12,36 @@
 }
 
 body {
-  background-color: $ctp-base;
-  color: $ctp-text;
-  font-family: $font-main;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: $font-family-sans;
+
+  // 现代 Grid 居中布局
+  display: grid;
+  place-items: center;
+  min-height: 100dvh; // 动态视口高度
+
+  // 字体平滑
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-// 自定义滚动条 (针对 Webkit 浏览器)
+// 滚动条样式适配 MD3 风格
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: $ctp-base;
+  background: var(--md-sys-color-surface-container);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: $ctp-surface1;
-  border-radius: $radius-sm;
+  background-color: var(--md-sys-color-outline);
+  border: 4px solid var(--md-sys-color-surface-container); // 创建 Padding 效果
+  border-radius: 20px;
 
   &:hover {
-    background: $ctp-surface0;
+    background-color: var(--md-sys-color-outline-variant);
   }
 }

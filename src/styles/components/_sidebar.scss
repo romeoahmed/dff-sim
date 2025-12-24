@@ -1,84 +1,58 @@
 // ==============================================
 // Sidebar: About / Credits Panel
 // ==============================================
-@use "sass:color";
 @use "../base/variables" as *;
 
-// 关于按钮（固定右上角）
+// FAB (Floating Action Button) 风格的触发按钮
+%fab-style {
+  position: fixed;
+  top: 24px;
+  z-index: 100;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--md-sys-shape-corner-large); // 16px
+  background-color: var(--md-sys-color-surface-container-high);
+  border: none;
+  color: var(--md-sys-color-on-surface-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--md-sys-elevation-level2);
+  transition: all 0.2s ease;
+
+  @include state-layer(--md-sys-color-on-surface);
+
+  &:hover {
+    box-shadow: var(--md-sys-elevation-level3);
+    transform: scale(1.05);
+    color: var(--md-sys-color-on-surface);
+  }
+}
+
 .btn-about {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 100;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: $ctp-surface0;
-  border: 1px solid $ctp-surface1;
-  color: $ctp-text;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-normal;
-  box-shadow: $shadow-md;
+  @extend %fab-style;
 
-  &:hover {
-    background-color: $ctp-mauve;
-    color: $ctp-base;
-    transform: scale(1.1);
-  }
-
-  &:focus-visible {
-    outline: 2px solid $ctp-blue;
-    outline-offset: 2px;
-  }
+  right: 24px;
 }
 
-// 设置按钮（固定右上角，靠左一些）
 .btn-settings {
-  position: fixed;
-  top: 20px;
-  right: 74px; // 比 .btn-about 向左偏移
-  z-index: 100;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: $ctp-surface0;
-  border: 1px solid $ctp-surface1;
-  color: $ctp-text;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-normal;
-  box-shadow: $shadow-md;
+  @extend %fab-style;
 
-  &:hover {
-    background-color: $ctp-blue;
-    color: $ctp-base;
-    transform: scale(1.1);
-  }
-
-  &:focus-visible {
-    outline: 2px solid $ctp-mauve;
-    outline-offset: 2px;
-  }
+  right: 84px; // 24px + 48px + 12px gap
 }
 
-// 遮罩层
+// 遮罩层 (Scrim)
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgb(0 0 0 / 50%);
+  background-color: rgb(0 0 0 / 40%); // Standard MD3 scrim opacity
   z-index: 200;
   opacity: 0;
   visibility: hidden;
   transition:
-    opacity $transition-slow,
-    visibility $transition-slow;
+    opacity 0.3s ease,
+    visibility 0.3s;
+  backdrop-filter: blur(2px);
 
   &.active {
     opacity: 1;
@@ -86,287 +60,132 @@
   }
 }
 
-// 侧边栏面板
+// 侧边栏 (Navigation Drawer Modal)
 .sidebar {
   position: fixed;
   top: 0;
   right: 0;
-  width: 400px;
-  max-width: 90vw;
-  height: 100vh;
-  background-color: $ctp-mantle;
-  border-left: 1px solid $ctp-surface0;
+  bottom: 0;
+  width: min(360px, 85vw); // MD3 Standard Drawer width
+  background-color: var(--md-sys-color-surface-container-low);
   z-index: 300;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto; // Header, Content, Footer
   transform: translateX(100%);
-  transition: transform $transition-slow;
-  box-shadow: -4px 0 20px rgb(0 0 0 / 30%);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: var(--md-sys-elevation-level3);
+
+  // 圆角仅在左侧
+  border-top-left-radius: var(--md-sys-shape-corner-large);
+  border-bottom-left-radius: var(--md-sys-shape-corner-large);
 
   &.active {
     transform: translateX(0);
   }
 }
 
-// 侧边栏头部
 .sidebar-header {
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid $ctp-surface0;
-  flex-shrink: 0;
 
   h2 {
-    color: $ctp-mauve;
-    font-size: 1.3rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    color: var(--md-sys-color-on-surface);
+    font-size: 1.5rem; // Headline Small
   }
 }
 
-// 关闭按钮
 .btn-close {
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-md;
-  background-color: transparent;
-  border: 1px solid $ctp-surface1;
-  color: $ctp-subtext0;
-  font-size: 1.1rem;
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface-variant);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-fast;
 
-  &:hover {
-    background-color: $ctp-red;
-    border-color: $ctp-red;
-    color: $ctp-base;
-  }
+  @include state-layer(--md-sys-color-on-surface);
 }
 
-// 侧边栏内容区
 .sidebar-content {
-  flex: 1;
+  padding: 0 24px;
   overflow-y: auto;
-  padding: 20px;
 
-  // 设置表单
+  // Settings Form
   #settings-form {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
+    display: grid;
+    gap: 20px;
 
     .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: grid;
+      gap: 8px;
 
       label {
-        color: $ctp-subtext0;
-        font-size: 0.95rem;
-        margin-bottom: 2px;
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.8rem;
       }
 
+      // MD3 Text Field Style (Outlined)
       input[type="number"] {
-        padding: 6px 10px;
-        border: 1px solid $ctp-surface1;
-        border-radius: $radius-md;
-        background: $ctp-base;
-        color: $ctp-text;
+        padding: 12px 16px;
+        background: transparent;
+        border: 1px solid var(--md-sys-color-outline);
+        border-radius: 4px;
+        color: var(--md-sys-color-on-surface);
+        font-family: inherit;
         font-size: 1rem;
-        transition: border-color $transition-fast;
+        transition: border-color 0.2s;
 
         &:focus {
-          border-color: $ctp-blue;
+          border-color: var(--md-sys-color-primary);
+          border-width: 2px;
+          padding: 11px 15px; // Compensate for border width
           outline: none;
         }
 
         &.invalid {
-          border-color: $ctp-red;
-          background: color.mix($ctp-red, $ctp-base, 10%);
-        }
-
-        &::placeholder {
-          color: $ctp-subtext0;
-          opacity: 1;
+          border-color: var(--md-sys-color-error);
         }
       }
     }
 
-    .form-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 8px;
-
-      .btn {
-        flex: 1;
-      }
-    }
-
-    // 错误信息提示
     .error-msg {
-      color: $ctp-red;
-      background: linear-gradient(
-        90deg,
-        color.mix($ctp-red, $ctp-base, 20%),
-        $ctp-base 80%
-      );
-      border: 1px solid $ctp-red;
-      border-radius: $radius-md;
-      padding: 10px 16px;
-      font-size: 1.05rem;
-      margin-top: 12px;
-      min-height: 1.6em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 16px rgb(237 135 150 / 18%);
-      opacity: 0;
-      transform: translateY(-12px) scale(0.98);
-      height: 0;
-      pointer-events: none;
-      transition:
-        opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      background-color: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none; // Control via JS usually, or add active class
 
       &.active {
-        opacity: 1;
-        transform: none;
-        height: auto;
-        pointer-events: auto;
-      }
-
-      &::before {
-        content: "\f06a";
-        font-family: "Font Awesome 7 Free", sans-serif;
-        font-weight: 900;
-        font-size: 1.3em;
-        margin-right: 6px;
-        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
     }
   }
 }
 
-// 关于章节
 .about-section {
-  margin-bottom: 24px;
-
   h3 {
-    color: $ctp-blue;
-    font-size: 1rem;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    color: var(--md-sys-color-primary);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
     padding-bottom: 8px;
-    border-bottom: 1px solid $ctp-surface0;
+    margin-bottom: 16px;
   }
 
-  p {
-    color: $ctp-text;
-    font-size: 0.9rem;
+  p,
+  li {
+    color: var(--md-sys-color-on-surface-variant);
     line-height: 1.6;
-    margin-bottom: 10px;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  li {
-    color: $ctp-subtext0;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-bottom: 8px;
-    padding-left: 16px;
-    position: relative;
-
-    &::before {
-      content: ">";
-      position: absolute;
-      left: 0;
-      color: $ctp-mauve;
-      font-weight: bold;
-    }
-
-    strong {
-      color: $ctp-text;
-    }
   }
 }
 
-// 致谢列表特殊样式
-.thanks-list {
-  li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-left: 0;
-
-    &::before {
-      display: none;
-    }
-
-    i {
-      color: $ctp-mauve;
-      width: 20px;
-      text-align: center;
-    }
-
-    a {
-      color: $ctp-blue;
-      text-decoration: none;
-      transition: color $transition-fast;
-
-      &:hover {
-        color: $ctp-mauve;
-        text-decoration: underline;
-      }
-    }
-  }
-}
-
-// 侧边栏底部
 .sidebar-footer {
-  color: $ctp-red;
-  padding: 16px 20px;
-  border-top: 1px solid $ctp-surface0;
+  padding: 24px;
   text-align: center;
-  flex-shrink: 0;
-
-  p {
-    color: $ctp-subtext0;
-    font-size: 0.8rem;
-    margin: 0;
-  }
-}
-
-// 响应式：小屏幕下全宽
-@media (width <= 480px) {
-  .sidebar {
-    width: 100vw;
-    max-width: 100vw;
-  }
-
-  .btn-about {
-    top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .btn-settings {
-    top: 10px;
-    right: 60px; // 向左偏移
-    width: 40px;
-    height: 40px;
-  }
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.75rem;
 }
