@@ -11,6 +11,10 @@
   flex-direction: column;
   border: 1px solid $ctp-surface0;
   box-shadow: $shadow-md;
+
+  // 填满左侧 Grid 区域
+  height: 100%;
+  width: 100%;
 }
 
 .digital-scope-header {

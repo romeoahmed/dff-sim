@@ -9,17 +9,30 @@
     height: auto;
     min-height: 100vh;
     padding: 10px 0;
+
+    // 切换为单列
+    grid-template-columns: 1fr;
+
+    // 行定义变更：Main 高度变为 auto 以容纳堆叠的内容
+    grid-template-rows: max-content auto;
   }
 
   main {
-    grid-template-columns: 1fr; // 单列
-    display: flex;
-    flex-direction: column;
+    // 列依然是 subgrid (此时继承了 1fr)
+    // 行变为 auto，内部元素自动换行堆叠
+    grid-template-rows: auto;
+    overflow: visible;
   }
 
   .oscilloscope-panel {
-    height: 300px; // 示波器固定高度
-    flex: none;
+    height: 300px; // 移动端固定高度
+    // 自动放置在第1行 (Grid Auto Placement)
+  }
+
+  .control-panel {
+    height: auto;
+    overflow-y: visible; // 移动端取消内部滚动，改用页面滚动
+    // 自动放置在第2行
   }
 
   // 移动端调整芯片显示大小

@@ -8,7 +8,14 @@
   background-color: $ctp-mantle;
   padding: 20px;
   border-radius: $radius-lg;
-  flex: 1;
+
+  // [Grid Item]
+  // 确保宽度占满列
+  width: 100%;
+
+  // 移除 flex: 1，高度由内容或 Grid 区域决定
+  // flex: 1;
+
   display: flex;
   flex-direction: column;
   gap: 15px;
