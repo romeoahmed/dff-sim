@@ -1,8 +1,9 @@
 // ==============================================
-// Catppuccin Macchiato Theme Variables
+// Catppuccin Macchiato Theme Variables (HIG Refined)
 // ==============================================
+@use "sass:color";
 
-// Sass 变量
+// Sass 变量 - 基础色板
 $ctp-base: #24273a;
 $ctp-mantle: #1e2030;
 $ctp-crust: #181926;
@@ -10,46 +11,56 @@ $ctp-text: #cad3f5;
 $ctp-subtext0: #a5adcb;
 $ctp-surface0: #363a4f;
 $ctp-surface1: #494d64;
+$ctp-surface2: #5b6078; // 新增，用于高亮边框
 $ctp-blue: #8aadf4;
 $ctp-red: #ed8796;
 $ctp-green: #a6da95;
 $ctp-yellow: #eed49f;
 $ctp-mauve: #c6a0f6;
+$ctp-overlay0: #6e738d;
 
-// 阴影
+// Apple HIG Materials (Glassmorphism)
+// 使用 sass:color 模块生成半透明颜色
+$mat-regular: color.change($ctp-mantle, $alpha: 0.75);
+$mat-thick: color.change($ctp-base, $alpha: 0.9);
+$mat-thin: color.change($ctp-surface0, $alpha: 0.5);
+
+// 阴影 - 更柔和、扩散的阴影
+$shadow-sm: 0 1px 2px rgb(0 0 0 / 10%);
 $shadow-md:
-  0 4px 6px -1px rgb(0 0 0 / 30%),
-  0 2px 4px -1px rgb(0 0 0 / 15%);
+  0 4px 12px rgb(0 0 0 / 15%),
+  0 1px 2px rgb(0 0 0 / 5%);
+$shadow-lg:
+  0 12px 32px rgb(0 0 0 / 25%),
+  0 4px 8px rgb(0 0 0 / 10%);
+$shadow-inner: inset 0 1px 1px rgb(255 255 255 / 5%);
 
-// 字体
-$font-main: "Segoe UI", tahoma, geneva, verdana, sans-serif;
-$font-mono: consolas, monaco, monospace;
+// 字体 - 优先使用 System UI 字体 (Linux/Mac 原生感)
+$font-main:
+  system-ui,
+  -apple-system,
+  "Segoe UI",
+  roboto,
+  ubuntu,
+  cantarell,
+  "Noto Sans",
+  sans-serif;
+$font-mono: "SF Mono", "JetBrains Mono", "Ubuntu Mono", "Fira Code", consolas, monospace;
 
-// 动画时长
-$transition-fast: 0.1s ease;
-$transition-normal: 0.2s ease;
-$transition-slow: 0.3s ease;
+// 动画
+$transition-fast: 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94); // Snappy
+$transition-normal: 0.25s cubic-bezier(0.25, 0.1, 0.25, 1); // Smooth
+$transition-bounce: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); // Bouncy
 
-// 圆角
-$radius-sm: 4px;
-$radius-md: 6px;
-$radius-lg: 12px;
+// 圆角 - iOS/macOS 风格的大圆角
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 16px;
+$radius-full: 9999px;
 
-// CSS 自定义属性（运行时可用，方便 JS 访问或主题切换）
 :root {
   --ctp-base: #{$ctp-base};
-  --ctp-mantle: #{$ctp-mantle};
-  --ctp-crust: #{$ctp-crust};
   --ctp-text: #{$ctp-text};
-  --ctp-subtext0: #{$ctp-subtext0};
-  --ctp-surface0: #{$ctp-surface0};
-  --ctp-surface1: #{$ctp-surface1};
   --ctp-blue: #{$ctp-blue};
-  --ctp-red: #{$ctp-red};
-  --ctp-green: #{$ctp-green};
-  --ctp-yellow: #{$ctp-yellow};
   --ctp-mauve: #{$ctp-mauve};
-  --shadow-md: #{$shadow-md};
-  --font-main: #{$font-main};
-  --font-mono: #{$font-mono};
 }

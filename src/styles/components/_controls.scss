@@ -1,150 +1,222 @@
 // ==============================================
 // Controls: Sliders, Buttons, Info Box
 // ==============================================
+@use "sass:color";
 @use "../base/variables" as *;
 
-// 控制面板容器
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  // 隐藏滚动条但保留功能
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .controls {
-  background-color: $ctp-mantle;
-  padding: 20px;
+  background-color: $mat-regular;
+  backdrop-filter: blur(20px);
+  padding: 24px;
   border-radius: $radius-lg;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  border: 1px solid $ctp-surface0;
+  gap: 20px;
+  border: 1px solid rgb(255 255 255 / 8%);
   box-shadow: $shadow-md;
 }
 
-// 控制组（标签 + 滑块）
 .control-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 
   label {
-    color: $ctp-subtext0;
-    font-size: 0.9rem;
+    color: $ctp-text;
+    font-size: 0.95rem;
     font-weight: 500;
-  }
-
-  p {
-    color: $ctp-subtext0;
-    font-size: 0.9rem;
-    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
   }
 }
 
-// 滑块样式
+// HIG 风格滑块 (Range Slider)
 input[type="range"] {
+  appearance: none;
   width: 100%;
-  accent-color: $ctp-mauve;
+  background: transparent;
   cursor: pointer;
-  height: 6px;
-}
+  height: 24px; // 增加触控区域
 
-// 无障碍：键盘聚焦时的样式
-input[type="range"]:focus-visible,
-button:focus-visible {
-  outline: 2px solid $ctp-blue;
-  outline-offset: 2px;
-  border-radius: $radius-sm;
-}
-
-// 按钮基础样式
-.btn {
-  background-color: $ctp-blue;
-  color: $ctp-base;
-  border: 1px solid transparent;
-  padding: 12px;
-  border-radius: $radius-md;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 0.95rem;
-  transition: all $transition-normal;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  &:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
+  &:focus {
+    outline: none;
   }
 
-  &:active {
-    transform: translateY(0);
-    filter: brightness(0.9);
+  // Webkit Track
+  &::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    background: $ctp-surface0;
+    border-radius: $radius-full;
   }
 
-  &.active {
-    background-color: $ctp-green;
+  // Firefox Track
+  &::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    background: $ctp-surface0;
+    border-radius: $radius-full;
   }
-}
 
-.btn-reset {
-  &.active {
-    background: $ctp-red;
-    border-color: $ctp-red;
-  }
-}
-
-#btn-mode-std,
-#btn-mode-exp {
-  // 未选中状态
-  &:not(.active) {
-    background-color: $ctp-surface0;
-    color: $ctp-subtext0;
-    border-color: $ctp-surface1;
+  // Webkit Thumb
+  &::-webkit-slider-thumb {
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+    margin-top: -7px; // 垂直居中
+    transition: transform $transition-fast;
 
     &:hover {
-      background-color: $ctp-surface1;
-      color: $ctp-text;
+      transform: scale(1.1);
+    }
+  }
+
+  // Firefox Thumb
+  &::-moz-range-thumb {
+    border: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+    transition: transform $transition-fast;
+
+    &:hover {
+      transform: scale(1.1);
     }
   }
 }
 
-// 标准后端激活：蓝色
-#btn-mode-std.active {
+// ==============================================
+// 按钮样式 (基于层叠覆盖原则)
+// ==============================================
+
+// 1. 通用按钮 (基础样式 + 默认 Primary 样式)
+.btn {
+  border: none;
+  padding: 12px 16px;
+  border-radius: $radius-md;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all $transition-normal;
+
+  // 默认作为主按钮 (Primary) 的样式
   background-color: $ctp-blue;
   color: $ctp-base;
-  border-color: $ctp-blue;
-}
 
-// 实验性后端激活：紫色 + 发光特效
-#btn-mode-exp.active {
-  background-color: $ctp-mauve;
-  color: $ctp-base;
-  border-color: $ctp-mauve;
-  box-shadow: 0 0 12px rgba($ctp-mauve, 0.6); // 霓虹光晕
-  text-shadow: 0 0 5px rgb(255 255 255 / 50%);
-  animation: pulse-glow 2s infinite alternate;
-}
-
-@keyframes pulse-glow {
-  from {
-    box-shadow: 0 0 8px rgba($ctp-mauve, 0.5);
+  &:hover {
+    background-color: color.mix(#fff, $ctp-blue, 10%);
+    box-shadow: 0 4px 12px rgb(138 173 244 / 30%);
+    transform: translateY(-1px);
   }
 
-  to {
-    box-shadow: 0 0 16px rgba($ctp-mauve, 0.8);
+  &:active {
+    transform: translateY(0) scale(0.98);
   }
 }
 
-// 按钮组 (用于横向排列按钮)
+// 2. 重置按钮 (覆盖默认样式)
+.btn.btn-reset {
+  background-color: transparent;
+  border: 1px solid $ctp-surface1;
+  color: $ctp-text;
+  box-shadow: none; // 清除默认投影
+
+  &:hover {
+    background-color: $ctp-surface0;
+    border-color: $ctp-surface2;
+
+    // 保持上浮效果但去除彩色投影
+    transform: translateY(-1px);
+    box-shadow: none;
+  }
+
+  &:active {
+    background-color: $ctp-surface1;
+    transform: translateY(0);
+  }
+
+  &.active {
+    background-color: $ctp-red;
+    color: $ctp-base;
+    border-color: $ctp-red;
+  }
+}
+
+// 3. 模拟 Segmented Control (分段控件)
 .button-group {
   display: flex;
-  gap: 10px;
+  background-color: $ctp-surface0; // 轨道背景
+  padding: 4px;
+  border-radius: $radius-md;
+  position: relative;
 
+  // 特异性: 0-2-0 (覆盖 .btn)
   .btn {
-    flex: 1; // 平分宽度
-    justify-content: center;
-    padding: 10px; // 稍微紧凑一点
+    flex: 1;
+    background: transparent; // 覆盖默认蓝色
+    color: $ctp-subtext0; // 覆盖默认颜色
+    border: none;
+    box-shadow: none;
+    padding: 8px;
     font-size: 0.9rem;
+    border-radius: $radius-sm;
+
+    &:hover {
+      color: $ctp-text;
+      background: rgb(255 255 255 / 5%);
+
+      // 覆盖默认的 transform 和 shadow
+      transform: none;
+      box-shadow: none;
+    }
+
+    &:active {
+      transform: none;
+    }
+
+    // 选中状态 - 悬浮卡片效果
+    &.active {
+      background-color: $ctp-surface1;
+      color: $ctp-text;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 15%);
+      font-weight: 600;
+
+      // 特殊处理实验模式的高亮
+      &#btn-mode-exp {
+        color: $ctp-mauve;
+      }
+
+      &#btn-mode-std {
+        color: $ctp-blue;
+      }
+    }
   }
 }
 
-// 默认隐藏 (On)
 .icon-on {
   display: none;
 }
@@ -152,37 +224,35 @@ button:focus-visible {
 // 信息框
 .info-box {
   margin-top: auto;
-  background-color: $ctp-surface0;
-  padding: 12px;
+  background-color: rgb(0 0 0 / 20%); // 深色半透明
+  padding: 16px;
   border-radius: $radius-md;
   font-size: 0.85rem;
-  border-left: 4px solid $ctp-mauve; // 左侧强调线
+  border: 1px solid rgb(255 255 255 / 5%);
 
   h4 {
     margin-bottom: 8px;
     color: $ctp-mauve;
-  }
-
-  ul {
-    list-style: none;
-    padding-left: 0;
+    font-weight: 600;
   }
 
   li {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     display: flex;
     justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid rgb(255 255 255 / 5%);
+
+    &:last-child {
+      border-bottom: none;
+    }
   }
 }
 
-// 高亮文字
 .highlight {
   color: $ctp-green;
-  font-family: $font-mono;
 }
 
-// 警告文字
 .warn {
   color: $ctp-red;
-  font-family: $font-mono;
 }

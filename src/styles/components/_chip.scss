@@ -1,119 +1,128 @@
 // ==============================================
 // Chip Visualizer & Pin Styles
 // ==============================================
+@use "sass:color";
 @use "../base/variables" as *;
 
-// Mixin: 发光效果
+// Mixin: 霓虹/发光效果 (更柔和)
 @mixin glow($color) {
   background-color: $color;
-  box-shadow: 0 0 10px $color;
-  z-index: 1; // 确保发光不被遮挡
+  box-shadow:
+    0 0 12px color.change($color, $alpha: 0.6),
+    0 0 2px $color;
+  border-color: color.mix($color, #fff, 80%); // 亮起时中心更白
+  z-index: 2;
 }
 
-// 控制面板（右侧容器）
-.control-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto; // 允许右侧在小屏幕下独立滚动
-  padding-right: 5px; // 留出滚动条空间
-}
-
-// 电路可视化区域
 .circuit-viz {
-  background-color: $ctp-mantle;
+  // 磨砂玻璃背景
+  background-color: $mat-regular;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 8%); // 极细的内发光边框
   border-radius: $radius-lg;
-  min-height: 200px; // 防止被压扁
+  box-shadow: $shadow-lg;
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 1px solid $ctp-surface0;
-  box-shadow: $shadow-md;
   position: relative;
-  overflow: hidden; // 防止引脚溢出
+  overflow: hidden;
 }
 
-// 芯片本体
 .chip {
-  width: 140px;
-  height: 160px;
-  background-color: $ctp-surface1;
-  border: 2px solid $ctp-subtext0;
-  position: relative;
-  border-radius: $radius-sm;
-  box-shadow: 4px 4px 0 rgb(0 0 0 / 20%);
-  transition: transform $transition-slow;
+  width: 150px;
+  height: 170px;
 
-  // 微交互：悬停时芯片微微浮起
+  // 芯片本体质感
+  background: linear-gradient(145deg, $ctp-surface1, $ctp-surface0);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: $radius-md;
+  box-shadow:
+    0 10px 20px rgb(0 0 0 / 30%),
+    inset 0 1px 0 rgb(255 255 255 / 15%); // 顶部高光
+
+  position: relative;
+  transition: transform $transition-bounce;
+
   &:hover {
-    transform: translateY(-2px);
+    transform: scale(1.02);
+  }
+
+  // 芯片表面的文字雕刻感
+  &::after {
+    content: "74HC74";
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    font-family: $font-mono;
+    font-size: 0.7rem;
+    color: rgb(0 0 0 / 30%);
+    text-shadow: 0 1px 0 rgb(255 255 255 / 5%);
   }
 }
 
-// 芯片标签
 .chip-label {
   position: absolute;
-  top: 50%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-weight: bold;
+  font-weight: 600;
   color: $ctp-text;
-  font-size: 1.2rem;
-  white-space: nowrap; // 防止换行
+  font-size: 1.3rem;
+  letter-spacing: -0.5px;
 }
 
-// 引脚基础样式
 .pin {
   position: absolute;
-  width: 60px;
-  height: 3px; // 稍微加粗线路
-  background-color: $ctp-subtext0;
+  width: 70px; // 更长一点
+  height: 4px;
+  background-color: $ctp-surface2;
+  border-radius: $radius-full; // 圆头线路
   display: flex;
   align-items: center;
+  transition: all $transition-normal;
 
-  // 增加过渡动画，让亮起/熄灭更柔和自然
-  transition:
-    background-color $transition-fast,
-    box-shadow $transition-fast;
+  // 默认状态下微弱的内阴影
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
 }
 
-// 引脚标签
 .pin-label {
   position: absolute;
   color: $ctp-subtext0;
   font-size: 0.8rem;
-  top: -20px;
-  font-weight: 600;
+  font-family: $font-mono;
+  top: -22px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
-// 电压显示
+// 电压显示胶囊
 .voltage-display {
   position: absolute;
-  background: $ctp-crust;
-  padding: 2px 6px;
+  background: rgb(0 0 0 / 40%);
+  backdrop-filter: blur(4px);
+  padding: 4px 8px;
   border-radius: $radius-sm;
-  font-family: $font-mono; // 强制等宽字体，数字不跳动
+  font-family: $font-mono;
   font-size: 0.75rem;
-  color: $ctp-yellow;
-  border: 1px solid $ctp-surface0;
+  color: $ctp-text;
+  border: 1px solid rgb(255 255 255 / 10%);
   z-index: 10;
+  box-shadow: $shadow-sm;
 }
 
-// ==============================================
-// D 输入引脚
-// ==============================================
+// 输入输出位置微调
 .input-d {
   top: 30px;
-  left: -60px;
+  left: -68px;
 
   .voltage-display {
     left: 0;
-    top: -28px;
+    top: -32px;
   }
 
   .pin-label {
-    left: 65px;
-    top: -8px;
+    left: 75px;
+    top: -10px;
   }
 
   &.active {
@@ -121,21 +130,18 @@
   }
 }
 
-// ==============================================
-// CLK 时钟引脚
-// ==============================================
 .input-clk {
   bottom: 30px;
-  left: -60px;
+  left: -68px;
 
   .voltage-display {
     left: 0;
-    top: 15px;
+    top: 18px;
   }
 
   .pin-label {
-    left: 65px;
-    top: -8px;
+    left: 75px;
+    top: -10px;
   }
 
   &.active {
@@ -143,21 +149,18 @@
   }
 }
 
-// ==============================================
-// Q 输出引脚
-// ==============================================
 .output-q {
   top: 30px;
-  right: -60px;
+  right: -68px;
 
   .voltage-display {
     right: 0;
-    top: -28px;
+    top: -32px;
   }
 
   .pin-label {
-    right: 65px;
-    top: -8px;
+    right: 75px;
+    top: -10px;
   }
 
   &.active {

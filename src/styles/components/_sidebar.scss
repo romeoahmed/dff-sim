@@ -1,84 +1,56 @@
 // ==============================================
-// Sidebar: About / Credits Panel
+// Sidebar: About / Settings (Modal Sheet)
 // ==============================================
 @use "sass:color";
 @use "../base/variables" as *;
 
-// 关于按钮（固定右上角）
+// 顶部浮动按钮
+@mixin float-btn {
+  position: fixed;
+  top: 24px;
+  z-index: 100;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: $mat-thick; // 半透明背景
+  backdrop-filter: blur(10px);
+  border: 1px solid $ctp-surface1;
+  color: $ctp-text;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-normal;
+  box-shadow: $shadow-sm;
+
+  &:hover {
+    background-color: $ctp-surface0;
+    transform: scale(1.05);
+  }
+}
+
 .btn-about {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 100;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: $ctp-surface0;
-  border: 1px solid $ctp-surface1;
-  color: $ctp-text;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-normal;
-  box-shadow: $shadow-md;
+  @include float-btn;
 
-  &:hover {
-    background-color: $ctp-mauve;
-    color: $ctp-base;
-    transform: scale(1.1);
-  }
-
-  &:focus-visible {
-    outline: 2px solid $ctp-blue;
-    outline-offset: 2px;
-  }
+  right: 24px;
 }
 
-// 设置按钮（固定右上角，靠左一些）
 .btn-settings {
-  position: fixed;
-  top: 20px;
-  right: 74px; // 比 .btn-about 向左偏移
-  z-index: 100;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: $ctp-surface0;
-  border: 1px solid $ctp-surface1;
-  color: $ctp-text;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-normal;
-  box-shadow: $shadow-md;
+  @include float-btn;
 
-  &:hover {
-    background-color: $ctp-blue;
-    color: $ctp-base;
-    transform: scale(1.1);
-  }
-
-  &:focus-visible {
-    outline: 2px solid $ctp-mauve;
-    outline-offset: 2px;
-  }
+  right: 76px; // 24 + 40 + 12
 }
 
-// 遮罩层
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgb(0 0 0 / 50%);
+  background-color: rgb(0 0 0 / 40%); // 调暗背景
+  backdrop-filter: blur(4px); // 背景模糊
   z-index: 200;
   opacity: 0;
   visibility: hidden;
-  transition:
-    opacity $transition-slow,
-    visibility $transition-slow;
+  transition: all 0.4s ease;
 
   &.active {
     opacity: 1;
@@ -86,287 +58,145 @@
   }
 }
 
-// 侧边栏面板
 .sidebar {
   position: fixed;
-  top: 0;
-  right: 0;
-  width: 400px;
-  max-width: 90vw;
-  height: 100vh;
-  background-color: $ctp-mantle;
-  border-left: 1px solid $ctp-surface0;
+  top: 12px;
+  right: 12px;
+  bottom: 12px; // 悬浮样式，不贴底
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  background-color: $mat-thick; // 极深的磨砂玻璃
+  backdrop-filter: blur(30px);
+  border: 1px solid $ctp-surface0;
+  border-radius: $radius-lg;
   z-index: 300;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform $transition-slow;
-  box-shadow: -4px 0 20px rgb(0 0 0 / 30%);
+  transform: translateX(110%); // 完全移出
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: $shadow-lg;
 
   &.active {
     transform: translateX(0);
   }
 }
 
-// 侧边栏头部
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid $ctp-surface0;
-  flex-shrink: 0;
 
   h2 {
-    color: $ctp-mauve;
-    font-size: 1.3rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    color: $ctp-text;
+    font-size: 1.2rem;
+    font-weight: 600;
   }
 }
 
-// 关闭按钮
 .btn-close {
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-md;
-  background-color: transparent;
-  border: 1px solid $ctp-surface1;
+  background: transparent;
+  border: none;
   color: $ctp-subtext0;
-  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all $transition-fast;
+  transition: background $transition-fast;
 
   &:hover {
-    background-color: $ctp-red;
-    border-color: $ctp-red;
-    color: $ctp-base;
+    background-color: $ctp-surface1;
+    color: $ctp-text;
   }
 }
 
-// 侧边栏内容区
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px;
 
-  // 设置表单
   #settings-form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px;
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
 
       label {
+        font-size: 0.9rem;
         color: $ctp-subtext0;
-        font-size: 0.95rem;
-        margin-bottom: 2px;
       }
 
+      // 输入框样式
       input[type="number"] {
-        padding: 6px 10px;
-        border: 1px solid $ctp-surface1;
+        background: $ctp-crust;
+        border: 1px solid $ctp-surface0;
         border-radius: $radius-md;
-        background: $ctp-base;
+        padding: 10px 12px;
         color: $ctp-text;
+        font-family: $font-mono;
         font-size: 1rem;
         transition: border-color $transition-fast;
 
         &:focus {
-          border-color: $ctp-blue;
           outline: none;
+          border-color: $ctp-blue;
+          box-shadow: 0 0 0 3px rgb(138 173 244 / 20%);
         }
 
         &.invalid {
           border-color: $ctp-red;
-          background: color.mix($ctp-red, $ctp-base, 10%);
+          color: $ctp-red;
         }
-
-        &::placeholder {
-          color: $ctp-subtext0;
-          opacity: 1;
-        }
-      }
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 8px;
-
-      .btn {
-        flex: 1;
-      }
-    }
-
-    // 错误信息提示
-    .error-msg {
-      color: $ctp-red;
-      background: linear-gradient(
-        90deg,
-        color.mix($ctp-red, $ctp-base, 20%),
-        $ctp-base 80%
-      );
-      border: 1px solid $ctp-red;
-      border-radius: $radius-md;
-      padding: 10px 16px;
-      font-size: 1.05rem;
-      margin-top: 12px;
-      min-height: 1.6em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 16px rgb(237 135 150 / 18%);
-      opacity: 0;
-      transform: translateY(-12px) scale(0.98);
-      height: 0;
-      pointer-events: none;
-      transition:
-        opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-
-      &.active {
-        opacity: 1;
-        transform: none;
-        height: auto;
-        pointer-events: auto;
-      }
-
-      &::before {
-        content: "\f06a";
-        font-family: "Font Awesome 7 Free", sans-serif;
-        font-weight: 900;
-        font-size: 1.3em;
-        margin-right: 6px;
-        flex-shrink: 0;
       }
     }
   }
 }
 
-// 关于章节
 .about-section {
-  margin-bottom: 24px;
-
   h3 {
-    color: $ctp-blue;
+    color: $ctp-text;
     font-size: 1rem;
     margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid $ctp-surface0;
+    font-weight: 600;
   }
 
-  p {
-    color: $ctp-text;
-    font-size: 0.9rem;
+  p,
+  li {
+    color: $ctp-subtext0;
     line-height: 1.6;
-    margin-bottom: 10px;
+    font-size: 0.95rem;
   }
 
   ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    padding-left: 20px;
+    margin-bottom: 20px;
   }
 
-  li {
-    color: $ctp-subtext0;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-bottom: 8px;
-    padding-left: 16px;
-    position: relative;
+  a {
+    color: $ctp-blue;
+    text-decoration: none;
 
-    &::before {
-      content: ">";
-      position: absolute;
-      left: 0;
-      color: $ctp-mauve;
-      font-weight: bold;
-    }
-
-    strong {
-      color: $ctp-text;
+    &:hover {
+      text-decoration: underline;
     }
   }
 }
 
-// 致谢列表特殊样式
-.thanks-list {
-  li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-left: 0;
-
-    &::before {
-      display: none;
-    }
-
-    i {
-      color: $ctp-mauve;
-      width: 20px;
-      text-align: center;
-    }
-
-    a {
-      color: $ctp-blue;
-      text-decoration: none;
-      transition: color $transition-fast;
-
-      &:hover {
-        color: $ctp-mauve;
-        text-decoration: underline;
-      }
-    }
-  }
-}
-
-// 侧边栏底部
 .sidebar-footer {
-  color: $ctp-red;
-  padding: 16px 20px;
-  border-top: 1px solid $ctp-surface0;
+  padding: 16px;
   text-align: center;
-  flex-shrink: 0;
+  border-top: 1px solid $ctp-surface0;
 
   p {
-    color: $ctp-subtext0;
     font-size: 0.8rem;
-    margin: 0;
-  }
-}
-
-// 响应式：小屏幕下全宽
-@media (width <= 480px) {
-  .sidebar {
-    width: 100vw;
-    max-width: 100vw;
-  }
-
-  .btn-about {
-    top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .btn-settings {
-    top: 10px;
-    right: 60px; // 向左偏移
-    width: 40px;
-    height: 40px;
+    color: $ctp-overlay0;
   }
 }

@@ -3,27 +3,32 @@
 // ==============================================
 @use "variables" as *;
 
-// 窄屏下变为单列布局
-@media (width <= 768px) {
+@media (width <= 900px) {
+  main {
+    grid-template-columns: 1fr; // 单列
+    grid-template-rows: auto auto 1fr;
+  }
+
   .container {
     height: auto;
     min-height: 100vh;
-    padding: 10px 0;
-  }
-
-  main {
-    grid-template-columns: 1fr; // 单列
-    display: flex;
-    flex-direction: column;
+    padding-bottom: 40px;
   }
 
   .oscilloscope-panel {
-    height: 300px; // 示波器固定高度
-    flex: none;
+    height: 320px;
   }
 
-  // 移动端调整芯片显示大小
-  .chip {
-    transform: scale(0.9);
+  .sidebar {
+    width: 100%;
+    top: auto;
+    bottom: 0;
+    border-radius: $radius-lg $radius-lg 0 0;
+    max-height: 85vh;
+    transform: translateY(100%);
+
+    &.active {
+      transform: translateY(0);
+    }
   }
 }

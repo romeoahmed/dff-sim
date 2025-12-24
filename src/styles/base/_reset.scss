@@ -3,40 +3,60 @@
 // ==============================================
 @use "variables" as *;
 
-// 更现代的 Reset
 *,
 *::before,
 *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+
+  // 禁止移动端高亮点击背景
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  // 字体平滑渲染，这对于深色模式下的文字可读性至关重要
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizelegibility;
 }
 
 body {
   background-color: $ctp-base;
+
+  // 增加背景纹理或渐变，增加高级感 (可选，这里用微弱渐变)
+  background-image: linear-gradient(to bottom right, $ctp-base, $ctp-crust);
   color: $ctp-text;
   font-family: $font-main;
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden; // 防止 body 滚动
 }
 
-// 自定义滚动条 (针对 Webkit 浏览器)
+// 统一滚动条样式 (支持 Firefox 和 Webkit)
+* {
+  scrollbar-width: thin;
+  scrollbar-color: $ctp-surface1 transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: $ctp-base;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: $ctp-surface1;
-  border-radius: $radius-sm;
+  background-color: $ctp-surface1;
+  border-radius: $radius-full;
+  border: 2px solid transparent; // 创建 Padding 效果
+  background-clip: content-box;
 
   &:hover {
-    background: $ctp-surface0;
+    background-color: $ctp-surface2;
   }
 }

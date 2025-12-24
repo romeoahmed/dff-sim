@@ -4,93 +4,110 @@
 @use "../base/variables" as *;
 
 .oscilloscope-panel {
-  background-color: $ctp-mantle;
+  background-color: $mat-regular;
+  backdrop-filter: blur(20px);
   border-radius: $radius-lg;
-  padding: 15px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  border: 1px solid $ctp-surface0;
+  border: 1px solid rgb(255 255 255 / 8%);
   box-shadow: $shadow-md;
 }
 
-.digital-scope-header {
-  display: flex;
-  align-items: center;
-  font-weight: bold;
-  color: $ctp-green;
-  margin-bottom: 2px;
-  font-size: 1rem;
-  gap: 6px;
-}
-
-canvas#digital-canvas {
-  background-color: $ctp-crust;
-  border: 1px solid $ctp-surface1;
-  border-radius: $radius-sm;
-  width: 100%;
-  margin-bottom: 8px;
-  cursor: crosshair;
-}
-
+.digital-scope-header,
 .scope-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-  font-weight: bold;
+  font-weight: 600;
+  color: $ctp-text;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+
+  i {
+    color: $ctp-green;
+    margin-right: 8px;
+  }
+}
+
+.scope-header i {
   color: $ctp-blue;
 }
 
-canvas#waveform-canvas {
+// Canvas 容器
+canvas {
   background-color: $ctp-crust;
-  border: 1px solid $ctp-surface1;
-  border-radius: $radius-sm;
-  flex: 1;
+  border: 1px solid $ctp-surface0;
+  border-radius: $radius-md; // 内圆角
   width: 100%;
-
-  // 网格线
-  background-image:
-    linear-gradient($ctp-surface0 1px, transparent 1px),
-    linear-gradient(90deg, $ctp-surface0 1px, transparent 1px);
-  background-size: 20px 20px;
-
-  // 鼠标变为十字准星，增加专业感
+  display: block;
   cursor: crosshair;
+
+  // 增加一点内阴影增加深度
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 20%);
+}
+
+#digital-canvas {
+  margin-bottom: 16px;
+}
+
+#waveform-canvas {
+  flex: 1;
+
+  // 网格线改用更加细腻的样式
+  background-image:
+    linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 // 图例
 .legend {
   display: flex;
-  gap: 20px;
-  margin-top: 10px;
+  gap: 24px;
+  margin-top: 16px;
   justify-content: center;
-  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 5%);
 }
 
 .leg-item {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  color: $ctp-subtext0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-weight: 500;
 
-  // 方块图例（更像数字电路）
   &::before {
     content: "";
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%; // 圆形图例更符合 HIG
+    box-shadow: 0 0 4px currentcolor;
   }
 }
 
-// 图例颜色
-.color-clk::before {
-  background-color: $ctp-green;
+.color-clk {
+  color: $ctp-green;
+
+  &::before {
+    background-color: $ctp-green;
+  }
 }
 
-.color-d::before {
-  background-color: $ctp-blue;
+.color-d {
+  color: $ctp-blue;
+
+  &::before {
+    background-color: $ctp-blue;
+  }
 }
 
-.color-q::before {
-  background-color: $ctp-red;
+.color-q {
+  color: $ctp-red;
+
+  &::before {
+    background-color: $ctp-red;
+  }
 }
