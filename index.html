@@ -8,7 +8,7 @@
     <title>D触发器物理仿真 | D-FlipFlop Simulation</title>
     <meta
       name="description"
-      content="基于 PixiJS v8 (WebGPU) 与 Web Workers 的高性能 D 触发器物理仿真，模拟电压噪声、RC 延迟与亚稳态现象"
+      content="基于 PixiJS (WebGPU) 与 Web Workers 的高性能 D 触发器物理仿真，模拟电压噪声、RC 延迟与亚稳态现象"
     />
     <meta name="author" content="Romeo Ahmed" />
 
@@ -72,7 +72,7 @@
           </p>
           <ul>
             <li>
-              <strong>PixiJS v8 (WebGPU)</strong>：优先使用 WebGPU
+              <strong>PixiJS (WebGPU)</strong>：优先使用 WebGPU
               进行批处理渲染，在保证方波垂直边缘抗锯齿的同时，维持极低的资源开销。
             </li>
             <li>
@@ -116,9 +116,7 @@
           <ul>
             <li><strong>TypeScript</strong> — 严格类型检查，提升代码可靠性</li>
             <li><strong>Vite</strong> — 现代化构建工具，极速热更新</li>
-            <li>
-              <strong>PixiJS v8</strong> — 下一代 2D 渲染引擎 (WebGPU/WebGL)
-            </li>
+            <li><strong>PixiJS</strong> — 下一代 2D 渲染引擎 (WebGPU/WebGL)</li>
             <li><strong>Web Workers</strong> — 高性能多线程编程</li>
             <li>
               <strong>Sass (SCSS)</strong> — 模块化样式，变量与 Mixin 复用
@@ -138,7 +136,7 @@
           <p>
             后续重构引入了
             <strong>Web Worker</strong> 隔离物理计算，并最终迁移至
-            <strong>PixiJS v8</strong>，利用 <strong>WebGPU</strong>
+            <strong>PixiJS</strong>，利用 <strong>WebGPU</strong>
             的批处理能力实现了极致的性能表现，这也是我前端工程化能力的一次完整实践。
           </p>
           <p>
@@ -151,6 +149,26 @@
         <section class="about-section">
           <h3><i class="fa-solid fa-heart"></i> 致谢</h3>
           <ul class="thanks-list">
+            <li>
+              <i class="fa-solid fa-university" aria-hidden="true"></i>
+              <a
+                href="https://www.gbu.edu.cn/menu/182/"
+                target="_blank"
+                rel="noopener"
+                >大湾区大学计算机科学导论教学团队</a
+              >
+              - 赋予我状态机的思维方式
+            </li>
+            <li>
+              <i class="fa-solid fa-book-atlas" aria-hidden="true"></i>
+              <a
+                href="https://developer.mozilla.org/"
+                target="_blank"
+                rel="noopener"
+                >MDN Web Docs</a
+              >
+              - 学习现代 Web 技术的宝库
+            </li>
             <li>
               <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
               <a href="https://pixijs.com/" target="_blank" rel="noopener"
