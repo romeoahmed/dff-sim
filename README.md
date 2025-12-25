@@ -2,8 +2,8 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.3-646cff)
-![PixiJS](<https://img.shields.io/badge/PixiJS-v8_(WebGPU)-e72264>)
+![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.5-646cff)
+![PixiJS](<https://img.shields.io/badge/PixiJS_(WebGPU)-e72264>)
 
 这是一个基于 Web 的 D 触发器 (D Flip-Flop) 物理行为仿真项目。
 
