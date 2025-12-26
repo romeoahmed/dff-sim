@@ -9,13 +9,13 @@
 
 与传统的逻辑门模拟器不同，本项目**模拟了数字电路背后的模拟特性**，包括电压波动、高斯白噪声、RC 延迟（压摆率）以及亚稳态（Metastability）现象。
 
-在渲染层，项目已全面升级至 **PixiJS v8**，优先使用 **WebGPU** 后端，并配合 **Web Workers + OffscreenCanvas** 多线程架构，实现了逻辑计算与图形渲染的完全隔离。
+在渲染层，项目已全面升级至 **PixiJS**，优先使用 **WebGPU** 后端，并配合 **Web Workers + OffscreenCanvas** 多线程架构，实现了逻辑计算与图形渲染的完全隔离。
 
 ## ✨ 核心特性
 
-### 1. 下一代图形渲染架构 (PixiJS v8)
+### 1. 下一代图形渲染架构 (PixiJS)
 
-- **WebGPU 优先**：渲染核心采用 PixiJS v8，优先调用 WebGPU API，在不支持的环境下自动回退至 WebGL。
+- **WebGPU 优先**：渲染核心采用 PixiJS，优先调用 WebGPU API，在不支持的环境下自动回退至 WebGL。
 - **Web Worker 渲染**：利用 `OffscreenCanvas` 将 PixiJS 实例完全运行在 Worker 线程中。**主线程的 DOM 操作（如侧边栏动画、复杂的 CSS 重排）完全不会阻塞示波器的 60FPS/144FPS 渲染循环**。
 - **批处理优化**：采用 PixiJS 的 `Graphics` 与 `MeshRope` 配合 WebGPU 的批处理能力，在同时绘制上千个数据点时，依旧维持极低的 CPU/GPU 开销。
 - **动静分离**：将网格、标签等静态元素与波形动态元素分层管理，大幅减少每帧的 Draw Call。
@@ -43,7 +43,7 @@
 ## 🛠️ 技术栈
 
 - **语言**：[TypeScript](https://www.typescriptlang.org/) (全类型覆盖，严格模式)
-- **渲染引擎**：[PixiJS v8](https://pixijs.com/) (WebGPU / WebGL)
+- **渲染引擎**：[PixiJS](https://pixijs.com/) (WebGPU / WebGL)
 - **多线程**：Web Workers + OffscreenCanvas
 - **构建工具**：[Vite](https://vitejs.dev/)
 - **样式**：[Sass](https://sass-lang.com/) (Dart Sass) + Catppuccin 主题
@@ -53,20 +53,20 @@
 
 ### 环境要求
 
-- Node.js (推荐 v18+)
-- pnpm (推荐) 或 npm/yarn
+- [Bun](https://bun.sh/) v1.0+ (推荐，用于快速部署)
+- [Node.js](https://nodejs.org/) v18+ (可选，替代 Bun)
 - 支持 WebGPU 或 WebGL 的现代浏览器 (Chrome 113+ 体验最佳)
 
 ### 安装依赖
 
 ```bash
-pnpm install
+bun install
 ```
 
 ### 启动开发服务器
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 打开浏览器访问 `http://localhost:5173` 即可看到仿真界面。
@@ -74,7 +74,7 @@ pnpm dev
 ### 构建生产版本
 
 ```bash
-pnpm build
+bun run build
 ```
 
 ## 📂 项目结构
