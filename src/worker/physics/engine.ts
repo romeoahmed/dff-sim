@@ -152,7 +152,7 @@ export class DFlipFlop {
     const { logicHighMin, logicLowMax } = VoltageSpecs;
 
     // 1. 施密特触发器
-    let clkLogic: 0 | 1 = 0;
+    let clkLogic: 0 | 1;
     if (clkVoltage > logicHighMin) {
       clkLogic = 1;
     } else if (clkVoltage < logicLowMax) {
