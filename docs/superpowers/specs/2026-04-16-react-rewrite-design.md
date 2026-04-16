@@ -63,7 +63,7 @@ Complete ground-up rewrite of the D flip-flop physics simulation. Replaces the i
 **Render Worker**: Owns the WebGPU device, pipeline, and both OffscreenCanvases. Runs at display vsync via `requestAnimationFrame`. Exposes an API via Comlink:
 - `init(waveformCanvas, digitalCanvas, width, height, dpr)` — canvas setup + WebGPU init
 - `resize(width, height, dpr)` — responsive resize
-- `setRendererMode(mode)` — switch between "standard" (solid triangle-strip lines) and "experimental" (glow/bloom shader effect on lines) rendering modes. Both are raw WebGPU; the distinction is in the fragment shader.
+- `setShaderStyle(style)` — switch between three WGSL fragment shader styles: "clean" (solid crisp lines), "glow" (neon bloom halo), "phosphor" (brightness decay trail). All share the same vertex shader and triangle-strip geometry; only the fragment shader differs.
 
 **Physics → Render**: Direct communication via `MessageChannel`. Physics Worker sends frame data (3 Float32Arrays + write pointer) each simulation tick. Render Worker consumes the latest frame on its next `requestAnimationFrame`.
 
@@ -110,7 +110,15 @@ Two separate render pipelines targeting two OffscreenCanvases (analog waveform a
 - Offsets vertex position by +/- half-thickness along normal (even/odd vertex_index)
 - Outputs position and channel color
 
-**Fragment shader**: Outputs solid channel color. Optional edge alpha falloff for anti-aliasing.
+**Fragment shaders** (three styles, switchable at runtime by swapping the pipeline):
+
+1. **Clean** (`waveform-clean.wgsl`): Solid channel color with smooth edge alpha falloff for anti-aliasing. Minimal computation.
+
+2. **Glow** (`waveform-glow.wgsl`): Bright core (full channel color) with a soft neon bloom halo. Uses distance-from-center-line to compute alpha: core is opaque, edges fade with Gaussian falloff. CRT/retro oscilloscope aesthetic.
+
+3. **Phosphor** (`waveform-phosphor.wgsl`): Brightness decays based on sample age (distance from write pointer in ring buffer). Newest samples render at full brightness, older samples fade toward a dim minimum. Simulates phosphor persistence on a real CRT oscilloscope. The age factor is passed from the vertex shader as a varying.
+
+All three share the same vertex shader (triangle strip extrusion). Pipeline switching is done by pre-compiling all three `GPURenderPipeline` objects on init and selecting the active one per frame based on `shaderStyle`.
 
 **Draw call**: `draw(4096, 3)` — 2048 sample points x 2 vertices per point, 3 channel instances.
 
@@ -124,6 +132,8 @@ Two separate render pipelines targeting two OffscreenCanvases (analog waveform a
 - Reads sample, applies threshold: `sample > logicHighMin ? yHigh : yLow`
 - Creates step-function waveform (discrete jumps)
 - Triangle strip extrusion for line thickness
+
+**Fragment shader**: Uses the same three styles as analog pipeline (clean/glow/phosphor). Same pipeline switching mechanism.
 
 **Draw call**: `draw(4096, 3)` — same geometry, different Y mapping.
 
@@ -174,7 +184,7 @@ src/
 │   │   ├── SpeedSlider.tsx        # Clock speed control
 │   │   ├── ToggleDButton.tsx      # Input D toggle
 │   │   ├── ResetButton.tsx        # Reset (hold) button
-│   │   └── RendererSwitch.tsx     # Standard/Experimental toggle
+│   │   └── ShaderStyleToggle.tsx   # Clean/Glow/Phosphor toggle group
 │   ├── settings/
 │   │   └── SettingsSheet.tsx      # Voltage parameter editing sidebar
 │   ├── about/
@@ -188,7 +198,7 @@ src/
 ├── stores/
 │   ├── simulation-store.ts        # Zustand: noise, speed, D state, reset, voltages
 │   ├── settings-store.ts          # Zustand: voltage spec config
-│   └── ui-store.ts                # Zustand: sidebar state, renderer mode, locale
+│   └── ui-store.ts                # Zustand: sidebar state, shader style, locale
 │
 ├── hooks/
 │   ├── useSimulation.ts           # Worker lifecycle, Comlink proxies, MessageChannel
@@ -197,10 +207,13 @@ src/
 │
 ├── workers/
 │   ├── physics/
-│   │   ├── physics.worker.ts      # Worker entry, Comlink.expose(), tick loop
-│   │   ├── signal.ts              # Signal class (Gaussian noise, RC filter)
-│   │   ├── flip-flop.ts           # DFlipFlop class (Schmitt trigger, metastability)
-│   │   └── waveform-buffer.ts     # Ring buffer (Float32Array, power-of-2)
+│   │   ├── physics.worker.ts      # Worker entry, Comlink.expose(), accumulator tick loop
+│   │   ├── engine.ts              # SimulationEngine: orchestrates all physics components
+│   │   ├── noise.ts               # NoiseGenerator: Marsaglia white + Voss-McCartney 1/f
+│   │   ├── signal.ts              # Signal: state-space RLC model, noise injection
+│   │   ├── clock.ts               # ClockGenerator: phase tracking, jitter, edge detection
+│   │   ├── flip-flop.ts           # DFlipFlop: Schmitt trigger, setup/hold, metastability
+│   │   └── waveform-buffer.ts     # WaveformBuffer: ring buffer (Float32Array, power-of-2)
 │   └── render/
 │       ├── render.worker.ts       # Worker entry, WebGPU init, Comlink.expose()
 │       ├── gpu-device.ts          # WebGPU adapter/device/context setup
@@ -208,13 +221,16 @@ src/
 │       │   ├── waveform.ts        # Analog waveform render pipeline setup
 │       │   └── digital.ts         # Digital logic render pipeline setup
 │       └── shaders/
-│           ├── waveform.wgsl      # Vertex/fragment for analog polylines
-│           └── digital.wgsl       # Vertex/fragment for digital square waves
+│           ├── waveform.vert.wgsl       # Shared vertex shader (triangle strip extrusion)
+│           ├── waveform-clean.frag.wgsl # Fragment: solid crisp lines
+│           ├── waveform-glow.frag.wgsl  # Fragment: neon bloom halo
+│           ├── waveform-phosphor.frag.wgsl # Fragment: brightness decay trail
+│           └── digital.wgsl             # Vertex/fragment for digital square waves
 │
 ├── lib/
-│   ├── constants.ts               # Colors (Catppuccin Macchiato), VoltageSpecs, Simulation, Layout
-│   ├── types.ts                   # Shared TypeScript interfaces
-│   ├── validation.ts              # Zod schemas for voltage spec validation
+│   ├── constants.ts               # Colors (Catppuccin Macchiato), VoltageSpecs, Simulation, Layout, Timing
+│   ├── types.ts                   # Shared TypeScript interfaces (incl. TimingConfig, SignalConfig, PhysicsConfig)
+│   ├── validation.ts              # Zod schemas for voltage spec and timing validation
 │   └── worker-bridge.ts           # Comlink + MessageChannel setup utility
 │
 ├── i18n/
@@ -230,8 +246,10 @@ src/
 │
 └── test/
     ├── physics/
-    │   ├── signal.test.ts         # Gaussian noise distribution, RC filter, clamping
-    │   └── flip-flop.test.ts      # Edge detection, Schmitt trigger, metastability
+    │   ├── noise.test.ts          # White + 1/f noise distribution and spectrum
+    │   ├── signal.test.ts         # RLC step response, overshoot, clamping
+    │   ├── clock.test.ts          # Frequency accuracy, jitter distribution
+    │   └── flip-flop.test.ts      # Edge detection, setup/hold, t_CQ, metastability
     ├── stores/
     │   └── simulation-store.test.ts
     ├── components/
@@ -280,12 +298,12 @@ Validation via Zod schema before dispatching to Worker. Constraints: `outputLowM
 
 ```ts
 interface UIState {
-  rendererMode: "standard" | "experimental";
+  shaderStyle: "clean" | "glow" | "phosphor";
   settingsOpen: boolean;
   aboutOpen: boolean;
   locale: "en" | "zh-CN";
 
-  setRendererMode: (m: "standard" | "experimental") => void;
+  setShaderStyle: (s: "clean" | "glow" | "phosphor") => void;
   toggleSettings: () => void;
   toggleAbout: () => void;
   setLocale: (l: "en" | "zh-CN") => void;
@@ -313,7 +331,7 @@ interface UIState {
             <PinDisplay channel="CLK" />
             <PinDisplay channel="Q" />
           </ChipDiagram>
-          <RendererSwitch />
+          <ShaderStyleToggle />
           <NoiseSlider />
           <SpeedSlider />
           <ToggleDButton />
@@ -343,7 +361,7 @@ function useSimulation(
   // 6. Subscribe to Zustand store slices:
   //    - noise/speed/inputD/resetActive changes → physicsProxy.setParam()
   //    - settings changes → physicsProxy.setSettings()
-  //    - rendererMode changes → renderProxy.setMode()
+  //    - shaderStyle changes → renderProxy.setShaderStyle()
   // 7. Physics Worker posts voltage status → Comlink callback → updateVoltages()
   // 8. On unmount: terminate both Workers, clean up subscriptions
 }
@@ -375,32 +393,188 @@ Dark theme only. Responsive grid: single column on mobile, two columns on deskto
 
 ## Physics Engine
 
-### Preserved from current codebase (cleaned and modularized):
+Complete redesign of the physics model for realistic circuit behavior. All classes receive config via constructor (dependency injection), no global mutable state.
 
-**Signal class** (`workers/physics/signal.ts`):
-- Gaussian noise via Marsaglia Polar Method (double-buffered)
-- Frame-rate-independent RC filter: `adjustedFactor = 1 - (1 - baseFactor)^(dt * baseFrameRate)`
-- Voltage clamping to `[clampMin, systemMax]`
-- Constructor params: `baseHigh`, `baseLow`, `smoothingFactor`
+### Fixed-Timestep Sub-Stepping
 
-**DFlipFlop class** (`workers/physics/flip-flop.ts`):
-- Rising edge detection on CLK (0→1 transition)
-- Schmitt trigger hysteresis: `voltage > logicHighMin` → 1, `< logicLowMax` → 0, else hold
-- Metastability: D in undefined zone (0.6V-1.0V) at clock edge → random output
-- Async reset support
-- Output Signal uses faster smoothing (0.4 vs 0.2)
+Physics runs at a fixed **10 kHz** rate (dt = 0.1ms) using an accumulator pattern:
 
-**WaveformBuffer class** (`workers/physics/waveform-buffer.ts`):
+```ts
+const PHYSICS_DT = 0.0001; // 100 microseconds
+
+tick(realDt: number) {
+  this.accumulator += realDt;
+  while (this.accumulator >= PHYSICS_DT) {
+    this.stepPhysics(PHYSICS_DT);
+    this.accumulator -= PHYSICS_DT;
+  }
+}
+```
+
+At the Worker's ~120Hz tick rate, this runs ~8 sub-steps per tick. Benefits:
+- Clock edges detected with 0.1ms precision regardless of display refresh rate
+- RLC model stays numerically stable (`wn * dt = 0.063`)
+- Setup/hold time windows evaluated accurately
+- Consistent behavior across 30fps, 60fps, 144fps
+
+Data pushed to ring buffer after each sub-step for higher-resolution waveform data.
+
+### Composite Noise Generator (`workers/physics/noise.ts`)
+
+Combines two noise sources for realistic CMOS noise spectrum:
+
+**White noise** — Marsaglia Polar Method (carried over, double-buffered):
+```
+rejection sample u,v in [-1,1] until s = u²+v² < 1
+mul = sqrt(-2 * log(s) / s)
+yield u*mul (cache v*mul for next call)
+```
+
+**1/f (flicker) noise** — Voss-McCartney algorithm, 8 octaves:
+```
+8 Gaussian generators, each updated at half the rate of the previous
+counter tracks which generator to update (trailing-zero-bit index)
+running_sum maintained incrementally (subtract old, add new)
+```
+
+**Composite**: `noise = (voss_sum / 8) * sigma_flicker + white * sigma_white`, where `sigma_flicker = 4 * sigma_white`. This produces realistic "slow drift + fast jitter" — the 1/f component creates wandering baseline visible on the oscilloscope, white noise adds high-frequency jitter. Both scale with the user's noise level control.
+
+### Signal Class (`workers/physics/signal.ts`)
+
+Models a voltage source with second-order edge response.
+
+**State-space RLC model** (replaces single-pole RC filter):
+```ts
+// Two state variables: voltage (x1) and its derivative (x2)
+// Per sub-step (dt = 0.0001):
+const error = targetVoltage + noise - this.x1;
+this.x2 += (wn * wn * error - 2 * zeta * wn * this.x2) * dt;
+this.x1 += this.x2 * dt;
+this.voltage = clamp(this.x1, clampMin, systemMax);
+```
+
+**Parameters** (per signal type):
+- Input signals (D, CLK): `zeta = 0.8` (slightly underdamped, ~1.5% overshoot), `f_ring = 80 Hz`
+- Output signal (Q): `zeta = 0.6` (more underdamped, ~9.5% overshoot), `f_ring = 120 Hz`
+
+This produces realistic edge shapes: fast rise with slight overshoot and ringing that settles in ~5ms. Overshoot formula: `exp(-pi * zeta / sqrt(1 - zeta²)) * 100%`.
+
+**Constructor** receives `SignalConfig` (immutable):
+```ts
+interface SignalConfig {
+  baseHigh: number;
+  baseLow: number;
+  zeta: number;       // damping ratio
+  ringFreq: number;   // natural frequency (Hz)
+  clampMin: number;
+  clampMax: number;
+}
+```
+
+### Clock Generator (`workers/physics/clock.ts`)
+
+Generates clock signal with **phase jitter**:
+
+```ts
+// Phase advances each sub-step:
+this.phase += this.speed * dt;
+
+// Edge detection with jitter:
+// When phase crosses edge boundary (0 or PI), apply Gaussian offset
+if (crossesEdge(oldPhase, this.phase)) {
+  const jitteredPhase = this.phase + gaussian(0, this.jitterRms);
+  this.signal.targetLogic = sin(jitteredPhase) > 0 ? 1 : 0;
+}
+```
+
+**Jitter parameter**: `jitter_rms` defaults to ~2% of clock period. Creates variable period lengths. This naturally causes occasional setup/hold window violations, making metastability **spontaneous** — without requiring the user to manually place D in the undefined zone.
+
+### D Flip-Flop (`workers/physics/flip-flop.ts`)
+
+Models a real flip-flop with timing parameters and proper metastability.
+
+**Timing parameters** (in `TimingConfig`):
+```ts
+interface TimingConfig {
+  tSetup: number;    // Setup time: D must be stable before CLK edge (default 3ms)
+  tHold: number;     // Hold time: D must remain stable after CLK edge (default 1ms)
+  tCQ: number;       // Clock-to-Q propagation delay (default 2ms)
+  tauMeta: number;   // Metastability resolution time constant (default 5ms)
+}
+```
+
+Values are scaled to visible simulation time (not real nanoseconds) so that timing violations and metastability are observable at default clock speed.
+
+**Rising edge detection**: Schmitt trigger with hysteresis (preserved):
+```
+if clkVoltage > logicHighMin → 1
+if clkVoltage < logicLowMax → 0
+else → hold previous state (hysteresis band)
+```
+
+**Setup/hold violation detection**: On a CLK rising edge, examine D's recent history:
+- Track D's logic state over a rolling window
+- **Setup violation**: D changed logic state within `[edge - t_su, edge]`
+- **Hold violation**: D changes logic state within `[edge, edge + t_h]`
+- Either violation → enter metastable state
+
+**Propagation delay (t_CQ)**: After a valid (non-metastable) clock edge captures D, Q's target logic doesn't change immediately. Instead, schedule the Q transition for `t_CQ` later. A pending transition queue handles this.
+
+**Metastability resolution** (the major improvement):
+
+When a setup/hold violation occurs:
+1. Q output drives toward **mid-rail voltage** (~VDD/2 = 1.25V) — the unstable equilibrium
+2. Q's Signal enters a special metastable mode with very low damping (`zeta = 0.2`), producing visible oscillations around mid-rail
+3. Resolution time sampled from exponential distribution: `t_resolve = -tau * ln(random())`
+4. After `t_resolve` elapses, Q collapses to 0 or 1 (random) and transitions normally with regular damping
+
+This means a student watching the oscilloscope will **see** metastability: Q goes to ~1.25V, wobbles visibly, then snaps to a logic level — exactly what happens on a real oscilloscope probing a metastable flip-flop.
+
+### Waveform Buffer (`workers/physics/waveform-buffer.ts`)
+
+Preserved from current codebase:
 - Ring buffer: 3 x Float32Array, length 2048 (power of 2)
 - O(1) wraparound via bitwise AND: `(ptr + 1) & (length - 1)`
 - Push, reset, read pointer access
 
-### Changes from current codebase:
+With 10kHz sub-stepping, data is pushed per sub-step (not per frame), giving ~80x higher temporal resolution in the waveform display than the current implementation.
 
-- Split `engine.ts` into separate `signal.ts` and `flip-flop.ts` files
-- Remove direct dependency on global `VoltageSpecs` — pass config as constructor/method params for testability
-- Physics Worker entry (`physics.worker.ts`) owns the tick loop and Comlink API surface
-- VoltageSpecs updates arrive via Comlink instead of `Object.assign(VoltageSpecs, ...)`
+### Immutable Configuration
+
+All physics config is immutable and injected:
+
+```ts
+interface PhysicsConfig {
+  readonly voltage: Readonly<VoltageSpecConfig>;
+  readonly simulation: Readonly<SimulationConfig>;
+  readonly timing: Readonly<TimingConfig>;
+}
+```
+
+Config updates: main thread sends new config via Comlink → physics worker creates a new frozen `PhysicsConfig` → reconstructs or reconfigures engine components. No mutation of shared objects.
+
+### Why Physics Stays on CPU (Not Compute Shader)
+
+Considered and rejected WebGPU Compute Shaders. Reasons:
+- Only 3 signals with sequential frame-to-frame dependencies (RLC state, Schmitt trigger state, metastability state). No parallelism to exploit.
+- Even with sub-stepping (~800 ops per tick at 120Hz), CPU cost is <10us. GPU dispatch overhead (5-50us) exceeds the computation.
+- `mapAsync()` readback latency (1-3 frames) would make UI voltage display stale.
+- 1/f noise generation (Voss-McCartney) is inherently sequential (counter-based octave updates).
+
+Compute shaders are the right tool for massive parallelism (particle systems, fluid grids, per-pixel processing). This simulation is 3 tightly coupled sequential state machines — CPU is the correct fit.
+
+### File Structure (physics)
+
+```
+workers/physics/
+├── physics.worker.ts       # Worker entry, Comlink.expose(), accumulator tick loop
+├── engine.ts               # SimulationEngine: orchestrates clock, signals, DFF, buffer
+├── noise.ts                # NoiseGenerator: Marsaglia white + Voss-McCartney 1/f
+├── signal.ts               # Signal: state-space RLC, noise injection, clamping
+├── clock.ts                # ClockGenerator: phase tracking, jitter, edge detection
+├── flip-flop.ts            # DFlipFlop: Schmitt trigger, setup/hold, t_CQ, metastability
+└── waveform-buffer.ts      # WaveformBuffer: ring buffer (Float32Array)
+```
 
 ## Internationalization (Lingui)
 
@@ -436,8 +610,10 @@ import { Trans, t } from "@lingui/react/macro";
 ### Unit Tests (Vitest)
 
 **Physics** (`test/physics/`):
-- `signal.test.ts`: Noise distribution (mean ~0, std ~noiseLevel over N samples), RC filter convergence to target, voltage clamping at bounds, frame-rate independence (same result at 30fps vs 120fps)
-- `flip-flop.test.ts`: Rising edge captures D, falling edge ignores, Schmitt trigger hysteresis band, metastability (~50% over 1000 runs), async reset overrides, output smoothing
+- `noise.test.ts`: White noise distribution (mean ~0, std ~sigma_white), 1/f spectral slope verification (power decreases ~linearly with log-frequency over 8 octaves), composite noise scaling with user control
+- `signal.test.ts`: RLC step response overshoot (~9.5% for zeta=0.6), settling time, voltage clamping at bounds, frame-rate independence (same result at 30fps vs 120fps via sub-stepping)
+- `clock.test.ts`: Frequency accuracy, jitter distribution (mean ~0, std ~jitter_rms), duty cycle within tolerance
+- `flip-flop.test.ts`: Rising edge captures D, falling edge ignores, Schmitt trigger hysteresis band, setup violation triggers metastability, hold violation triggers metastability, t_CQ delay (Q changes after delay, not immediately), metastability resolution (~50% distribution over 1000 runs), resolution time follows exponential distribution, async reset overrides metastable state
 
 **Stores** (`test/stores/`):
 - Store action tests: setNoise updates state, toggleD flips, resetToDefaults restores initial values
