@@ -728,23 +728,35 @@ export const adderCircuit: CircuitDefinition = {
 
 ### Component Registry (`workers/physics/components/registry.ts`)
 
-Maps type strings to constructors. New component types are registered here:
+DI-aware factory that maps type strings to constructors. Receives shared dependencies (config, RNG) and threads them into component constructors:
 
 ```ts
-const registry = new Map<string, ComponentConstructor>([
-  ["ClockSource", ClockSource],
-  ["SignalSource", SignalSource],
-  ["DFlipFlop", DFlipFlop],
-  // Day 2:
-  ["ANDGate", ANDGate],
-  ["ORGate", ORGate],
-  ["XORGate", XORGate],
-  ["NOTGate", NOTGate],
-  ["FullAdder", FullAdder],
-]);
+interface ComponentDeps {
+  config: PhysicsConfig;
+  rng: RngFn;
+}
+
+class ComponentRegistry {
+  private factories = new Map<string, (id: string, params: Record<string, unknown>, deps: ComponentDeps) => Component>();
+
+  register(type: string, factory: ComponentFactory): void { ... }
+  create(type: string, id: string, params: Record<string, unknown>, deps: ComponentDeps): Component { ... }
+}
+
+// Default registry:
+const registry = new ComponentRegistry();
+registry.register("ClockSource", (id, params, deps) => new ClockSource(id, params, deps.config, deps.rng));
+registry.register("SignalSource", (id, params, deps) => new SignalSource(id, params, deps.config));
+registry.register("DFlipFlop", (id, params, deps) => new DFlipFlop(id, params, deps.config, deps.rng));
+// Day 2:
+registry.register("ANDGate", (id, params, _deps) => new ANDGate(id, params));
+registry.register("ORGate", (id, params, _deps) => new ORGate(id, params));
+registry.register("XORGate", (id, params, _deps) => new XORGate(id, params));
+registry.register("NOTGate", (id, params, _deps) => new NOTGate(id, params));
+registry.register("FullAdder", (id, params, _deps) => new FullAdder(id, params));
 ```
 
-Adding a new component type: implement the `Component` interface, register it, use it in a circuit definition. No other files change.
+Adding a new component type: implement the `Component` interface, register a factory function, use it in a circuit definition. No other files change. Tests can create a custom registry with mock components.
 
 ## Physics Engine
 
@@ -776,18 +788,33 @@ Data pushed to ring buffer after each sub-step for higher-resolution waveform da
 
 ### Composite Noise Generator (`workers/physics/noise.ts`)
 
-Combines two noise sources for realistic CMOS noise spectrum:
+Receives `RngFn` via constructor injection — never calls `Math.random()` directly. This makes noise generation fully deterministic when a seeded RNG is provided.
 
-**White noise** — Marsaglia Polar Method (carried over, double-buffered):
+```ts
+class NoiseGenerator {
+  constructor(
+    private readonly rng: RngFn,      // injected — Math.random in prod, seeded in tests
+    private sigmaWhite: number,
+    private sigmaFlicker: number,     // default: 4 * sigmaWhite
+    private readonly octaves: number = 8,
+  ) { ... }
+
+  setSigma(sigmaWhite: number): void { ... }  // called when user changes noise slider
+  sample(): number { ... }                     // returns composite noise value
+}
 ```
-rejection sample u,v in [-1,1] until s = u²+v² < 1
+
+**White noise** — Marsaglia Polar Method (uses injected `rng`):
+```
+u = rng() * 2 - 1; v = rng() * 2 - 1
+rejection sample until s = u²+v² < 1
 mul = sqrt(-2 * log(s) / s)
 yield u*mul (cache v*mul for next call)
 ```
 
 **1/f (flicker) noise** — Voss-McCartney algorithm, 8 octaves:
 ```
-8 Gaussian generators, each updated at half the rate of the previous
+8 Gaussian generators (each initialized via rng), updated at halving rates
 counter tracks which generator to update (trailing-zero-bit index)
 running_sum maintained incrementally (subtract old, add new)
 ```
@@ -814,7 +841,7 @@ this.voltage = clamp(this.x1, clampMin, systemMax);
 
 This produces realistic edge shapes: fast rise with slight overshoot and ringing that settles in ~5ms. Overshoot formula: `exp(-pi * zeta / sqrt(1 - zeta²)) * 100%`.
 
-**Constructor** receives `SignalConfig` (immutable):
+**Constructor** receives `SignalConfig` (immutable) and a `NoiseGenerator` instance (injected):
 ```ts
 interface SignalConfig {
   baseHigh: number;
@@ -823,6 +850,13 @@ interface SignalConfig {
   ringFreq: number;   // natural frequency (Hz)
   clampMin: number;
   clampMax: number;
+}
+
+class Signal {
+  constructor(
+    private readonly config: SignalConfig,
+    private readonly noise: NoiseGenerator,  // injected — tests can pass zero-noise
+  ) { ... }
 }
 ```
 
@@ -897,9 +931,50 @@ Generalized for N channels (determined by circuit definition's probe count):
 
 With 10kHz sub-stepping, data is pushed per sub-step (not per frame), giving ~80x higher temporal resolution in the waveform display than the current implementation.
 
-### Immutable Configuration
+### Dependency Injection Architecture
 
-All physics config is immutable and injected:
+All physics classes use **constructor injection**. No class imports global constants or creates its own collaborators. This enables deterministic testing and clean isolation.
+
+**Seedable PRNG** — The most impactful DI decision. Every class that uses randomness (noise generation, metastability resolution, clock jitter) receives an RNG function:
+
+```ts
+// Simple interface: returns uniform [0, 1) — same as Math.random()
+type RngFn = () => number;
+
+// Production: Math.random
+// Testing: seedable PRNG (e.g., mulberry32) for deterministic, reproducible tests
+function createSeededRng(seed: number): RngFn {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+```
+
+**Injection chain:**
+
+```
+SimulationEngine (receives PhysicsConfig, RngFn, timer fn)
+  └─ CircuitGraph (receives ComponentRegistry, PhysicsConfig, RngFn)
+       └─ ComponentRegistry.create(type, id, params, deps)
+            └─ ClockSource (receives SignalConfig, NoiseGenerator, RngFn)
+            └─ SignalSource (receives SignalConfig, NoiseGenerator)
+            └─ DFlipFlop (receives TimingConfig, SignalConfig, NoiseGenerator, RngFn)
+                 └─ Signal (receives SignalConfig, NoiseGenerator)
+                      └─ NoiseGenerator (receives sigma config, RngFn)
+```
+
+**Key DI rules:**
+- `NoiseGenerator` is injected into `Signal`, not created internally. Tests can pass a zero-noise generator to isolate RLC behavior.
+- `ComponentRegistry` is injected into `CircuitGraph`, not imported as a global. Tests can register mock components.
+- `RngFn` is threaded through the entire chain. Production passes `Math.random`; tests pass `createSeededRng(42)` for reproducibility.
+- `SimulationEngine` receives a timer function (`(callback: () => void, ms: number) => number`) instead of calling `setTimeout` directly. Tests can use synchronous stepping.
+- `WaveformBuffer` receives `length` and `channelCount` as constructor params, not from global constants.
+
+**Immutable config:**
 
 ```ts
 interface PhysicsConfig {
