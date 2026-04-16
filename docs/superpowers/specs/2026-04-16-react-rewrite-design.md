@@ -2,6 +2,8 @@
 
 Complete ground-up rewrite of the D flip-flop physics simulation. Replaces the imperative vanilla TypeScript + PixiJS + SCSS codebase with a modern declarative stack: React 19, Tailwind CSS v4, raw WebGPU/WGSL, multi-Worker Actor Model, and Zustand state management.
 
+The architecture is built on a **generic circuit graph model** so that future demos (adder, counter, shift register) require only new component classes and circuit definitions — zero engine changes.
+
 ## Tech Stack
 
 | Layer | Technology | Version | Purpose |
@@ -25,68 +27,81 @@ Complete ground-up rewrite of the D flip-flop physics simulation. Replaces the i
 ### Three-Thread Actor Model
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                   React (Main Thread)                 │
-│                                                      │
-│  ┌─────────┐  ┌───────────┐  ┌────────────────────┐ │
-│  │ Zustand  │  │ shadcn/ui │  │ Lingui i18n        │ │
-│  │ Store    │  │ Components│  │ (zh-CN, en)        │ │
-│  └────┬─────┘  └─────┬─────┘  └────────────────────┘ │
-│       │              │                                │
-│  ┌────┴──────────────┴──────────────────────┐        │
-│  │  useSimulation() — React hook             │        │
-│  │  Owns Worker lifecycle, Comlink proxies   │        │
-│  │  Subscribes to status updates             │        │
-│  └──────┬────────────────────┬──────────────┘        │
-└─────────┼────────────────────┼───────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                    React (Main Thread)                     │
+│                                                           │
+│  ┌─────────┐  ┌───────────┐  ┌──────┐  ┌──────────────┐ │
+│  │ Zustand  │  │ shadcn/ui │  │Lingui│  │ Circuit      │ │
+│  │ Stores   │  │ Components│  │ i18n │  │ Definitions  │ │
+│  └────┬─────┘  └─────┬─────┘  └──────┘  └──────┬───────┘ │
+│       │              │                          │         │
+│  ┌────┴──────────────┴──────────────────────────┴───┐    │
+│  │  useSimulation(circuitDef) — React hook           │    │
+│  │  Owns Worker lifecycle, Comlink proxies            │    │
+│  │  Sends circuit definition to Physics Worker        │    │
+│  │  Subscribes to probe voltage updates               │    │
+│  └──────┬────────────────────┬──────────────────────┘    │
+└─────────┼────────────────────┼───────────────────────────┘
           │ Comlink            │ Comlink
           │                    │
-┌─────────┴──────┐   ┌────────┴────────────┐
-│ Physics Worker  │   │ Render Worker        │
-│                 │   │                      │
-│ Signal class    │   │ WebGPU Device        │
-│ DFlipFlop class │   │ WGSL Shaders         │
-│ WaveformBuffer  │   │ OffscreenCanvas x2   │
-│                 │   │ Analog + Digital view │
-└────────┬────────┘   └────────┬─────────────┘
-         │  MessageChannel     │
-         └─────────────────────┘
+┌─────────┴──────────┐   ┌────┴────────────────┐
+│ Physics Worker      │   │ Render Worker        │
+│                     │   │                      │
+│ CircuitGraph        │   │ WebGPU Device        │
+│   Components[]      │   │ WGSL Shaders         │
+│   Nets[]            │   │ OffscreenCanvas x2   │
+│   Levelized eval    │   │ N-channel rendering  │
+│ WaveformBuffer (N)  │   │ Analog + Digital     │
+└────────┬────────────┘   └────────┬─────────────┘
+         │  MessageChannel         │
+         └─────────────────────────┘
 ```
 
-**Main Thread (React)**: UI rendering, user interaction, Zustand state. Zero physics computation, zero canvas rendering.
+**Main Thread (React)**: UI rendering, user interaction, Zustand state. Holds the circuit definition (data) and passes it to Workers. Zero physics computation, zero canvas rendering. UI components are driven by the circuit definition's `controls` and `probes` arrays — not hardcoded for a specific circuit.
 
-**Physics Worker**: Runs the simulation loop via a `setTimeout`-based tick (Workers don't have `requestAnimationFrame`). Owns Signal instances, DFlipFlop logic, and the WaveformBuffer ring buffer. Ticks at ~120Hz (8ms interval) for smooth physics, decoupled from display refresh rate. Exposes an API via Comlink:
-- `setParam(key, value)` — noise, speed, toggleD, reset
-- `setSettings(specs)` — voltage threshold updates
-- Status callback: pushes `{ d, clk, q }` voltage readings to main thread at ~20Hz
+**Physics Worker**: Receives a `CircuitDefinition`, instantiates the circuit graph (components, nets, levelized evaluation order), and runs the simulation loop via `setTimeout` at ~120Hz. Exposes a generic API via Comlink:
+- `loadCircuit(def)` — instantiate circuit graph from definition
+- `setParam(componentId, key, value)` — set parameter on any component
+- `setSettings(specs)` — voltage threshold updates (global)
+- Status callback: pushes probed net voltages to main thread at ~20Hz
 
-**Render Worker**: Owns the WebGPU device, pipeline, and both OffscreenCanvases. Runs at display vsync via `requestAnimationFrame`. Exposes an API via Comlink:
-- `init(waveformCanvas, digitalCanvas, width, height, dpr)` — canvas setup + WebGPU init
+**Render Worker**: Owns the WebGPU device, pipeline, and both OffscreenCanvases. Runs at display vsync via `requestAnimationFrame`. Accepts **N channels** (not hardcoded 3). Exposes an API via Comlink:
+- `init(canvases, width, height, dpr, probes)` — canvas setup + WebGPU init with N-channel config (labels, colors, offsets)
 - `resize(width, height, dpr)` — responsive resize
-- `setShaderStyle(style)` — switch between three WGSL fragment shader styles: "clean" (solid crisp lines), "glow" (neon bloom halo), "phosphor" (brightness decay trail). All share the same vertex shader and triangle-strip geometry; only the fragment shader differs.
+- `setShaderStyle(style)` — switch between "clean", "glow", "phosphor" WGSL fragment shaders
+- `updateProbes(probes)` — reconfigure displayed channels
 
-**Physics → Render**: Direct communication via `MessageChannel`. Physics Worker sends frame data (3 Float32Arrays + write pointer) each simulation tick. Render Worker consumes the latest frame on its next `requestAnimationFrame`.
+**Physics → Render**: Direct communication via `MessageChannel`. Physics Worker sends frame data as a single `Float32Array` (N channels interleaved, length = N * bufferLength) + write pointer + channel count. Render Worker consumes the latest frame on its next `requestAnimationFrame`.
 
 ### Data Flow
 
 ```
+User loads circuit (or app starts with default DFF circuit)
+  → CircuitDefinition passed to useSimulation()
+  → Comlink → Physics Worker: loadCircuit(def)
+  → Comlink → Render Worker: init(canvases, probes from def)
+
 User interaction
   → Zustand store update
   → useSimulation effect
-  → Comlink proxy call to Physics Worker
-  → Physics Worker updates simulation state
+  → Comlink → Physics Worker: setParam(componentId, key, value)
 
 Physics Worker tick loop:
-  → stepPhysics(dt)
-  → buffer.push(d, clk, q)
+  → accumulator sub-stepping at 10kHz
+  → per sub-step:
+      1. Update stimulus sources (clock, inputs)
+      2. Set sequential outputs (Q) from captured values
+      3. Evaluate combinational gates in level order
+      4. Sequential elements: edge detect, setup/hold, capture
+      5. Push probed voltages to ring buffer
   → MessageChannel.postMessage(frameData) → Render Worker
-  → postMessage(voltages) → Main Thread → Zustand updateVoltages()
+  → postMessage(probeVoltages) → Main Thread → Zustand
 
 Render Worker frame loop (rAF):
-  → receive latest frame data
-  → device.queue.writeBuffer() → GPU storage buffer
-  → encode render pass (waveform pipeline)
-  → encode render pass (digital pipeline)
+  → receive latest frame data (N channels)
+  → device.queue.writeBuffer() → GPU storage buffer (N channels)
+  → encode render pass (waveform pipeline, N instances)
+  → encode render pass (digital pipeline, N instances)
   → submit + present
 ```
 
@@ -98,13 +113,16 @@ Two separate render pipelines targeting two OffscreenCanvases (analog waveform a
 
 ### Analog Waveform Pipeline
 
-**Storage buffer**: Ring buffer data — 3 channels x 2048 samples as Float32. Updated each frame via `device.queue.writeBuffer()`.
+**Storage buffer**: Ring buffer data — N channels x 2048 samples as Float32 (interleaved: `channel_0[0..2047], channel_1[0..2047], ...`). Updated each frame via `device.queue.writeBuffer()`. Buffer size = `N * 2048 * 4` bytes. N is dynamic — determined by the circuit definition's probe count.
 
-**Uniform buffer**: Canvas dimensions, channel Y-offsets (CLK=20, D=100, Q=180), colors (Catppuccin Macchiato), line width, voltage scale (30px/V), write pointer offset, voltage headroom.
+**Uniform buffer**: Canvas dimensions, line width, voltage scale (30px/V), write pointer offset, voltage headroom, channel count N.
 
-**Vertex shader** (`waveform.wgsl`):
-- Input: `vertex_index` (0..4095 per channel), `instance_index` (0..2 for channel selection)
-- Reads current sample and adjacent sample from storage buffer via: `let idx = (ringOffset + vertex_index / 2u) % 2048u;`
+**Per-channel config buffer**: Array of `{ yOffset: f32, color: vec4<f32> }` for each channel. Updated when probes change. Channel Y-offsets are computed dynamically: evenly spaced across canvas height, or using a layout algorithm that groups related signals.
+
+**Vertex shader** (`waveform.vert.wgsl`):
+- Input: `vertex_index` (0..4095 per channel), `instance_index` (0..N-1 for channel selection)
+- Reads channel config (yOffset, color) from per-channel buffer using `instance_index`
+- Reads current sample and adjacent sample from storage buffer via: `let idx = (ringOffset + vertex_index / 2u) % 2048u; let bufferIdx = instance_index * 2048u + idx;`
 - Computes line direction between adjacent points
 - Derives perpendicular normal
 - Offsets vertex position by +/- half-thickness along normal (even/odd vertex_index)
@@ -120,9 +138,9 @@ Two separate render pipelines targeting two OffscreenCanvases (analog waveform a
 
 All three share the same vertex shader (triangle strip extrusion). Pipeline switching is done by pre-compiling all three `GPURenderPipeline` objects on init and selecting the active one per frame based on `shaderStyle`.
 
-**Draw call**: `draw(4096, 3)` — 2048 sample points x 2 vertices per point, 3 channel instances.
+**Draw call**: `draw(4096, N)` — 2048 sample points x 2 vertices per point, N channel instances. N is the probe count from the circuit definition.
 
-**Static elements**: Threshold dashed lines (VIH, VIL) and channel labels rendered as additional draw calls or a lightweight second pipeline.
+**Static elements**: Threshold dashed lines (VIH, VIL) and channel labels rendered as additional draw calls or a lightweight second pipeline. Labels and colors are sourced from the probe configuration.
 
 ### Digital Logic Pipeline
 
@@ -132,16 +150,17 @@ All three share the same vertex shader (triangle strip extrusion). Pipeline swit
 - Reads sample, applies threshold: `sample > logicHighMin ? yHigh : yLow`
 - Creates step-function waveform (discrete jumps)
 - Triangle strip extrusion for line thickness
+- Uses `instance_index` to select channel (same N-channel pattern)
 
 **Fragment shader**: Uses the same three styles as analog pipeline (clean/glow/phosphor). Same pipeline switching mechanism.
 
-**Draw call**: `draw(4096, 3)` — same geometry, different Y mapping.
+**Draw call**: `draw(4096, N)` — same geometry, different Y mapping. N channels.
 
 ### GPU Resource Lifecycle
 
 - `GPUDevice`, `GPUCanvasContext`: Created once on Worker init
 - `GPURenderPipeline`: Compiled once per pipeline type, reused every frame
-- Storage buffer (`STORAGE | COPY_DST`): Created once, updated every frame
+- Storage buffer (`STORAGE | COPY_DST`): Sized to `N * 2048 * 4` bytes on circuit load, recreated if N changes, updated every frame
 - Uniform buffer: Created once, updated on resize or settings change
 - Canvas contexts: `alphaMode: 'premultiplied'` for transparent background
 
@@ -174,17 +193,16 @@ src/
 │   │   ├── OscilloscopePanel.tsx  # Container: canvas refs, resize observer
 │   │   ├── WaveformCanvas.tsx     # Analog waveform canvas element
 │   │   ├── DigitalCanvas.tsx      # Digital logic canvas element
-│   │   └── Legend.tsx             # Channel legend (CLK, D, Q)
+│   │   └── Legend.tsx             # Channel legend (driven by probes[])
 │   ├── chip/
-│   │   ├── ChipDiagram.tsx        # D-FlipFlop chip visualization
+│   │   ├── ChipDiagram.tsx        # Circuit visualization (driven by circuit def)
 │   │   └── PinDisplay.tsx         # Individual pin (voltage + active state)
 │   ├── controls/
-│   │   ├── ControlPanel.tsx       # All controls container
-│   │   ├── NoiseSlider.tsx        # Noise level control
-│   │   ├── SpeedSlider.tsx        # Clock speed control
-│   │   ├── ToggleDButton.tsx      # Input D toggle
-│   │   ├── ResetButton.tsx        # Reset (hold) button
-│   │   └── ShaderStyleToggle.tsx   # Clean/Glow/Phosphor toggle group
+│   │   ├── ControlPanel.tsx       # Renders controls from circuit def's controls[]
+│   │   ├── ParamSlider.tsx        # Generic slider control (noise, speed, etc.)
+│   │   ├── ParamToggle.tsx        # Generic toggle control (input signals)
+│   │   ├── ParamMomentary.tsx     # Generic momentary button (reset)
+│   │   └── ShaderStyleToggle.tsx  # Clean/Glow/Phosphor toggle group
 │   ├── settings/
 │   │   └── SettingsSheet.tsx      # Voltage parameter editing sidebar
 │   ├── about/
@@ -201,19 +219,28 @@ src/
 │   └── ui-store.ts                # Zustand: sidebar state, shader style, locale
 │
 ├── hooks/
-│   ├── useSimulation.ts           # Worker lifecycle, Comlink proxies, MessageChannel
+│   ├── useSimulation.ts           # Worker lifecycle, Comlink proxies, circuit loading
 │   ├── useResizeObserver.ts       # Canvas container resize tracking
-│   └── useVoltageDisplay.ts       # Subscribes to voltage status updates from Worker
+│   └── useProbeVoltages.ts        # Subscribes to probed net voltage updates
 │
 ├── workers/
 │   ├── physics/
 │   │   ├── physics.worker.ts      # Worker entry, Comlink.expose(), accumulator tick loop
-│   │   ├── engine.ts              # SimulationEngine: orchestrates all physics components
-│   │   ├── noise.ts               # NoiseGenerator: Marsaglia white + Voss-McCartney 1/f
+│   │   ├── engine.ts              # SimulationEngine: circuit graph, levelized evaluation
+│   │   ├── graph.ts               # CircuitGraph: component/net instantiation, topological sort
+│   │   ├── components/
+│   │   │   ├── base.ts            # Component, CombinationalComponent, SequentialComponent interfaces
+│   │   │   ├── clock-source.ts    # ClockSource: phase tracking, jitter
+│   │   │   ├── signal-source.ts   # SignalSource: user-controlled input
+│   │   │   ├── flip-flop.ts       # DFlipFlop: Schmitt trigger, setup/hold, metastability
+│   │   │   ├── and-gate.ts        # ANDGate: 2-input combinational (day 2)
+│   │   │   ├── or-gate.ts         # ORGate: 2-input combinational (day 2)
+│   │   │   ├── xor-gate.ts        # XORGate: 2-input combinational (day 2)
+│   │   │   ├── not-gate.ts        # NOTGate: inverter (day 2)
+│   │   │   └── registry.ts        # ComponentRegistry: maps type string → constructor
 │   │   ├── signal.ts              # Signal: state-space RLC model, noise injection
-│   │   ├── clock.ts               # ClockGenerator: phase tracking, jitter, edge detection
-│   │   ├── flip-flop.ts           # DFlipFlop: Schmitt trigger, setup/hold, metastability
-│   │   └── waveform-buffer.ts     # WaveformBuffer: ring buffer (Float32Array, power-of-2)
+│   │   ├── noise.ts               # NoiseGenerator: Marsaglia white + Voss-McCartney 1/f
+│   │   └── waveform-buffer.ts     # WaveformBuffer: N-channel ring buffer (Float32Array)
 │   └── render/
 │       ├── render.worker.ts       # Worker entry, WebGPU init, Comlink.expose()
 │       ├── gpu-device.ts          # WebGPU adapter/device/context setup
@@ -227,10 +254,14 @@ src/
 │           ├── waveform-phosphor.frag.wgsl # Fragment: brightness decay trail
 │           └── digital.wgsl             # Vertex/fragment for digital square waves
 │
+├── circuits/
+│   ├── dff.ts                     # D Flip-Flop circuit definition (day 1)
+│   └── adder.ts                   # 4-Bit Accumulator circuit definition (day 2)
+│
 ├── lib/
 │   ├── constants.ts               # Colors (Catppuccin Macchiato), VoltageSpecs, Simulation, Layout, Timing
-│   ├── types.ts                   # Shared TypeScript interfaces (incl. TimingConfig, SignalConfig, PhysicsConfig)
-│   ├── validation.ts              # Zod schemas for voltage spec and timing validation
+│   ├── types.ts                   # Circuit model types: Component, Port, Net, Probe, CircuitDefinition
+│   ├── validation.ts              # Zod schemas for voltage spec, timing, and circuit definition validation
 │   └── worker-bridge.ts           # Comlink + MessageChannel setup utility
 │
 ├── i18n/
@@ -249,7 +280,8 @@ src/
     │   ├── noise.test.ts          # White + 1/f noise distribution and spectrum
     │   ├── signal.test.ts         # RLC step response, overshoot, clamping
     │   ├── clock.test.ts          # Frequency accuracy, jitter distribution
-    │   └── flip-flop.test.ts      # Edge detection, setup/hold, t_CQ, metastability
+    │   ├── flip-flop.test.ts      # Edge detection, setup/hold, t_CQ, metastability
+    │   └── graph.test.ts          # Levelization, net propagation, circuit validation
     ├── stores/
     │   └── simulation-store.test.ts
     ├── components/
@@ -262,25 +294,29 @@ src/
 
 ### simulation-store.ts
 
+Generic simulation state driven by the active circuit definition:
+
 ```ts
 interface SimulationState {
-  // Parameters
-  noise: number;           // 0-100, maps to voltage in Worker
-  speed: number;           // 1-100, maps to clock speed in Worker
-  inputD: boolean;         // D pin logic state
-  resetActive: boolean;    // hold-to-reset
+  // Active circuit
+  circuitId: string;                          // e.g., "dff", "adder"
 
-  // Live readings (updated ~20Hz from Physics Worker)
-  voltages: { d: number; clk: number; q: number };
+  // Component parameters — keyed by "componentId.paramKey"
+  // Populated from circuit definition's controls[]
+  params: Record<string, number | boolean>;   // e.g., { "clk_src.speed": 30, "d_src.targetLogic": false }
+
+  // Probed voltages (updated ~20Hz from Physics Worker)
+  // Keyed by probe netId, values are current voltage
+  voltages: Record<string, number>;           // e.g., { "clk_net": 1.82, "d_net": 0.15, "q_net": 1.90 }
 
   // Actions
-  setNoise: (v: number) => void;
-  setSpeed: (v: number) => void;
-  toggleD: () => void;
-  setReset: (active: boolean) => void;
-  updateVoltages: (v: { d: number; clk: number; q: number }) => void;
+  setCircuit: (id: string) => void;
+  setParam: (componentId: string, key: string, value: number | boolean) => void;
+  updateVoltages: (v: Record<string, number>) => void;
 }
 ```
+
+This store is fully generic — no DFF-specific fields. Adding a new circuit doesn't change the store interface.
 
 ### settings-store.ts
 
@@ -314,29 +350,26 @@ interface UIState {
 
 ### Component Tree
 
+All components below `<ControlPanel>` are **driven by the circuit definition** — they render from `circuitDef.controls[]` and `circuitDef.probes[]`, not hardcoded for a specific circuit.
+
 ```
 <App>
   <LinguiProvider>
     <AppLayout>
-      <Header />
+      <Header title={circuitDef.name} />
       <main className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
         <OscilloscopePanel>
           <DigitalCanvas />
           <WaveformCanvas />
-          <Legend />
+          <Legend probes={circuitDef.probes} />           ← N channels
         </OscilloscopePanel>
-        <ControlPanel>
-          <ChipDiagram>
-            <PinDisplay channel="D" />
-            <PinDisplay channel="CLK" />
-            <PinDisplay channel="Q" />
-          </ChipDiagram>
+        <ControlPanel circuit={circuitDef}>
+          <ChipDiagram circuit={circuitDef} />            ← renders from circuit topology
           <ShaderStyleToggle />
-          <NoiseSlider />
-          <SpeedSlider />
-          <ToggleDButton />
-          <ResetButton />
-          <InfoBox />
+          {circuitDef.controls.map(ctrl => (              ← dynamic controls
+            <ParamSlider /> | <ParamToggle /> | <ParamMomentary />
+          ))}
+          <InfoBox specs={voltageSpecs} />
         </ControlPanel>
       </main>
       <SettingsSheet />
@@ -350,20 +383,22 @@ interface UIState {
 
 ```ts
 function useSimulation(
+  circuitDef: CircuitDefinition,
   waveformRef: RefObject<HTMLCanvasElement>,
   digitalRef: RefObject<HTMLCanvasElement>,
 ): void {
   // 1. On mount: create Physics Worker + Render Worker
   // 2. Wrap both with Comlink.wrap<PhysicsAPI>() and Comlink.wrap<RenderAPI>()
   // 3. Create MessageChannel, transfer port1 to Physics, port2 to Render
-  // 4. Transfer OffscreenCanvases to Render Worker via Comlink
-  // 5. Start physics simulation loop
-  // 6. Subscribe to Zustand store slices:
-  //    - noise/speed/inputD/resetActive changes → physicsProxy.setParam()
+  // 4. Send circuitDef to Physics Worker: physicsProxy.loadCircuit(def)
+  // 5. Transfer OffscreenCanvases to Render Worker + probe config (N channels)
+  // 6. Subscribe to Zustand store params:
+  //    - params changes → physicsProxy.setParam(componentId, key, value)
   //    - settings changes → physicsProxy.setSettings()
   //    - shaderStyle changes → renderProxy.setShaderStyle()
-  // 7. Physics Worker posts voltage status → Comlink callback → updateVoltages()
-  // 8. On unmount: terminate both Workers, clean up subscriptions
+  // 7. Physics Worker posts probe voltages → Comlink → updateVoltages()
+  // 8. On circuitDef change: reload circuit in both Workers
+  // 9. On unmount: terminate both Workers, clean up subscriptions
 }
 ```
 
@@ -390,6 +425,210 @@ Catppuccin Macchiato colors defined as CSS custom properties in `globals.css`:
 ```
 
 Dark theme only. Responsive grid: single column on mobile, two columns on desktop.
+
+## Circuit Graph Model
+
+The simulation is built on a generic circuit graph that separates **circuit topology** (what components exist, how they connect) from **simulation mechanics** (physics stepping, rendering). This means adding new demos requires only new component classes and a circuit definition — the engine, renderer, and UI are circuit-agnostic.
+
+### Core Type Interfaces (`lib/types.ts`)
+
+```ts
+// Port: a named connection point on a component, carrying a voltage
+interface Port {
+  readonly name: string;
+  voltage: number;
+}
+
+// Base component interface
+interface Component {
+  readonly id: string;
+  readonly kind: "combinational" | "sequential";
+  readonly inputs: ReadonlyMap<string, Port>;
+  readonly outputs: ReadonlyMap<string, Port>;
+}
+
+// Combinational: output = f(inputs), evaluated every sub-step in level order
+interface CombinationalComponent extends Component {
+  kind: "combinational";
+  evaluate(): void;
+}
+
+// Sequential: state changes on clock edges, has internal Signal with RLC/noise
+interface SequentialComponent extends Component {
+  kind: "sequential";
+  clock(dt: number): void;   // edge detection, setup/hold, state capture
+  update(dt: number): void;  // signal physics (RLC response, noise)
+}
+
+// Net: single-driver wire connecting one output port to N input ports
+interface Net {
+  readonly id: string;
+  readonly driver: { componentId: string; port: string };
+  readonly loads: Array<{ componentId: string; port: string }>;
+  voltage: number;  // driven by the output port
+}
+
+// Probe: marks a net for oscilloscope display
+interface Probe {
+  readonly netId: string;
+  readonly label: string;
+  readonly color: string;
+  readonly channelIndex: number;
+}
+
+// Control: a UI element bound to a component parameter
+interface ControlDef {
+  readonly type: "slider" | "toggle" | "momentary";
+  readonly targetComponent: string;  // componentId
+  readonly param: string;            // parameter key on the component
+  readonly label: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly defaultValue?: number | boolean;
+}
+
+// Circuit definition: complete declarative description of a circuit
+interface CircuitDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly components: ComponentDef[];
+  readonly nets: NetDef[];
+  readonly probes: Probe[];
+  readonly controls: ControlDef[];
+}
+```
+
+### Circuit Graph Instantiation (`workers/physics/graph.ts`)
+
+`CircuitGraph` takes a `CircuitDefinition` and:
+1. Instantiates component objects via `ComponentRegistry` (type string → constructor)
+2. Creates `Net` objects and wires output ports to input ports
+3. Separates components into combinational and sequential sets
+4. **Levelizes** combinational components via topological sort:
+   - Primary inputs (SignalSource outputs) and sequential outputs (DFF Q) = level 0
+   - Each gate's level = `max(level of each input's driver) + 1`
+   - Evaluate in ascending level order → guarantees all inputs resolved before gate evaluates
+5. Detects combinational feedback loops (rejects with error)
+
+### Evaluation Order (per sub-step)
+
+```
+1. Sequential components: update() — advance Signal physics (RLC, noise)
+2. Sequential components: clock() — edge detection, setup/hold check, capture D
+3. Propagate sequential outputs to nets
+4. Evaluate combinational gates in level order
+5. Propagate combinational outputs to nets
+6. Collect probed net voltages → push to WaveformBuffer
+```
+
+### DFF Demo Circuit Definition (`circuits/dff.ts`)
+
+```ts
+export const dffCircuit: CircuitDefinition = {
+  id: "dff",
+  name: "D Flip-Flop",
+  description: "Single D flip-flop with clock, demonstrating edge triggering, noise, and metastability",
+  components: [
+    { type: "ClockSource", id: "clk", params: { speed: 30, jitterRms: 0.02 } },
+    { type: "SignalSource", id: "d", params: { baseHigh: 1.5, baseLow: 0.1 } },
+    { type: "DFlipFlop", id: "dff0", params: { /* timing defaults */ } },
+  ],
+  nets: [
+    { id: "clk_net", driver: { componentId: "clk", port: "out" },
+      loads: [{ componentId: "dff0", port: "clk" }] },
+    { id: "d_net", driver: { componentId: "d", port: "out" },
+      loads: [{ componentId: "dff0", port: "d" }] },
+    { id: "q_net", driver: { componentId: "dff0", port: "q" }, loads: [] },
+  ],
+  probes: [
+    { netId: "clk_net", label: "CLK", color: "#a6da95", channelIndex: 0 },
+    { netId: "d_net", label: "D", color: "#8aadf4", channelIndex: 1 },
+    { netId: "q_net", label: "Q", color: "#ed8796", channelIndex: 2 },
+  ],
+  controls: [
+    { type: "toggle", targetComponent: "d", param: "targetLogic", label: "Input D", defaultValue: false },
+    { type: "slider", targetComponent: "clk", param: "speed", label: "Clock Speed", min: 1, max: 100, defaultValue: 30 },
+    { type: "slider", targetComponent: "global", param: "noise", label: "Noise Level", min: 0, max: 100, defaultValue: 10 },
+    { type: "momentary", targetComponent: "dff0", param: "reset", label: "Reset (Hold)", defaultValue: false },
+  ],
+};
+```
+
+### Future: 4-Bit Accumulator (`circuits/adder.ts`)
+
+Adding an adder requires **zero engine changes** — only new component classes and a new definition:
+
+```ts
+export const adderCircuit: CircuitDefinition = {
+  id: "adder-4bit",
+  name: "4-Bit Accumulator",
+  description: "4-bit register with ripple-carry adder, accumulating on each clock cycle",
+  components: [
+    { type: "ClockSource", id: "clk", params: { ... } },
+    // 4 input signal sources (A[3:0])
+    { type: "SignalSource", id: "a0", params: { ... } },
+    { type: "SignalSource", id: "a1", params: { ... } },
+    { type: "SignalSource", id: "a2", params: { ... } },
+    { type: "SignalSource", id: "a3", params: { ... } },
+    // 4 full adders
+    { type: "FullAdder", id: "fa0", params: {} },
+    { type: "FullAdder", id: "fa1", params: {} },
+    { type: "FullAdder", id: "fa2", params: {} },
+    { type: "FullAdder", id: "fa3", params: {} },
+    // 4 D flip-flops (register)
+    { type: "DFlipFlop", id: "reg0", params: { ... } },
+    { type: "DFlipFlop", id: "reg1", params: { ... } },
+    { type: "DFlipFlop", id: "reg2", params: { ... } },
+    { type: "DFlipFlop", id: "reg3", params: { ... } },
+  ],
+  nets: [
+    // Clock to all DFFs
+    { id: "clk_net", driver: { componentId: "clk", port: "out" },
+      loads: [
+        { componentId: "reg0", port: "clk" },
+        { componentId: "reg1", port: "clk" },
+        { componentId: "reg2", port: "clk" },
+        { componentId: "reg3", port: "clk" },
+      ] },
+    // A inputs → full adder A ports
+    // DFF Q outputs → full adder B ports (feedback)
+    // Full adder Sum → DFF D inputs
+    // Carry chain: fa0.cout → fa1.cin → fa2.cin → fa3.cin
+    // ... (full net list omitted for brevity)
+  ],
+  probes: [
+    // User selects which nets to observe — e.g., CLK + 4 sum outputs + carry
+    { netId: "clk_net", label: "CLK", color: "#a6da95", channelIndex: 0 },
+    { netId: "sum0_net", label: "SUM[0]", color: "#8aadf4", channelIndex: 1 },
+    { netId: "sum1_net", label: "SUM[1]", color: "#7dc4e4", channelIndex: 2 },
+    { netId: "sum2_net", label: "SUM[2]", color: "#b7bdf8", channelIndex: 3 },
+    { netId: "sum3_net", label: "SUM[3]", color: "#c6a0f6", channelIndex: 4 },
+    { netId: "cout_net", label: "CARRY", color: "#ed8796", channelIndex: 5 },
+  ],
+  controls: [ /* sliders, toggles for A[3:0] inputs, noise, speed, reset */ ],
+};
+```
+
+### Component Registry (`workers/physics/components/registry.ts`)
+
+Maps type strings to constructors. New component types are registered here:
+
+```ts
+const registry = new Map<string, ComponentConstructor>([
+  ["ClockSource", ClockSource],
+  ["SignalSource", SignalSource],
+  ["DFlipFlop", DFlipFlop],
+  // Day 2:
+  ["ANDGate", ANDGate],
+  ["ORGate", ORGate],
+  ["XORGate", XORGate],
+  ["NOTGate", NOTGate],
+  ["FullAdder", FullAdder],
+]);
+```
+
+Adding a new component type: implement the `Component` interface, register it, use it in a circuit definition. No other files change.
 
 ## Physics Engine
 
@@ -532,10 +771,13 @@ This means a student watching the oscilloscope will **see** metastability: Q goe
 
 ### Waveform Buffer (`workers/physics/waveform-buffer.ts`)
 
-Preserved from current codebase:
-- Ring buffer: 3 x Float32Array, length 2048 (power of 2)
+Generalized for N channels (determined by circuit definition's probe count):
+- Ring buffer: **N x Float32Array**, length 2048 (power of 2)
+- N set at construction time from `circuitDef.probes.length`
 - O(1) wraparound via bitwise AND: `(ptr + 1) & (length - 1)`
-- Push, reset, read pointer access
+- `push(values: number[])` — accepts N voltage values per sub-step
+- Data layout for GPU transfer: contiguous per-channel (`channel_0[0..2047], channel_1[0..2047], ...`) for efficient `writeBuffer()`
+- Reset, read pointer access
 
 With 10kHz sub-stepping, data is pushed per sub-step (not per frame), giving ~80x higher temporal resolution in the waveform display than the current implementation.
 
@@ -561,19 +803,28 @@ Considered and rejected WebGPU Compute Shaders. Reasons:
 - `mapAsync()` readback latency (1-3 frames) would make UI voltage display stale.
 - 1/f noise generation (Voss-McCartney) is inherently sequential (counter-based octave updates).
 
-Compute shaders are the right tool for massive parallelism (particle systems, fluid grids, per-pixel processing). This simulation is 3 tightly coupled sequential state machines — CPU is the correct fit.
+Compute shaders are the right tool for massive parallelism (particle systems, fluid grids, per-pixel processing). Even a 4-bit accumulator (4 DFFs + 4 full adders + carry chain) is ~20 components with sequential dependencies — CPU handles this in <50us per tick. The circuit graph's levelized evaluation is inherently sequential. GPU parallelism would only help at scales of thousands of independent components, which is far beyond this project's scope.
 
 ### File Structure (physics)
 
 ```
 workers/physics/
 ├── physics.worker.ts       # Worker entry, Comlink.expose(), accumulator tick loop
-├── engine.ts               # SimulationEngine: orchestrates clock, signals, DFF, buffer
-├── noise.ts                # NoiseGenerator: Marsaglia white + Voss-McCartney 1/f
+├── engine.ts               # SimulationEngine: owns graph, runs sub-stepping loop
+├── graph.ts                # CircuitGraph: instantiates components/nets, topological sort
+├── components/
+│   ├── base.ts             # Component, CombinationalComponent, SequentialComponent
+│   ├── clock-source.ts     # ClockSource: phase tracking, jitter (sequential)
+│   ├── signal-source.ts    # SignalSource: user-controlled input (sequential)
+│   ├── flip-flop.ts        # DFlipFlop: Schmitt trigger, setup/hold, metastability
+│   ├── and-gate.ts         # ANDGate: 2-input (combinational, day 2)
+│   ├── or-gate.ts          # ORGate: 2-input (combinational, day 2)
+│   ├── xor-gate.ts         # XORGate: 2-input (combinational, day 2)
+│   ├── not-gate.ts         # NOTGate: inverter (combinational, day 2)
+│   └── registry.ts         # ComponentRegistry: type string → constructor map
 ├── signal.ts               # Signal: state-space RLC, noise injection, clamping
-├── clock.ts                # ClockGenerator: phase tracking, jitter, edge detection
-├── flip-flop.ts            # DFlipFlop: Schmitt trigger, setup/hold, t_CQ, metastability
-└── waveform-buffer.ts      # WaveformBuffer: ring buffer (Float32Array)
+├── noise.ts                # NoiseGenerator: Marsaglia white + Voss-McCartney 1/f
+└── waveform-buffer.ts      # WaveformBuffer: N-channel ring buffer
 ```
 
 ## Internationalization (Lingui)
@@ -614,6 +865,7 @@ import { Trans, t } from "@lingui/react/macro";
 - `signal.test.ts`: RLC step response overshoot (~9.5% for zeta=0.6), settling time, voltage clamping at bounds, frame-rate independence (same result at 30fps vs 120fps via sub-stepping)
 - `clock.test.ts`: Frequency accuracy, jitter distribution (mean ~0, std ~jitter_rms), duty cycle within tolerance
 - `flip-flop.test.ts`: Rising edge captures D, falling edge ignores, Schmitt trigger hysteresis band, setup violation triggers metastability, hold violation triggers metastability, t_CQ delay (Q changes after delay, not immediately), metastability resolution (~50% distribution over 1000 runs), resolution time follows exponential distribution, async reset overrides metastable state
+- `graph.test.ts`: Levelization produces correct evaluation order, combinational feedback loop detected and rejected, net voltage propagation from driver to loads, N-channel waveform buffer push with correct probe mapping, circuit definition validation (missing nets, dangling ports)
 
 **Stores** (`test/stores/`):
 - Store action tests: setNoise updates state, toggleD flips, resetToDefaults restores initial values
