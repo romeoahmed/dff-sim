@@ -1,6 +1,6 @@
 # D-FlipFlop Simulation: React + WebGPU Rewrite
 
-Complete ground-up rewrite of the D flip-flop physics simulation. Replaces the imperative vanilla TypeScript + PixiJS + SCSS codebase with a modern declarative stack: React 19, Tailwind CSS v4, raw WebGPU/WGSL, multi-Worker Actor Model, and Zustand state management.
+Complete ground-up rewrite of the D flip-flop physics simulation. Replaces the imperative vanilla TypeScript + PixiJS + SCSS codebase with a modern declarative stack: React 19, Tailwind CSS v4, raw WebGPU/WGSL, multi-Worker Actor Model, and Jotai atomic state management.
 
 The architecture is built on a **generic circuit graph model** so that future demos (adder, counter, shift register) require only new component classes and circuit definitions — zero engine changes.
 
@@ -11,7 +11,7 @@ The architecture is built on a **generic circuit graph model** so that future de
 | UI Framework | React | 19 | Declarative component model |
 | Styling | Tailwind CSS | v4 | Utility-first CSS, CSS-first config |
 | Component Library | shadcn/ui | latest | Accessible primitives (Radix + Tailwind) |
-| State Management | Zustand | latest | Lightweight store for React-side state |
+| State Management | Jotai | latest | Atomic state — per-probe, per-param subscriptions |
 | Rendering | Raw WebGPU + WGSL | — | GPU-accelerated waveform rendering |
 | Physics | TypeScript (pure) | — | Signal, DFlipFlop, WaveformBuffer |
 | Worker Comms | Comlink | latest | Ergonomic Worker RPC proxies |
@@ -217,10 +217,10 @@ src/
 │   └── layout/
 │       └── AppLayout.tsx          # Dashboard grid layout
 │
-├── stores/
-│   ├── simulation-store.ts        # Zustand: generic circuit params, probe voltages
-│   ├── settings-store.ts          # Zustand: voltage spec config (global)
-│   └── ui-store.ts                # Zustand: sidebar state, shader style, locale
+├── atoms/
+│   ├── simulation-atoms.ts        # Jotai: atomFamily for voltages, params; circuitDef atom
+│   ├── settings-atoms.ts          # Jotai: voltage spec config atom
+│   └── ui-atoms.ts                # Jotai: shaderStyle, activeProbes, sidebar, locale
 │
 ├── hooks/
 │   ├── useSimulation.ts           # Worker lifecycle, Comlink proxies, circuit loading
@@ -286,72 +286,94 @@ src/
     │   ├── clock.test.ts          # Frequency accuracy, jitter distribution
     │   ├── flip-flop.test.ts      # Edge detection, setup/hold, t_CQ, metastability
     │   └── graph.test.ts          # Levelization, net propagation, circuit validation
-    ├── stores/
-    │   └── simulation-store.test.ts
+    ├── atoms/
+    │   └── simulation-atoms.test.ts
     ├── components/
     │   ├── ControlPanel.test.tsx   # Control interaction tests
     │   └── SettingsSheet.test.tsx  # Validation, save/reset
     └── setup.ts                   # Vitest setup (happy-dom, testing library matchers)
 ```
 
-## Zustand Stores
+## State Management (Jotai)
 
-### simulation-store.ts
+Jotai's atomic model is chosen over Zustand because the circuit simulation has **dynamic, granular state** that changes at high frequency:
+- N probe voltages updated at ~20Hz each (N determined by circuit definition)
+- N control params (one per UI control)
+- Each voltage/param is independent — updating one should not re-render components subscribed to others
 
-Generic simulation state driven by the active circuit definition:
+Jotai's `atomFamily` creates one atom per probe and one atom per param. Components subscribe to exactly the atoms they need — zero wasted re-renders.
+
+### simulation-atoms.ts
 
 ```ts
-interface SimulationState {
-  // Active circuit
-  circuitId: string;                          // e.g., "dff", "adder"
+import { atom } from "jotai";
+import { atomFamily } from "jotai/utils";
+import type { CircuitDefinition } from "@/lib/types";
+import { dffCircuit } from "@/circuits/dff";
 
-  // Component parameters — keyed by "componentId.paramKey"
-  // Populated from circuit definition's controls[]
-  params: Record<string, number | boolean>;   // e.g., { "clk_src.speed": 30, "d_src.targetLogic": false }
+/** Active circuit definition */
+export const circuitDefAtom = atom<CircuitDefinition>(dffCircuit);
 
-  // Probed voltages (updated ~20Hz from Physics Worker)
-  // Keyed by probe netId, values are current voltage
-  voltages: Record<string, number>;           // e.g., { "clk_net": 1.82, "d_net": 0.15, "q_net": 1.90 }
+/** One atom per probe voltage — keyed by netId */
+export const voltageAtomFamily = atomFamily(
+  (_netId: string) => atom(0),
+);
 
-  // Actions
-  setCircuit: (id: string) => void;
-  setParam: (componentId: string, key: string, value: number | boolean) => void;
-  updateVoltages: (v: Record<string, number>) => void;
+/** One atom per control parameter — keyed by "componentId.paramKey" */
+export const paramAtomFamily = atomFamily(
+  (key: string) => atom<number | boolean>(0),
+);
+```
+
+Each component subscribes to exactly ONE atom:
+```tsx
+function PinDisplay({ netId }: { netId: string }) {
+  const voltage = useAtomValue(voltageAtomFamily(netId));
+  // Re-renders ONLY when this specific net's voltage changes
 }
 ```
 
-This store is fully generic — no DFF-specific fields. Adding a new circuit doesn't change the store interface.
-
-### settings-store.ts
+### settings-atoms.ts
 
 ```ts
-interface SettingsState {
-  specs: VoltageSpecConfig;
-  updateSpecs: (partial: Partial<VoltageSpecConfig>) => void;
-  resetToDefaults: () => void;
-}
+import { atom } from "jotai";
+import type { VoltageSpecConfig } from "@/lib/types";
+import { DefaultVoltageSpecs } from "@/lib/constants";
+
+export const voltageSpecsAtom = atom<VoltageSpecConfig>(DefaultVoltageSpecs);
 ```
 
 Validation via Zod schema before dispatching to Worker. Constraints: `outputLowMax < logicLowMax < logicHighMin < outputHighMin < outputHighMax`, all within `[clampMin, systemMax]`.
 
-### ui-store.ts
+### ui-atoms.ts
 
 ```ts
-interface UIState {
-  shaderStyle: "clean" | "glow" | "phosphor";
-  activeProbeIds: Set<string>;     // which probe netIds are displayed on oscilloscope
-  settingsOpen: boolean;
-  aboutOpen: boolean;
-  locale: "en" | "zh-CN";
+import { atom } from "jotai";
+import type { Probe } from "@/lib/types";
 
-  setShaderStyle: (s: "clean" | "glow" | "phosphor") => void;
-  toggleProbe: (netId: string) => void;
-  resetProbes: (probes: Probe[]) => void;  // reset to all-on when circuit changes
-  toggleSettings: () => void;
-  toggleAbout: () => void;
-  setLocale: (l: "en" | "zh-CN") => void;
-}
+export const shaderStyleAtom = atom<"clean" | "glow" | "phosphor">("clean");
+export const activeProbeIdsAtom = atom<Set<string>>(new Set());
+export const settingsOpenAtom = atom(false);
+export const aboutOpenAtom = atom(false);
+export const localeAtom = atom<"en" | "zh-CN">("en");
+
+/** Derived: active probes filtered from circuit definition */
+export const activeProbesAtom = atom((get) => {
+  const circuitDef = get(circuitDefAtom);
+  const activeIds = get(activeProbeIdsAtom);
+  return circuitDef.probes.filter((p) => activeIds.has(p.netId));
+});
 ```
+
+### Why Jotai over Zustand
+
+| Concern | Zustand | Jotai |
+|---|---|---|
+| N dynamic voltages at 20Hz | Record spread → new object every 50ms, selector dance | atomFamily → per-atom write, zero waste |
+| N dynamic params | Same Record spread issue | atomFamily → per-atom isolation |
+| Circuit switch (N changes) | Reset Record, all selectors re-evaluate | Old atoms GC'd, new atoms created |
+| Component subscription | `useStore(s => s.voltages[netId])` — works but fragile | `useAtomValue(voltageAtomFamily(netId))` — explicit |
+| Derived state | External selectors or middleware | `atom((get) => ...)` — first-class |
 
 ## React Component Design
 
@@ -504,11 +526,11 @@ function useSimulation(
   // 3. Create MessageChannel, transfer port1 to Physics, port2 to Render
   // 4. Send circuitDef to Physics Worker: physicsProxy.loadCircuit(def)
   // 5. Transfer OffscreenCanvases + activeProbes to Render Worker
-  // 6. Subscribe to Zustand store params:
-  //    - params changes → physicsProxy.setParam(componentId, key, value)
-  //    - settings changes → physicsProxy.setSettings()
-  //    - shaderStyle changes → renderProxy.setShaderStyle()
-  // 7. Physics Worker posts probe voltages → Comlink → updateVoltages()
+  // 6. Subscribe to Jotai atoms:
+  //    - paramAtomFamily changes → physicsProxy.setParam(componentId, key, value)
+  //    - voltageSpecsAtom changes → physicsProxy.setSettings()
+  //    - shaderStyleAtom changes → renderProxy.setShaderStyle()
+  // 7. Physics Worker posts probe voltages → write to voltageAtomFamily(netId)
   // 8. On circuitDef change: teardown + rebuild both Workers
   // 9. On activeProbes change: renderProxy.updateProbes(activeProbes)
   // 10. On unmount: terminate both Workers, clean up subscriptions
@@ -1061,8 +1083,8 @@ Note: Circuit-specific labels (probe names, control labels) come from the `Circu
 - `flip-flop.test.ts`: Rising edge captures D, falling edge ignores, Schmitt trigger hysteresis band, setup violation triggers metastability, hold violation triggers metastability, t_CQ delay (Q changes after delay, not immediately), metastability resolution (~50% distribution over 1000 runs), resolution time follows exponential distribution, async reset overrides metastable state
 - `graph.test.ts`: Levelization produces correct evaluation order, combinational feedback loop detected and rejected, net voltage propagation from driver to loads, N-channel waveform buffer push with correct probe mapping, circuit definition validation (missing nets, dangling ports)
 
-**Stores** (`test/stores/`):
-- Store action tests: setParam(componentId, key, value) updates params record, updateVoltages merges new probe readings, setCircuit switches active circuit ID
+**Atoms** (`test/atoms/`):
+- Atom tests: writing to `voltageAtomFamily(netId)` updates only that atom, `paramAtomFamily` read/write, `activeProbesAtom` derives correctly from `circuitDefAtom` + `activeProbeIdsAtom`, circuit switch resets state
 
 ### Component Tests (Vitest + React Testing Library)
 
@@ -1123,7 +1145,7 @@ Same GitHub Actions pipeline as current project, updated for the new stack:
 - react, react-dom
 - pixi.js — REMOVED (replaced by raw WebGPU)
 - @fortawesome/fontawesome-free — REMOVED (replaced by Lucide React)
-- zustand
+- jotai
 - comlink
 - @radix-ui/* (via shadcn/ui)
 - lucide-react
