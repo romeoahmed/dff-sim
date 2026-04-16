@@ -416,10 +416,13 @@ Catppuccin Macchiato colors defined as CSS custom properties in `globals.css`:
   --color-surface-2: #5b6078;
   --color-text: #cad3f5;
   --color-subtext: #a5adcb;
-  --color-clk: #a6da95;
-  --color-d: #8aadf4;
-  --color-q: #ed8796;
-  --color-highlight: #eed49f;
+  --color-accent-green: #a6da95;
+  --color-accent-blue: #8aadf4;
+  --color-accent-red: #ed8796;
+  --color-accent-yellow: #eed49f;
+  --color-accent-mauve: #c6a0f6;
+  --color-accent-teal: #7dc4e4;
+  --color-accent-lavender: #b7bdf8;
   --color-overlay: #363a4f;
 }
 ```
@@ -798,8 +801,8 @@ Config updates: main thread sends new config via Comlink → physics worker crea
 ### Why Physics Stays on CPU (Not Compute Shader)
 
 Considered and rejected WebGPU Compute Shaders. Reasons:
-- Only 3 signals with sequential frame-to-frame dependencies (RLC state, Schmitt trigger state, metastability state). No parallelism to exploit.
-- Even with sub-stepping (~800 ops per tick at 120Hz), CPU cost is <10us. GPU dispatch overhead (5-50us) exceeds the computation.
+- Small component count with sequential frame-to-frame dependencies (RLC state, Schmitt trigger state, metastability state). Even the DFF demo has 3 signals; a 4-bit accumulator has ~20 components. No meaningful parallelism to exploit at this scale.
+- Even with sub-stepping, CPU cost is <50us per tick for the largest planned circuit. GPU dispatch overhead (5-50us) exceeds the benefit.
 - `mapAsync()` readback latency (1-3 frames) would make UI voltage display stale.
 - 1/f noise generation (Voss-McCartney) is inherently sequential (counter-based octave updates).
 
@@ -868,7 +871,7 @@ import { Trans, t } from "@lingui/react/macro";
 - `graph.test.ts`: Levelization produces correct evaluation order, combinational feedback loop detected and rejected, net voltage propagation from driver to loads, N-channel waveform buffer push with correct probe mapping, circuit definition validation (missing nets, dangling ports)
 
 **Stores** (`test/stores/`):
-- Store action tests: setNoise updates state, toggleD flips, resetToDefaults restores initial values
+- Store action tests: setParam(componentId, key, value) updates params record, updateVoltages merges new probe readings, setCircuit switches active circuit ID
 
 ### Component Tests (Vitest + React Testing Library)
 
