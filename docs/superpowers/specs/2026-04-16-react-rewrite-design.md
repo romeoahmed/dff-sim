@@ -190,32 +190,36 @@ src/
 │   │   ├── sheet.tsx              # Sidebar (slide-over panel)
 │   │   └── ...
 │   ├── oscilloscope/
-│   │   ├── OscilloscopePanel.tsx  # Container: canvas refs, resize observer
+│   │   ├── OscilloscopePanel.tsx  # Container: canvas refs, resize observer, auto-height
 │   │   ├── WaveformCanvas.tsx     # Analog waveform canvas element
 │   │   ├── DigitalCanvas.tsx      # Digital logic canvas element
-│   │   └── Legend.tsx             # Channel legend (driven by probes[])
-│   ├── chip/
-│   │   ├── ChipDiagram.tsx        # Circuit visualization (driven by circuit def)
-│   │   └── PinDisplay.tsx         # Individual pin (voltage + active state)
+│   │   └── Legend.tsx             # Channel legend (driven by probes[], N channels)
+│   ├── schematic/
+│   │   ├── CircuitSchematic.tsx   # Interactive SVG circuit topology (driven by circuit def)
+│   │   ├── SchematicNode.tsx      # Single component in schematic (DFF, gate, source)
+│   │   └── SchematicWire.tsx      # Wire between nodes (highlights with voltage color)
 │   ├── controls/
 │   │   ├── ControlPanel.tsx       # Renders controls from circuit def's controls[]
 │   │   ├── ParamSlider.tsx        # Generic slider control (noise, speed, etc.)
 │   │   ├── ParamToggle.tsx        # Generic toggle control (input signals)
 │   │   ├── ParamMomentary.tsx     # Generic momentary button (reset)
-│   │   └── ShaderStyleToggle.tsx  # Clean/Glow/Phosphor toggle group
+│   │   ├── ShaderStyleToggle.tsx  # Clean/Glow/Phosphor toggle group
+│   │   └── ProbeSelector.tsx      # Toggle which nets are displayed on oscilloscope
+│   ├── nav/
+│   │   ├── CircuitSelector.tsx    # Tab/dropdown to switch between circuit demos
+│   │   └── Toolbar.tsx            # Top toolbar: circuit selector, settings, about, lang
 │   ├── settings/
 │   │   └── SettingsSheet.tsx      # Voltage parameter editing sidebar
 │   ├── about/
-│   │   └── AboutSheet.tsx         # About sidebar
+│   │   └── AboutSheet.tsx         # About sidebar (content from circuit def's description)
 │   ├── fallback/
 │   │   └── WebGPUUnavailable.tsx  # Fallback for unsupported browsers
 │   └── layout/
-│       ├── Header.tsx             # Title + subtitle
-│       └── AppLayout.tsx          # Main grid layout
+│       └── AppLayout.tsx          # Dashboard grid layout
 │
 ├── stores/
-│   ├── simulation-store.ts        # Zustand: noise, speed, D state, reset, voltages
-│   ├── settings-store.ts          # Zustand: voltage spec config
+│   ├── simulation-store.ts        # Zustand: generic circuit params, probe voltages
+│   ├── settings-store.ts          # Zustand: voltage spec config (global)
 │   └── ui-store.ts                # Zustand: sidebar state, shader style, locale
 │
 ├── hooks/
@@ -335,11 +339,14 @@ Validation via Zod schema before dispatching to Worker. Constraints: `outputLowM
 ```ts
 interface UIState {
   shaderStyle: "clean" | "glow" | "phosphor";
+  activeProbeIds: Set<string>;     // which probe netIds are displayed on oscilloscope
   settingsOpen: boolean;
   aboutOpen: boolean;
   locale: "en" | "zh-CN";
 
   setShaderStyle: (s: "clean" | "glow" | "phosphor") => void;
+  toggleProbe: (netId: string) => void;
+  resetProbes: (probes: Probe[]) => void;  // reset to all-on when circuit changes
   toggleSettings: () => void;
   toggleAbout: () => void;
   setLocale: (l: "en" | "zh-CN") => void;
@@ -348,32 +355,100 @@ interface UIState {
 
 ## React Component Design
 
+### UI Layout
+
+Dashboard-style layout designed to scale from 3 channels (DFF) to 10+ channels (adder). The layout adapts to circuit complexity.
+
+```
+Desktop (lg+):
+┌───────────────────────────────────────────────────────────────┐
+│ Toolbar: [DFF ▾ | 4-Bit Acc ▾]    [Clean|Glow|Phos]  [⚙][i][🌐] │
+├────────────────────────────────┬──────────────────────────────┤
+│                                │                              │
+│  Digital Logic View            │  Circuit Schematic (SVG)     │
+│  ┌────────────────────────┐   │  ┌──────────────────────┐   │
+│  │  N-channel square waves │   │  │  [CLK]──┐            │   │
+│  └────────────────────────┘   │  │         ├──[DFF]──Q  │   │
+│                                │  │  [D]────┘            │   │
+│  Real-time Oscilloscope        │  └──────────────────────┘   │
+│  ┌────────────────────────┐   │                              │
+│  │  N-channel analog       │   │  Controls                   │
+│  │  waveforms with         │   │  ┌──────────────────────┐   │
+│  │  threshold markers      │   │  │ Noise     [━━━●━━━]  │   │
+│  └────────────────────────┘   │  │ Speed     [━━━━━●━]  │   │
+│  Legend: ● CLK  ● D  ● Q     │  │ Input D   [ON/OFF]   │   │
+│                                │  │ Reset     [HOLD]     │   │
+│                                │  │ Probes    [☑CLK ☑D…] │   │
+│                                │  └──────────────────────┘   │
+└────────────────────────────────┴──────────────────────────────┘
+
+Mobile (< lg):
+┌─────────────────────────┐
+│ Toolbar (sticky)        │
+├─────────────────────────┤
+│ Digital Logic View      │
+│ Oscilloscope            │
+│ Legend                  │
+├─────────────────────────┤
+│ Circuit Schematic       │
+├─────────────────────────┤
+│ Controls                │
+└─────────────────────────┘
+```
+
+**Key layout decisions:**
+- **Toolbar** replaces the old floating buttons. Contains circuit selector (tabs or dropdown), shader style toggle, settings/about/language buttons. Always visible.
+- **Oscilloscope panel** takes the majority of screen width — this is the primary output. Canvas height scales dynamically with probe count (each channel gets a fixed row height).
+- **Circuit schematic** (new) — interactive SVG showing the circuit topology. Components are labeled boxes, wires connect ports. Active signals highlight in their channel color. Driven entirely by `CircuitDefinition`.
+- **Controls panel** — renders dynamic controls from `circuitDef.controls[]`. Includes a **probe selector** (checkbox list) for circuits with many nets — user toggles which nets appear on the oscilloscope.
+- **Responsive**: `grid-cols-1` stacked on mobile, `grid-cols-[1fr_20rem]` on desktop. Oscilloscope always takes priority.
+
 ### Component Tree
 
-All components below `<ControlPanel>` are **driven by the circuit definition** — they render from `circuitDef.controls[]` and `circuitDef.probes[]`, not hardcoded for a specific circuit.
+All components are **circuit-agnostic** — driven by `CircuitDefinition` data.
 
 ```
 <App>
   <LinguiProvider>
     <AppLayout>
-      <Header title={circuitDef.name} />
-      <main className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
-        <OscilloscopePanel>
+      <Toolbar>
+        <CircuitSelector circuits={[dffCircuit, adderCircuit]} />
+        <ShaderStyleToggle />
+        <SettingsButton /> <AboutButton /> <LocaleToggle />
+      </Toolbar>
+
+      <main className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-4">
+        {/* Left: Oscilloscope */}
+        <OscilloscopePanel probes={circuitDef.probes}>
           <DigitalCanvas />
           <WaveformCanvas />
-          <Legend probes={circuitDef.probes} />           ← N channels
+          <Legend probes={activeProbes} />
         </OscilloscopePanel>
-        <ControlPanel circuit={circuitDef}>
-          <ChipDiagram circuit={circuitDef} />            ← renders from circuit topology
-          <ShaderStyleToggle />
-          {circuitDef.controls.map(ctrl => (              ← dynamic controls
-            <ParamSlider /> | <ParamToggle /> | <ParamMomentary />
-          ))}
-          <InfoBox specs={voltageSpecs} />
-        </ControlPanel>
+
+        {/* Right: Schematic + Controls */}
+        <aside className="flex flex-col gap-4">
+          <CircuitSchematic circuit={circuitDef}>
+            {circuitDef.components.map(comp =>
+              <SchematicNode />
+            )}
+          </CircuitSchematic>
+
+          <ControlPanel controls={circuitDef.controls}>
+            {circuitDef.controls.map(ctrl =>
+              <ParamSlider /> | <ParamToggle /> | <ParamMomentary />
+            )}
+          </ControlPanel>
+
+          <ProbeSelector
+            probes={circuitDef.probes}
+            active={activeProbes}
+            onToggle={toggleProbe}
+          />
+        </aside>
       </main>
+
       <SettingsSheet />
-      <AboutSheet />
+      <AboutSheet description={circuitDef.description} />
     </AppLayout>
   </LinguiProvider>
 </App>
@@ -384,6 +459,7 @@ All components below `<ControlPanel>` are **driven by the circuit definition** �
 ```ts
 function useSimulation(
   circuitDef: CircuitDefinition,
+  activeProbes: Probe[],             // subset of circuitDef.probes user has enabled
   waveformRef: RefObject<HTMLCanvasElement>,
   digitalRef: RefObject<HTMLCanvasElement>,
 ): void {
@@ -391,14 +467,15 @@ function useSimulation(
   // 2. Wrap both with Comlink.wrap<PhysicsAPI>() and Comlink.wrap<RenderAPI>()
   // 3. Create MessageChannel, transfer port1 to Physics, port2 to Render
   // 4. Send circuitDef to Physics Worker: physicsProxy.loadCircuit(def)
-  // 5. Transfer OffscreenCanvases to Render Worker + probe config (N channels)
+  // 5. Transfer OffscreenCanvases + activeProbes to Render Worker
   // 6. Subscribe to Zustand store params:
   //    - params changes → physicsProxy.setParam(componentId, key, value)
   //    - settings changes → physicsProxy.setSettings()
   //    - shaderStyle changes → renderProxy.setShaderStyle()
   // 7. Physics Worker posts probe voltages → Comlink → updateVoltages()
-  // 8. On circuitDef change: reload circuit in both Workers
-  // 9. On unmount: terminate both Workers, clean up subscriptions
+  // 8. On circuitDef change: teardown + rebuild both Workers
+  // 9. On activeProbes change: renderProxy.updateProbes(activeProbes)
+  // 10. On unmount: terminate both Workers, clean up subscriptions
 }
 ```
 
@@ -841,13 +918,16 @@ Lingui with compile-time extraction. Two locales: `en` (default), `zh-CN`.
 ```tsx
 import { Trans, t } from "@lingui/react/macro";
 
-// In JSX:
-<Trans>Input D: LOW</Trans>
-<Trans>Noise Level</Trans>
+// Static UI strings (not circuit-specific):
+<Trans>Real-time Oscilloscope</Trans>
+<Trans>Digital Logic View</Trans>
+<Trans>Settings</Trans>
 
 // In attributes:
-<button aria-label={t`Toggle input D`}>
+<button aria-label={t`Toggle shader style`}>
 ```
+
+Note: Circuit-specific labels (probe names, control labels) come from the `CircuitDefinition` and are stored in message catalogs per locale. The definition itself uses message IDs that Lingui extracts.
 
 ### Message catalogs
 
