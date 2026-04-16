@@ -263,7 +263,7 @@ src/
 │   └── adder.ts                   # 4-Bit Accumulator circuit definition (day 2)
 │
 ├── lib/
-│   ├── constants.ts               # Colors (Catppuccin Macchiato), VoltageSpecs, Simulation, Layout, Timing
+│   ├── constants.ts               # VoltageSpecs, Simulation, Layout, Timing (colors via @catppuccin/palette)
 │   ├── types.ts                   # Circuit model types: Component, Port, Net, Probe, CircuitDefinition
 │   ├── validation.ts              # Zod schemas for voltage spec, timing, and circuit definition validation
 │   └── worker-bridge.ts           # Comlink + MessageChannel setup utility
@@ -277,7 +277,8 @@ src/
 │           └── messages.po
 │
 ├── styles/
-│   └── globals.css                # Tailwind v4 directives + Catppuccin CSS custom properties
+│   ├── globals.css                # Tailwind v4 directives + Catppuccin @theme block
+│   └── theme.ts                   # Programmatic colors from @catppuccin/palette (for JS/WebGPU)
 │
 └── test/
     ├── physics/
@@ -379,135 +380,164 @@ export const activeProbesAtom = atom((get) => {
 
 ### UI Layout
 
-Dashboard-style layout designed to scale from 3 channels (DFF) to 10+ channels (adder). The layout adapts to circuit complexity.
+Full-viewport immersive dashboard — not a "page with sections" but a **single-screen instrument panel** where every pixel serves the simulation. Inspired by professional EDA tools (Sigrok PulseView, Saleae Logic) and modern creative apps (Figma, Linear).
 
 ```
 Desktop (lg+):
-┌───────────────────────────────────────────────────────────────┐
-│ Toolbar: [DFF ▾ | 4-Bit Acc ▾]    [Clean|Glow|Phos]  [⚙][i][🌐] │
-├────────────────────────────────┬──────────────────────────────┤
-│                                │                              │
-│  Digital Logic View            │  Circuit Schematic (SVG)     │
-│  ┌────────────────────────┐   │  ┌──────────────────────┐   │
-│  │  N-channel square waves │   │  │  [CLK]──┐            │   │
-│  └────────────────────────┘   │  │         ├──[DFF]──Q  │   │
-│                                │  │  [D]────┘            │   │
-│  Real-time Oscilloscope        │  └──────────────────────┘   │
-│  ┌────────────────────────┐   │                              │
-│  │  N-channel analog       │   │  Controls                   │
-│  │  waveforms with         │   │  ┌──────────────────────┐   │
-│  │  threshold markers      │   │  │ Noise     [━━━●━━━]  │   │
-│  └────────────────────────┘   │  │ Speed     [━━━━━●━]  │   │
-│  Legend: ● CLK  ● D  ● Q     │  │ Input D   [ON/OFF]   │   │
-│                                │  │ Reset     [HOLD]     │   │
-│                                │  │ Probes    [☑CLK ☑D…] │   │
-│                                │  └──────────────────────┘   │
-└────────────────────────────────┴──────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ ┌─ Toolbar ───────────────────────────────────────────────────────┐ │
+│ │ ⬡ DFF-Sim   [D Flip-Flop ▾]     ●Clean ○Glow ○Phosphor   ⚙ i 🌐│ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+│                                                                     │
+│ ┌─ Circuit Schematic ─────────────────────────────────────────────┐ │
+│ │                                                                 │ │
+│ │    ┌─────┐         ╔═══════════╗         ┌─────┐              │ │
+│ │    │ CLK │─────────╢    D-FF   ╟─────────│  Q  │              │ │
+│ │    └─────┘    ┌────╢           ║         └─────┘              │ │
+│ │               │    ╚═══════════╝                               │ │
+│ │    ┌─────┐    │                                                │ │
+│ │    │  D  │────┘         Live voltage annotations               │ │
+│ │    └─────┘              on wires + pin highlights               │ │
+│ │                                                                 │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+│                                                                     │
+│ ┌─ Oscilloscope ──────────────────────────────┐ ┌─ Controls ─────┐ │
+│ │  Digital Logic View                         │ │                 │ │
+│ │  ┌─────────────────────────────────────┐    │ │ Noise   [━●━━] │ │
+│ │  │ CLK ▁▁▁█████▁▁▁█████▁▁▁█████▁▁    │    │ │ Speed   [━━●━] │ │
+│ │  │ D   ▁▁▁▁▁▁▁▁▁████████████████▁    │    │ │                 │ │
+│ │  │ Q   ▁▁▁▁▁▁▁▁▁▁▁▁████████▁▁▁▁▁    │    │ │ Input D [ON|off]│ │
+│ │  └─────────────────────────────────────┘    │ │ Reset   [HOLD]  │ │
+│ │                                             │ │                 │ │
+│ │  Real-time Oscilloscope                     │ │ ─── Probes ─── │ │
+│ │  ┌─────────────────────────────────────┐    │ │ ☑ CLK  ● green │ │
+│ │  │ CLK ∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿   │    │ │ ☑ D    ● blue  │ │
+│ │  │ --- VIH 1.0V --- VIL 0.6V ---     │    │ │ ☑ Q    ● red   │ │
+│ │  │ D   ∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿   │    │ │                 │ │
+│ │  │ Q   ∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿∿   │    │ │ ── Info ────── │ │
+│ │  └─────────────────────────────────────┘    │ │ VIH: 1.0V      │ │
+│ │  ● CLK   ● D   ● Q                         │ │ VIL: 0.6V      │ │
+│ └─────────────────────────────────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
 
-Mobile (< lg):
-┌─────────────────────────┐
-│ Toolbar (sticky)        │
-├─────────────────────────┤
-│ Digital Logic View      │
-│ Oscilloscope            │
-│ Legend                  │
-├─────────────────────────┤
-│ Circuit Schematic       │
-├─────────────────────────┤
-│ Controls                │
-└─────────────────────────┘
+Mobile (< lg):                    Tablet (md):
+┌──────────────────┐              ┌──────────────────────────┐
+│ Toolbar (sticky)  │              │ Toolbar                  │
+├──────────────────┤              ├──────────────────────────┤
+│ Schematic        │              │ Schematic (compact)      │
+│ (collapsed, tap  │              ├───────────────┬──────────┤
+│  to expand)      │              │ Oscilloscope  │ Controls │
+├──────────────────┤              │ (stacked)     │          │
+│ Digital View     │              │               │          │
+│ Oscilloscope     │              │               │          │
+│ Legend           │              └───────────────┴──────────┘
+├──────────────────┤
+│ Controls (sheet) │
+└──────────────────┘
 ```
 
+**Design philosophy:**
+- **Schematic as hero** — The circuit schematic sits at the top, large and prominent. It's the first thing a viewer sees: "this is a circuit simulation." Wires animate with signal colors. Pins glow on logic HIGH. Voltages annotate in real-time. This is the visual centerpiece, not an afterthought in a sidebar.
+- **Oscilloscope below schematic** — The waveform display is the analytical view. It spans the full width on mobile and ~70% on desktop, with controls in a narrow right column.
+- **Controls are secondary** — Sliders, toggles, and probe selector live in a compact right column (desktop) or a bottom sheet (mobile). They're always accessible but never compete for attention with the visualizations.
+- **Full viewport** — `h-screen` with `overflow-hidden`. No scrolling on desktop. The entire UI is a single instrument panel. On mobile, controlled scrolling within sections.
+- **Circuit selector in toolbar** — Prominent dropdown/tabs. Switching circuits is the primary navigation action.
+
 **Key layout decisions:**
-- **Toolbar** replaces the old floating buttons. Contains circuit selector (tabs or dropdown), shader style toggle, settings/about/language buttons. Always visible.
-- **Oscilloscope panel** takes the majority of screen width — this is the primary output. Canvas height scales dynamically with probe count (each channel gets a fixed row height).
-- **Circuit schematic** (new) — interactive SVG showing the circuit topology. Components are labeled boxes, wires connect ports. Active signals highlight in their channel color. Driven entirely by `CircuitDefinition`.
-- **Controls panel** — renders dynamic controls from `circuitDef.controls[]`. Includes a **probe selector** (checkbox list) for circuits with many nets — user toggles which nets appear on the oscilloscope.
-- **Responsive**: `grid-cols-1` stacked on mobile, `grid-cols-[1fr_20rem]` on desktop. Oscilloscope always takes priority.
+- **Three-row desktop grid**: `grid-template-rows: auto 1fr 1fr` — toolbar (auto), schematic (1fr), oscilloscope+controls (1fr). Schematic and oscilloscope split the viewport 50/50 vertically.
+- **Oscilloscope + controls row** uses `grid-template-columns: 1fr 16rem` — waveforms take remaining space, controls get a fixed 16rem column.
+- **Canvas height** scales dynamically with probe count. Each channel gets a proportional share of the oscilloscope panel height.
 
 ### CSS Subgrid Strategy
 
-The dashboard uses **CSS Subgrid** (Tailwind v4: `grid-rows-subgrid`) to align nested children across the two-column layout. This continues the project's existing Subgrid pattern (the current codebase already uses it).
+The three-row layout uses **CSS Subgrid** (Tailwind v4) for cross-panel alignment:
 
 ```
-<main> — parent grid
-  grid-template-columns: 1fr 20rem       (desktop)
-  grid-template-rows: auto 1fr auto      (toolbar / content / legend)
+<div class="grid h-screen grid-rows-[auto_1fr_1fr]">
+  <!-- Row 1: Toolbar -->
+  <Toolbar />
 
-  <OscilloscopePanel> — spans col 1, inherits row tracks via subgrid
-    grid-row: 1 / -1
-    display: grid
-    grid-template-rows: subgrid           ← aligns digital/analog/legend rows
-                                            with schematic/controls/probes rows
+  <!-- Row 2: Schematic (full width) -->
+  <CircuitSchematic class="min-h-0" />
 
-  <aside> — spans col 2, inherits row tracks via subgrid
-    grid-row: 1 / -1
-    display: grid
-    grid-template-rows: subgrid           ← schematic/controls/probes align
-                                            with oscilloscope internal rows
+  <!-- Row 3: Oscilloscope + Controls (subgrid columns) -->
+  <div class="grid grid-cols-[1fr_16rem] min-h-0">
+    <OscilloscopePanel class="grid grid-rows-subgrid min-h-0">
+      <!-- Subgrid: digital + analog + legend share row tracks -->
+      <DigitalCanvas />
+      <WaveformCanvas />
+      <Legend />
+    </OscilloscopePanel>
+
+    <aside class="grid grid-rows-subgrid overflow-y-auto">
+      <!-- Subgrid: controls align with oscilloscope rows -->
+      <ControlPanel />
+      <ProbeSelector />
+      <InfoBox />
+    </aside>
+  </div>
+</div>
 ```
 
 **Where Subgrid is used:**
-1. **Main content area**: Two columns share row tracks — oscilloscope rows align with sidebar sections
-2. **Control groups**: `label + input` pairs within `ControlPanel` use `grid-cols-subgrid` to align labels and inputs across all control groups
-3. **Probe selector**: Checkbox rows align with the control group grid
-4. **Settings form**: Voltage spec `label + input` pairs use subgrid for consistent alignment
+1. **Oscilloscope + Controls row**: Two columns share row tracks — digital/analog/legend rows align with controls/probes/info sections
+2. **Control groups**: `label + input` pairs use `grid-cols-subgrid` for consistent alignment
+3. **Settings form**: Voltage spec `label + input` pairs use subgrid
 
 **Tailwind v4 classes:**
 - `grid-rows-subgrid` — inherit parent's row tracks
 - `grid-cols-subgrid` — inherit parent's column tracks
-- `row-span-full` — span all rows of the parent
-- Standard `grid`, `grid-cols-*`, `grid-rows-*` for the parent grid
-
-This eliminates the need for hardcoded heights or JavaScript-based height synchronization between panels. The browser's grid engine handles alignment natively.
+- `min-h-0` — critical for preventing grid blowout in `h-screen` layouts
+- `overflow-y-auto` — controls column scrolls independently if content overflows
 
 ### Component Tree
 
-All components are **circuit-agnostic** — driven by `CircuitDefinition` data.
+All components are **circuit-agnostic** — driven by `CircuitDefinition` data. The layout is a full-viewport instrument panel with the schematic as the visual hero.
 
 ```
 <App>
   <LinguiProvider>
-    <AppLayout>
+    <div className="grid h-screen grid-rows-[auto_1fr_1fr] bg-base text-text">
+
+      {/* Row 1: Toolbar */}
       <Toolbar>
+        <AppLogo />
         <CircuitSelector circuits={[dffCircuit, adderCircuit]} />
         <ShaderStyleToggle />
-        <SettingsButton /> <AboutButton /> <LocaleToggle />
+        <div className="ml-auto flex gap-2">
+          <SettingsButton /> <AboutButton /> <LocaleToggle />
+        </div>
       </Toolbar>
 
-      <main className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-4">
-        {/* Left: Oscilloscope */}
-        <OscilloscopePanel probes={circuitDef.probes}>
+      {/* Row 2: Circuit Schematic (full width, hero) */}
+      <CircuitSchematic circuit={circuitDef} className="min-h-0 border-b border-surface0">
+        {circuitDef.components.map(comp => <SchematicNode />)}
+        {circuitDef.nets.map(net => <SchematicWire />)}
+      </CircuitSchematic>
+
+      {/* Row 3: Oscilloscope + Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_16rem] min-h-0">
+        <OscilloscopePanel probes={activeProbes} className="grid grid-rows-subgrid min-h-0">
           <DigitalCanvas />
           <WaveformCanvas />
           <Legend probes={activeProbes} />
         </OscilloscopePanel>
 
-        {/* Right: Schematic + Controls */}
-        <aside className="flex flex-col gap-4">
-          <CircuitSchematic circuit={circuitDef}>
-            {circuitDef.components.map(comp =>
-              <SchematicNode />
-            )}
-          </CircuitSchematic>
-
+        <aside className="grid grid-rows-subgrid overflow-y-auto border-l border-surface0">
           <ControlPanel controls={circuitDef.controls}>
             {circuitDef.controls.map(ctrl =>
               <ParamSlider /> | <ParamToggle /> | <ParamMomentary />
             )}
           </ControlPanel>
-
-          <ProbeSelector
-            probes={circuitDef.probes}
-            active={activeProbes}
-            onToggle={toggleProbe}
-          />
+          <ProbeSelector probes={circuitDef.probes} />
+          <InfoBox />
         </aside>
-      </main>
+      </div>
 
+      {/* Overlays */}
       <SettingsSheet />
       <AboutSheet description={circuitDef.description} />
-    </AppLayout>
+    </div>
   </LinguiProvider>
 </App>
 ```
@@ -539,30 +569,20 @@ function useSimulation(
 
 ### Tailwind + Catppuccin
 
-Catppuccin Macchiato colors defined as CSS custom properties in `globals.css`:
+Colors sourced from **`@catppuccin/palette`** (not hardcoded hex). Two integration points:
 
-```css
-@import "tailwindcss";
+1. **CSS** (`globals.css`): `@theme` block defines CSS custom properties for Tailwind's class generation. Values match `@catppuccin/palette` Macchiato flavor.
+2. **JS** (`styles/theme.ts`): Imports `flavors.macchiato` from the package for use in WebGPU color uniforms and probe color lookups where CSS vars aren't accessible.
 
-@theme {
-  --color-base: #24273a;
-  --color-surface-0: #363a4f;
-  --color-surface-1: #494d64;
-  --color-surface-2: #5b6078;
-  --color-text: #cad3f5;
-  --color-subtext: #a5adcb;
-  --color-accent-green: #a6da95;
-  --color-accent-blue: #8aadf4;
-  --color-accent-red: #ed8796;
-  --color-accent-yellow: #eed49f;
-  --color-accent-mauve: #c6a0f6;
-  --color-accent-teal: #7dc4e4;
-  --color-accent-lavender: #b7bdf8;
-  --color-overlay: #363a4f;
-}
+```ts
+// src/styles/theme.ts
+import { flavors } from "@catppuccin/palette";
+export const theme = Object.fromEntries(
+  Object.entries(flavors.macchiato.colors).map(([name, color]) => [name, color.hex]),
+);
 ```
 
-Dark theme only. Responsive grid: single column on mobile, two columns on desktop.
+Dark theme only.
 
 ## Circuit Graph Model
 
@@ -1142,22 +1162,23 @@ Same GitHub Actions pipeline as current project, updated for the new stack:
 ## Dependencies Summary
 
 ### Production
-- react, react-dom
+- react@19.2, react-dom@19.2
 - pixi.js — REMOVED (replaced by raw WebGPU)
 - @fortawesome/fontawesome-free — REMOVED (replaced by Lucide React)
-- jotai
-- comlink
+- jotai@2.19
+- comlink@4.4
+- @catppuccin/palette@1.8
 - @radix-ui/* (via shadcn/ui)
-- lucide-react
-- @lingui/core, @lingui/react
-- zod
-- tailwind-merge, class-variance-authority (shadcn/ui utilities)
+- lucide-react@1.8
+- @lingui/core@5.9, @lingui/react@5.9
+- zod@4.3
+- tailwind-merge@3.5, class-variance-authority@0.7
 
 ### Dev
-- typescript
-- vite, @vitejs/plugin-react
-- @biomejs/biome
-- vitest, @testing-library/react, @testing-library/jest-dom, happy-dom
-- @lingui/cli, @lingui/macro, @lingui/vite-plugin
-- tailwindcss
-- @types/react, @types/react-dom, @types/bun
+- typescript@6.0
+- vite@8.0, @vitejs/plugin-react@6.0
+- @biomejs/biome@2.4
+- vitest@4.1, @testing-library/react@16.3, @testing-library/jest-dom@6.9, happy-dom@20.9
+- @lingui/cli@5.9, @lingui/macro@5.9, @lingui/vite-plugin@5.9
+- tailwindcss@4.2
+- @types/react@19.2, @types/react-dom@19.2, @types/bun@1.3

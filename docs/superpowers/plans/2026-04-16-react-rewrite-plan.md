@@ -81,38 +81,39 @@ Create `package.json` with all dependencies from the spec:
     "lingui:compile": "lingui compile"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "jotai": "^2.12.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "jotai": "^2.19.1",
     "comlink": "^4.4.2",
-    "lucide-react": "^0.509.0",
-    "zod": "^3.25.0",
-    "@lingui/core": "^5.3.0",
-    "@lingui/react": "^5.3.0",
-    "@radix-ui/react-dialog": "^1.1.0",
-    "@radix-ui/react-slider": "^1.3.0",
-    "@radix-ui/react-switch": "^1.2.0",
-    "@radix-ui/react-toggle-group": "^1.1.0",
-    "@radix-ui/react-slot": "^1.2.0",
-    "tailwind-merge": "^3.3.0",
-    "class-variance-authority": "^0.7.0"
+    "lucide-react": "^1.8.0",
+    "zod": "^4.3.6",
+    "@lingui/core": "^5.9.5",
+    "@lingui/react": "^5.9.5",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-slider": "^1.3.6",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-toggle-group": "^1.1.11",
+    "@radix-ui/react-slot": "^1.2.4",
+    "tailwind-merge": "^3.5.0",
+    "class-variance-authority": "^0.7.1",
+    "@catppuccin/palette": "^1.8.0"
   },
   "devDependencies": {
-    "typescript": "^6.0.0",
-    "vite": "^8.0.0",
-    "@vitejs/plugin-react": "^4.5.0",
-    "@biomejs/biome": "^1.9.0",
-    "vitest": "^3.2.0",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/jest-dom": "^6.6.0",
-    "happy-dom": "^18.0.0",
-    "@lingui/cli": "^5.3.0",
-    "@lingui/macro": "^5.3.0",
-    "@lingui/vite-plugin": "^5.3.0",
-    "tailwindcss": "^4.1.0",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "@types/bun": "^1.3.0"
+    "typescript": "^6.0.2",
+    "vite": "^8.0.8",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@biomejs/biome": "^2.4.12",
+    "vitest": "^4.1.4",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "happy-dom": "^20.9.0",
+    "@lingui/cli": "^5.9.5",
+    "@lingui/macro": "^5.9.5",
+    "@lingui/vite-plugin": "^5.9.5",
+    "tailwindcss": "^4.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/bun": "^1.3.12"
   },
   "trustedDependencies": [
     "@parcel/watcher"
@@ -229,29 +230,85 @@ export function App() {
 }
 ```
 
-- [ ] **Step 9: Create src/styles/globals.css**
+- [ ] **Step 9: Create src/styles/theme.ts — programmatic Catppuccin colors**
+
+Use `@catppuccin/palette` instead of hardcoding hex values. This generates CSS custom properties from the package:
+
+```ts
+// src/styles/theme.ts
+import { flavors } from "@catppuccin/palette";
+
+const macchiato = flavors.macchiato;
+
+/** Export all Catppuccin Macchiato colors for use in JS (WebGPU uniforms, etc.) */
+export const theme = {
+  base: macchiato.colors.base.hex,
+  mantle: macchiato.colors.mantle.hex,
+  crust: macchiato.colors.crust.hex,
+  surface0: macchiato.colors.surface0.hex,
+  surface1: macchiato.colors.surface1.hex,
+  surface2: macchiato.colors.surface2.hex,
+  text: macchiato.colors.text.hex,
+  subtext0: macchiato.colors.subtext0.hex,
+  subtext1: macchiato.colors.subtext1.hex,
+  overlay0: macchiato.colors.overlay0.hex,
+  overlay1: macchiato.colors.overlay1.hex,
+  green: macchiato.colors.green.hex,
+  blue: macchiato.colors.blue.hex,
+  red: macchiato.colors.red.hex,
+  yellow: macchiato.colors.yellow.hex,
+  mauve: macchiato.colors.mauve.hex,
+  teal: macchiato.colors.teal.hex,
+  lavender: macchiato.colors.lavender.hex,
+  peach: macchiato.colors.peach.hex,
+  sky: macchiato.colors.sky.hex,
+  pink: macchiato.colors.pink.hex,
+  flamingo: macchiato.colors.flamingo.hex,
+  rosewater: macchiato.colors.rosewater.hex,
+  maroon: macchiato.colors.maroon.hex,
+  sapphire: macchiato.colors.sapphire.hex,
+} as const;
+
+/** Generate CSS custom properties string for injection into globals.css */
+export function toCssVars(): string {
+  return Object.entries(theme)
+    .map(([name, hex]) => `  --color-${name}: ${hex};`)
+    .join("\n");
+}
+```
+
+- [ ] **Step 10: Create src/styles/globals.css**
 
 ```css
 @import "tailwindcss";
 
+/* Catppuccin Macchiato — sourced from @catppuccin/palette (see theme.ts) */
 @theme {
   --color-base: #24273a;
   --color-mantle: #1e2030;
   --color-crust: #181926;
-  --color-surface-0: #363a4f;
-  --color-surface-1: #494d64;
-  --color-surface-2: #5b6078;
+  --color-surface0: #363a4f;
+  --color-surface1: #494d64;
+  --color-surface2: #5b6078;
   --color-text: #cad3f5;
-  --color-subtext: #a5adcb;
-  --color-accent-green: #a6da95;
-  --color-accent-blue: #8aadf4;
-  --color-accent-red: #ed8796;
-  --color-accent-yellow: #eed49f;
-  --color-accent-mauve: #c6a0f6;
-  --color-accent-teal: #7dc4e4;
-  --color-accent-lavender: #b7bdf8;
-  --color-accent-peach: #f5a97f;
-  --color-overlay: #363a4f;
+  --color-subtext0: #a5adcb;
+  --color-subtext1: #b8c0e0;
+  --color-overlay0: #6e738d;
+  --color-overlay1: #8087a2;
+  --color-green: #a6da95;
+  --color-blue: #8aadf4;
+  --color-red: #ed8796;
+  --color-yellow: #eed49f;
+  --color-mauve: #c6a0f6;
+  --color-teal: #7dc4e4;
+  --color-lavender: #b7bdf8;
+  --color-peach: #f5a97f;
+  --color-sky: #91d7e3;
+  --color-pink: #f5bde6;
+  --color-flamingo: #f0c6c6;
+  --color-rosewater: #f4dbd6;
+  --color-maroon: #ee99a0;
+  --color-sapphire: #7dc4e4;
 }
 
 body {
@@ -260,6 +317,8 @@ body {
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 ```
+
+Note: The CSS `@theme` block mirrors the `@catppuccin/palette` values so Tailwind can resolve them at build time. The `theme.ts` module is used in JS contexts (WebGPU color uniforms, probe color lookups) where CSS vars aren't accessible.
 
 - [ ] **Step 10: Install dependencies and verify**
 
@@ -566,7 +625,6 @@ export interface LayoutConfig {
 
 ```ts
 import type {
-  ColorConfig,
   LayoutConfig,
   PhysicsConfig,
   SimulationConfig,
@@ -574,22 +632,8 @@ import type {
   VoltageSpecConfig,
 } from "./types";
 
-export const Colors: ColorConfig = {
-  green: "#a6da95",
-  blue: "#8aadf4",
-  red: "#ed8796",
-  yellow: "#eed49f",
-  mauve: "#c6a0f6",
-  teal: "#7dc4e4",
-  lavender: "#b7bdf8",
-  peach: "#f5a97f",
-  text: "#cad3f5",
-  subtext: "#a5adcb",
-  grid: "#363a4f",
-  stroke: "#494d64",
-  fill: "#5b6078",
-  surface0: "#363a4f",
-} as const;
+// Colors are sourced from @catppuccin/palette via src/styles/theme.ts
+// No hardcoded hex values in constants — see theme.ts for color access
 
 export const DefaultVoltageSpecs: VoltageSpecConfig = {
   logicHighMin: 1.0,
