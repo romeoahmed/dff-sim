@@ -403,6 +403,42 @@ Mobile (< lg):
 - **Controls panel** — renders dynamic controls from `circuitDef.controls[]`. Includes a **probe selector** (checkbox list) for circuits with many nets — user toggles which nets appear on the oscilloscope.
 - **Responsive**: `grid-cols-1` stacked on mobile, `grid-cols-[1fr_20rem]` on desktop. Oscilloscope always takes priority.
 
+### CSS Subgrid Strategy
+
+The dashboard uses **CSS Subgrid** (Tailwind v4: `grid-rows-subgrid`) to align nested children across the two-column layout. This continues the project's existing Subgrid pattern (the current codebase already uses it).
+
+```
+<main> — parent grid
+  grid-template-columns: 1fr 20rem       (desktop)
+  grid-template-rows: auto 1fr auto      (toolbar / content / legend)
+
+  <OscilloscopePanel> — spans col 1, inherits row tracks via subgrid
+    grid-row: 1 / -1
+    display: grid
+    grid-template-rows: subgrid           ← aligns digital/analog/legend rows
+                                            with schematic/controls/probes rows
+
+  <aside> — spans col 2, inherits row tracks via subgrid
+    grid-row: 1 / -1
+    display: grid
+    grid-template-rows: subgrid           ← schematic/controls/probes align
+                                            with oscilloscope internal rows
+```
+
+**Where Subgrid is used:**
+1. **Main content area**: Two columns share row tracks — oscilloscope rows align with sidebar sections
+2. **Control groups**: `label + input` pairs within `ControlPanel` use `grid-cols-subgrid` to align labels and inputs across all control groups
+3. **Probe selector**: Checkbox rows align with the control group grid
+4. **Settings form**: Voltage spec `label + input` pairs use subgrid for consistent alignment
+
+**Tailwind v4 classes:**
+- `grid-rows-subgrid` — inherit parent's row tracks
+- `grid-cols-subgrid` — inherit parent's column tracks
+- `row-span-full` — span all rows of the parent
+- Standard `grid`, `grid-cols-*`, `grid-rows-*` for the parent grid
+
+This eliminates the need for hardcoded heights or JavaScript-based height synchronization between panels. The browser's grid engine handles alignment natively.
+
 ### Component Tree
 
 All components are **circuit-agnostic** — driven by `CircuitDefinition` data.
