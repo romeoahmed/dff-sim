@@ -118,3 +118,105 @@ describe("DFlipFlop", () => {
     expect(q.voltage).toBeLessThan(0.6);
   });
 });
+
+describe("DFlipFlop metastability (biased)", () => {
+  const { logicHighMin, logicLowMax } = DefaultPhysicsConfig.voltage;
+  const vMid = (logicHighMin + logicLowMax) / 2;
+  const band = logicHighMin - logicLowMax;
+  const dt = DefaultPhysicsConfig.simulation.physicsDt;
+  const tauMeta = DefaultPhysicsConfig.timing.tauMeta;
+
+  function runTrial(seed: number, dVoltage: number): 0 | 1 {
+    const dff = new DFlipFlop(
+      "dff0",
+      {},
+      {
+        config: DefaultPhysicsConfig,
+        rng: createSeededRng(seed),
+      },
+    );
+    const dPort = dff.inputs.get("d");
+    const clkPort = dff.inputs.get("clk");
+    const qPort = dff.outputs.get("q");
+    if (!dPort || !clkPort || !qPort) throw new Error("DFF port missing");
+    dPort.voltage = dVoltage;
+    clkPort.voltage = DefaultPhysicsConfig.voltage.outputHighMax;
+    dff.clock(dt);
+    for (let i = 0; i < 1000; i++) dff.update(dt);
+    return qPort.voltage > vMid ? 1 : 0;
+  }
+
+  it("D clearly HIGH in band resolves to HIGH in most trials", () => {
+    const trials = 200;
+    let highs = 0;
+    const dHigh = vMid + 0.5 * band;
+    for (let s = 0; s < trials; s++) {
+      if (runTrial(s, dHigh) === 1) highs++;
+    }
+    expect(highs / trials).toBeGreaterThan(0.8);
+  });
+
+  it("D clearly LOW in band resolves to LOW in most trials", () => {
+    const trials = 200;
+    let lows = 0;
+    const dLow = vMid - 0.5 * band;
+    for (let s = 0; s < trials; s++) {
+      if (runTrial(s, dLow) === 0) lows++;
+    }
+    expect(lows / trials).toBeGreaterThan(0.8);
+  });
+
+  it("D exactly at mid resolves roughly 50/50", () => {
+    const trials = 400;
+    let highs = 0;
+    for (let s = 0; s < trials; s++) {
+      if (runTrial(s, vMid) === 1) highs++;
+    }
+    const ratio = highs / trials;
+    expect(ratio).toBeGreaterThan(0.35);
+    expect(ratio).toBeLessThan(0.65);
+  });
+
+  it("during metastable interval Q voltage hovers at mid", () => {
+    const dff = new DFlipFlop(
+      "dff0",
+      {},
+      {
+        config: DefaultPhysicsConfig,
+        rng: createSeededRng(12345),
+      },
+    );
+    const dPort = dff.inputs.get("d");
+    const clkPort = dff.inputs.get("clk");
+    const qPort = dff.outputs.get("q");
+    if (!dPort || !clkPort || !qPort) throw new Error("DFF port missing");
+    dPort.voltage = vMid;
+    clkPort.voltage = DefaultPhysicsConfig.voltage.outputHighMax;
+    dff.clock(dt);
+    const shortTime = tauMeta * 0.1;
+    const steps = Math.max(1, Math.floor(shortTime / dt));
+    for (let i = 0; i < steps; i++) dff.update(dt);
+    expect(Math.abs(qPort.voltage - vMid)).toBeLessThan(0.05);
+  });
+
+  it("after metaResolveTime Q settles to a rail", () => {
+    const dff = new DFlipFlop(
+      "dff0",
+      {},
+      {
+        config: DefaultPhysicsConfig,
+        rng: createSeededRng(99),
+      },
+    );
+    const dPort = dff.inputs.get("d");
+    const clkPort = dff.inputs.get("clk");
+    const qPort = dff.outputs.get("q");
+    if (!dPort || !clkPort || !qPort) throw new Error("DFF port missing");
+    dPort.voltage = vMid;
+    clkPort.voltage = DefaultPhysicsConfig.voltage.outputHighMax;
+    dff.clock(dt);
+    for (let i = 0; i < 10_000; i++) dff.update(dt);
+    const settled = qPort.voltage > logicHighMin || qPort.voltage < logicLowMax;
+    expect(settled).toBe(true);
+  });
+});

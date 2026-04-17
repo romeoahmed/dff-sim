@@ -1,4 +1,5 @@
 import type { ComponentDeps, PhysicsConfig, Port, RngFn, SequentialComponent } from "@/lib/types";
+import { createGaussianSampler } from "../gaussian";
 import { NoiseGenerator } from "../noise";
 import { Signal } from "../signal";
 import { createPort } from "./base";
@@ -14,6 +15,8 @@ export class DFlipFlop implements SequentialComponent {
   private readonly dPort: Port;
   private readonly config: PhysicsConfig;
   private readonly rng: RngFn;
+  private readonly gaussianSample: () => number;
+  private readonly vMid: number;
 
   private lastClkLogic: 0 | 1 = 0;
   private resetActive: boolean = false;
@@ -21,6 +24,7 @@ export class DFlipFlop implements SequentialComponent {
   private metastable: boolean = false;
   private metaTimer: number = 0;
   private metaResolveTime: number = 0;
+  private metaInputVoltage: number = 0;
 
   private pendingQ: 0 | 1 | null = null;
   private pendingTimer: number = 0;
@@ -33,6 +37,8 @@ export class DFlipFlop implements SequentialComponent {
     const { config, rng } = deps;
     this.config = config;
     this.rng = rng;
+    this.gaussianSample = createGaussianSampler(rng);
+    this.vMid = (config.voltage.logicHighMin + config.voltage.logicLowMax) / 2;
 
     const dPort = createPort("d");
     const clkPort = createPort("clk");
@@ -79,7 +85,14 @@ export class DFlipFlop implements SequentialComponent {
       this.metaTimer += dt;
       if (this.metaTimer >= this.metaResolveTime) {
         this.metastable = false;
-        this.qSignal.targetLogic = this.rng() > 0.5 ? 1 : 0;
+        const sigma = this.config.timing.metaResolveNoiseSigma;
+        const jitter = sigma * this.gaussianSample();
+        const noisy = this.metaInputVoltage + jitter;
+        this.qSignal.targetLogic = noisy > this.vMid ? 1 : 0;
+      } else {
+        this.qSignal.snapTo(this.vMid);
+        this.qPort.voltage = this.qSignal.voltage;
+        return;
       }
     }
 
@@ -137,6 +150,7 @@ export class DFlipFlop implements SequentialComponent {
     this.metaTimer = 0;
     const u = this.rng();
     this.metaResolveTime = -this.config.timing.tauMeta * Math.log(u || 1e-10);
-    this.qSignal.snapTo(this.config.voltage.systemMax / 2);
+    this.metaInputVoltage = this.dPort.voltage;
+    this.qSignal.snapTo(this.vMid);
   }
 }
