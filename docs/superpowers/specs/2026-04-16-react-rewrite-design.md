@@ -31,8 +31,8 @@ The architecture is built on a **generic circuit graph model** so that future de
 │                    React (Main Thread)                     │
 │                                                           │
 │  ┌─────────┐  ┌───────────┐  ┌──────┐  ┌──────────────┐ │
-│  │ Zustand  │  │ shadcn/ui │  │Lingui│  │ Circuit      │ │
-│  │ Stores   │  │ Components│  │ i18n │  │ Definitions  │ │
+│  │ Jotai    │  │ shadcn/ui │  │Lingui│  │ Circuit      │ │
+│  │ atoms    │  │ Components│  │ i18n │  │ Definitions  │ │
 │  └────┬─────┘  └─────┬─────┘  └──────┘  └──────┬───────┘ │
 │       │              │                          │         │
 │  ┌────┴──────────────┴──────────────────────────┴───┐    │
@@ -57,7 +57,7 @@ The architecture is built on a **generic circuit graph model** so that future de
          └─────────────────────────┘
 ```
 
-**Main Thread (React)**: UI rendering, user interaction, Zustand state. Holds the circuit definition (data) and passes it to Workers. Zero physics computation, zero canvas rendering. UI components are driven by the circuit definition's `controls` and `probes` arrays — not hardcoded for a specific circuit.
+**Main Thread (React)**: UI rendering, user interaction, Jotai atoms. Holds the circuit definition (data) and passes it to Workers. Zero physics computation, zero canvas rendering. UI components are driven by the circuit definition's `controls` and `probes` arrays — not hardcoded for a specific circuit.
 
 **Physics Worker**: Receives a `CircuitDefinition`, instantiates the circuit graph (components, nets, levelized evaluation order), and runs the simulation loop via `setTimeout` at ~120Hz. Exposes a generic API via Comlink:
 - `loadCircuit(def)` — instantiate circuit graph from definition
@@ -82,8 +82,8 @@ User loads circuit (or app starts with default DFF circuit)
   → Comlink → Render Worker: init(canvases, probes from def)
 
 User interaction
-  → Zustand store update
-  → useSimulation effect
+  → Jotai atom update (paramAtomFamily)
+  → useSimulation effect (store.sub subscription)
   → Comlink → Physics Worker: setParam(componentId, key, value)
 
 Physics Worker tick loop:
@@ -95,7 +95,7 @@ Physics Worker tick loop:
       4. Sequential elements: edge detect, setup/hold, capture
       5. Push probed voltages to ring buffer
   → MessageChannel.postMessage(frameData) → Render Worker
-  → postMessage(probeVoltages) → Main Thread → Zustand
+  → postMessage(probeVoltages) → Main Thread → voltageAtomFamily(netId)
 
 Render Worker frame loop (rAF):
   → receive latest frame data (N channels)
@@ -490,7 +490,6 @@ The three-row layout uses **CSS Subgrid** (Tailwind v4) for cross-panel alignmen
       <!-- Subgrid: controls align with oscilloscope rows -->
       <ControlPanel />
       <ProbeSelector />
-      <InfoBox />
     </aside>
   </div>
 </div>
@@ -552,8 +551,7 @@ All components are **circuit-agnostic** — driven by `CircuitDefinition` data. 
             )}
           </ControlPanel>
           <ProbeSelector probes={circuitDef.probes} />
-          <InfoBox />
-        </aside>
+            </aside>
       </div>
 
       {/* Row 4: Status strip — sim time, tick rate, WebGPU adapter */}
@@ -614,29 +612,63 @@ export const theme = Object.fromEntries(
 );
 ```
 
-**Typography** — IBM Plex pair, self-hosted via `@fontsource-variable/ibm-plex-sans` + `@fontsource-variable/ibm-plex-mono`. Variable fonts, ~50KB total, no network fetch.
+**Typography** — IBM Plex pair, self-hosted. Plex Sans ships as a variable font (single woff2, 100–700 weight range); Plex Mono is static-only (no variable distribution exists in IBM's source).
 
-- `--font-sans: "IBM Plex Sans Variable"` — UI body and headings
-- `--font-mono: "IBM Plex Mono Variable"` — voltage readouts, pin labels, timing values, status strip
+- `@fontsource-variable/ibm-plex-sans` — one import loads all weights
+- `@fontsource/ibm-plex-mono/{400,500,600}.css` — per-weight imports for mono
 
-Plex is specifically designed for technical/engineering contexts. The `zero` feature makes `0` visually distinct from `O`; `tabular-nums` keeps voltage digits column-aligned; stylistic sets `ss01` and `cv11` give the monospace its characteristic schoolbook-italic look.
+CSS tokens:
+- `--font-sans: "IBM Plex Sans Variable", system-ui, sans-serif` — UI body and headings
+- `--font-mono: "IBM Plex Mono", ui-monospace, monospace` — voltage readouts, pin labels, timing, status strip
+
+Plex is specifically designed for technical/engineering contexts. Stylistic set `ss03` + `zero` feature produce a slashed zero (distinct from `O`) in Plex Mono — critical for voltage readouts. `tabular-nums` keeps digit columns aligned.
 
 Readout class for all numeric displays:
 ```css
 .readout {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "zero", "ss01";
+  font-feature-settings: "zero" 1, "ss03" 1;  /* slashed zero */
 }
 ```
 
 **Background** — Not flat. Two subtle radial gradients (blue top-left, mauve bottom-right) at ~4% opacity over base color. Adds atmosphere without distraction.
 
-**Motion** — Purposeful, not decorative:
-- Entry: 200ms fade+slide with 50ms stagger (toolbar → schematic → oscilloscope → controls)
-- Circuit switch: old schematic fades (150ms), new one fades in (150ms) — use `motion` library
-- Sheet open/close: Radix's built-in animations, customized via `data-state` selectors
-- No per-frame animations on canvas — the waveform IS the motion
+**Motion** — `motion@12.38` library, imported from `motion/react`. Purposeful, not decorative.
+
+Three concrete patterns:
+
+1. **Staggered entry on mount** (Toolbar items):
+   ```tsx
+   const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
+   const item = { hidden: { opacity: 0, y: -6 }, show: { opacity: 1, y: 0 } };
+   <motion.header variants={container} initial="hidden" animate="show">
+     <motion.div variants={item}>...</motion.div>
+   </motion.header>
+   ```
+
+2. **Circuit-swap crossfade** (CircuitSchematic):
+   ```tsx
+   <AnimatePresence mode="wait">
+     <motion.svg key={circuitDef.id}
+       initial={{ opacity: 0, y: 8 }}
+       animate={{ opacity: 1, y: 0 }}
+       exit={{ opacity: 0, y: -8 }}
+       transition={{ duration: 0.2, ease: "easeOut" }}
+     >
+       {/* schematic contents */}
+     </motion.svg>
+   </AnimatePresence>
+   ```
+
+3. **Hover lift + tap press** (toolbar action buttons):
+   ```tsx
+   <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }} />
+   ```
+
+Global defaults via `<MotionConfig reducedMotion="user" transition={{ duration: 0.2, ease: "easeOut" }}>` in `Providers`. The `reducedMotion="user"` setting auto-disables transform/layout animations when the OS sets `prefers-reduced-motion: reduce`, while preserving opacity/color transitions for WCAG-aligned accessibility.
+
+No per-frame canvas animations — the waveform itself IS the motion. Sheet open/close uses Radix's built-in data-state animations (customized via Tailwind `data-[state=open]:*` selectors).
 
 **Accessibility defaults** (global CSS):
 - `:focus-visible` — consistent 2px lavender outline with 2px offset on every interactive element
@@ -1237,6 +1269,9 @@ Same GitHub Actions pipeline as current project, updated for the new stack:
 - jotai@2.19
 - comlink@4.4
 - @catppuccin/palette@1.8
+- @fontsource-variable/ibm-plex-sans@5.2.8 (variable sans)
+- @fontsource/ibm-plex-mono@5.2.7 (static mono — no variable version exists)
+- motion@12.38 (animations; `motion/react` import path)
 - @radix-ui/* (via shadcn/ui)
 - lucide-react@1.8
 - @lingui/core@5.9, @lingui/react@5.9

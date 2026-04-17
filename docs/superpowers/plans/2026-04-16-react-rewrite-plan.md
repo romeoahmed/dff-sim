@@ -97,9 +97,9 @@ Create `package.json` with all dependencies from the spec:
     "tailwind-merge": "^3.5.0",
     "class-variance-authority": "^0.7.1",
     "@catppuccin/palette": "^1.8.0",
-    "@fontsource-variable/ibm-plex-sans": "^5.2.7",
-    "@fontsource-variable/ibm-plex-mono": "^5.2.7",
-    "motion": "^12.0.0"
+    "@fontsource-variable/ibm-plex-sans": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "motion": "^12.38.0"
   },
   "devDependencies": {
     "typescript": "^6.0.2",
@@ -213,9 +213,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 
-// Self-hosted variable fonts (no Google Fonts / FOIT)
+// Self-hosted fonts (no Google Fonts / FOIT).
+// Plex Sans ships as a variable font (single file, 100–700 weight range).
+// Plex Mono is STATIC ONLY — no variable distribution exists, so import each weight used.
 import "@fontsource-variable/ibm-plex-sans";
-import "@fontsource-variable/ibm-plex-mono";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
 
 import "../styles/globals.css";
 
@@ -323,11 +327,12 @@ export function toCssVars(): string {
   --color-maroon: #ee99a0;
   --color-sapphire: #7dc4e4;
 
-  /* Typography — IBM Plex pair (display + mono) */
+  /* Typography — IBM Plex pair.
+     Sans is variable (single woff2, 100–700); Mono is static per-weight. */
   --font-sans: "IBM Plex Sans Variable", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono Variable", ui-monospace, "Cascadia Mono", monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
 
-  /* Motion */
+  /* Motion easing */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
 }
@@ -340,7 +345,6 @@ body {
     var(--color-base);
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";  /* IBM Plex stylistic sets */
   overscroll-behavior: none;
 }
 
@@ -369,11 +373,12 @@ body {
   color: var(--color-base);
 }
 
-/* Mono-styled numeric readouts (voltage values, timing) */
+/* Mono-styled numeric readouts (voltage values, timing).
+   Plex Mono: ss03 + zero = slashed zero (distinct from O). */
 .readout {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "zero", "ss01";
+  font-feature-settings: "zero" 1, "ss03" 1;
 }
 ```
 
@@ -3956,12 +3961,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
 // src/components/nav/Toolbar.tsx
 import { useAtom, useSetAtom } from "jotai";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
+import { motion } from "motion/react";
 import { Settings, Info, Globe, CircuitBoard } from "lucide-react";
 import { shaderStyleAtom, settingsOpenAtom, aboutOpenAtom, localeAtom } from "@/atoms/ui-atoms";
 import type { ShaderStyle } from "@/workers/render/shaders";
 import { CircuitSelector } from "./CircuitSelector";
 
 const SHADER_STYLES: ShaderStyle[] = ["clean", "glow", "phosphor"];
+
+// Staggered entry variants — each child fades+slides in sequence
+const toolbarContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
+};
+const toolbarItem = {
+  hidden: { opacity: 0, y: -6 },
+  show: { opacity: 1, y: 0 },
+};
 
 export function Toolbar() {
   const [shaderStyle, setShaderStyle] = useAtom(shaderStyleAtom);
@@ -3970,16 +3986,23 @@ export function Toolbar() {
   const [locale, setLocale] = useAtom(localeAtom);
 
   return (
-    <header className="flex items-center gap-4 px-4 py-2 border-b border-surface0 bg-mantle/80 backdrop-blur-sm">
+    <motion.header
+      className="flex items-center gap-4 px-4 py-2 border-b border-surface0 bg-mantle/80 backdrop-blur-sm"
+      variants={toolbarContainer}
+      initial="hidden"
+      animate="show"
+    >
       {/* Logo + product name */}
-      <div className="flex items-center gap-2 font-bold text-lavender">
+      <motion.div variants={toolbarItem} className="flex items-center gap-2 font-bold text-lavender">
         <CircuitBoard size={18} strokeWidth={2.25} />
         <span className="readout tracking-[0.15em]">DFF·SIM</span>
-      </div>
+      </motion.div>
 
-      <CircuitSelector />
+      <motion.div variants={toolbarItem}>
+        <CircuitSelector />
+      </motion.div>
 
-      <div className="ml-auto flex items-center gap-3">
+      <motion.div variants={toolbarItem} className="ml-auto flex items-center gap-3">
         {/* Shader style toggle group */}
         <ToggleGroup.Root
           type="single"
@@ -4006,24 +4029,27 @@ export function Toolbar() {
 
         <div className="h-6 w-px bg-surface1" aria-hidden />
 
-        <button type="button" onClick={() => setSettingsOpen(true)}
-          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text transition-colors"
+        <motion.button type="button" onClick={() => setSettingsOpen(true)}
+          whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text"
           aria-label="Settings">
           <Settings size={16} />
-        </button>
-        <button type="button" onClick={() => setAboutOpen(true)}
-          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text transition-colors"
+        </motion.button>
+        <motion.button type="button" onClick={() => setAboutOpen(true)}
+          whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text"
           aria-label="About">
           <Info size={16} />
-        </button>
-        <button type="button"
+        </motion.button>
+        <motion.button type="button"
           onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")}
-          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text transition-colors"
+          whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text"
           aria-label="Language">
           <Globe size={16} />
-        </button>
-      </div>
-    </header>
+        </motion.button>
+      </motion.div>
+    </motion.header>
   );
 }
 ```
@@ -4696,6 +4722,7 @@ Also add the flow keyframes to globals.css:
 ```tsx
 // src/components/schematic/CircuitSchematic.tsx
 import { useAtomValue } from "jotai";
+import { AnimatePresence, motion } from "motion/react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { SchematicGrid } from "./SchematicGrid";
 import { SchematicNode } from "./SchematicNode";
@@ -4754,35 +4781,42 @@ export function CircuitSchematic() {
           {circuitDef.components.length} components · {circuitDef.nets.length} nets
         </span>
       </div>
-      <svg
-        viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
-        preserveAspectRatio="xMidYMid meet"
-        className="w-full h-full"
-      >
-        <SchematicGrid />
-        {wires.map((w, i) => w && (
-          <SchematicWire
-            key={`${w.netId}-${i}`}
-            netId={w.netId}
-            label={w.label}
-            color={w.color}
-            points={w.points}
-          />
-        ))}
-        {circuitDef.components.map((c) => {
-          const pos = positions.get(c.id)!;
-          return (
-            <SchematicNode
-              key={c.id}
-              component={c}
-              x={pos.x}
-              y={pos.y}
-              width={nodeW}
-              height={nodeH}
+      <AnimatePresence mode="wait">
+        <motion.svg
+          key={circuitDef.id}
+          viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="w-full h-full"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <SchematicGrid />
+          {wires.map((w, i) => w && (
+            <SchematicWire
+              key={`${w.netId}-${i}`}
+              netId={w.netId}
+              label={w.label}
+              color={w.color}
+              points={w.points}
             />
-          );
-        })}
-      </svg>
+          ))}
+          {circuitDef.components.map((c) => {
+            const pos = positions.get(c.id)!;
+            return (
+              <SchematicNode
+                key={c.id}
+                component={c}
+                x={pos.x}
+                y={pos.y}
+                width={nodeW}
+                height={nodeH}
+              />
+            );
+          })}
+        </motion.svg>
+      </AnimatePresence>
     </section>
   );
 }
@@ -5534,19 +5568,27 @@ msgstr ""
 "Language: zh-CN\n"
 ```
 
-- [ ] **Step 5: Wrap providers with i18n**
+- [ ] **Step 5: Wrap providers (Jotai + Lingui + MotionConfig)**
 
 ```tsx
 // src/app/providers.tsx
 import { Provider as JotaiProvider } from "jotai";
 import { I18nProvider } from "@lingui/react";
+import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 import { i18n } from "@/i18n";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <I18nProvider i18n={i18n}>
-      <JotaiProvider>{children}</JotaiProvider>
+      <JotaiProvider>
+        {/* reducedMotion="user" — auto-disables transform/layout animations
+            when prefers-reduced-motion is set; keeps opacity/color transitions
+            for a WCAG-aligned experience. */}
+        <MotionConfig reducedMotion="user" transition={{ duration: 0.2, ease: "easeOut" }}>
+          {children}
+        </MotionConfig>
+      </JotaiProvider>
     </I18nProvider>
   );
 }
