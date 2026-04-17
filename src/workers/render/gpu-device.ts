@@ -1,21 +1,16 @@
-// WebGPU 设备初始化模块
-
 export interface GPUDeviceBundle {
   device: GPUDevice;
   adapter: GPUAdapter;
   format: GPUTextureFormat;
 }
 
-/**
- * 请求 WebGPU 适配器和设备，返回捆绑对象
- */
 export async function createGPUDevice(): Promise<GPUDeviceBundle> {
   const adapter = await navigator.gpu.requestAdapter();
   if (adapter === null) {
     throw new Error("WebGPU not supported");
   }
 
-  const device = await adapter.requestDevice();
+  const device = (await adapter.requestDevice()) as GPUDevice | null;
   if (device === null) {
     throw new Error("WebGPU device unavailable");
   }
@@ -25,20 +20,17 @@ export async function createGPUDevice(): Promise<GPUDeviceBundle> {
   return { device, adapter, format };
 }
 
-/**
- * 为 OffscreenCanvas 配置 WebGPU 上下文
- */
 export function configureCanvas(
   canvas: OffscreenCanvas,
   device: GPUDevice,
   format: GPUTextureFormat,
 ): GPUCanvasContext {
-  const ctx = canvas.getContext("webgpu") as GPUCanvasContext | null;
-  if (ctx === null) {
-    throw new Error("Cannot get WebGPU context");
-  }
+  const ctx = canvas.getContext("webgpu");
+  if (ctx === null) throw new Error("Cannot get WebGPU context");
+  // WebGPU context type not in OffscreenCanvas overloads yet
+  const gpuCtx = ctx as unknown as GPUCanvasContext;
 
-  ctx.configure({ device, format, alphaMode: "premultiplied" });
+  gpuCtx.configure({ device, format, alphaMode: "premultiplied" });
 
-  return ctx;
+  return gpuCtx;
 }

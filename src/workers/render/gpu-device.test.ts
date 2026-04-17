@@ -1,22 +1,21 @@
-// WebGPU 设备初始化测试
-
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { configureCanvas, createGPUDevice } from "./gpu-device";
 
-// 模拟 WebGPU 对象
-const mockDevice = { label: "mock-device" } as unknown as GPUDevice;
-const mockAdapter = {
-  requestDevice: vi.fn(),
-} as unknown as GPUAdapter;
+const mockDevice = Object.freeze({ label: "mock-device" }) as unknown as GPUDevice;
 
 const mockGPU = {
   requestAdapter: vi.fn(),
   getPreferredCanvasFormat: vi.fn(),
 };
 
+let mockAdapter: GPUAdapter;
+
 beforeEach(() => {
+  mockAdapter = {
+    requestDevice: vi.fn<() => Promise<GPUDevice>>(),
+  } as unknown as GPUAdapter;
+
   vi.resetAllMocks();
-  // 默认行为：成功路径
+
   mockGPU.requestAdapter.mockResolvedValue(mockAdapter);
   (
     mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }
