@@ -18,9 +18,9 @@ beforeEach(() => {
   vi.resetAllMocks();
   // 默认行为：成功路径
   mockGPU.requestAdapter.mockResolvedValue(mockAdapter);
-  (mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }).requestDevice.mockResolvedValue(
-    mockDevice,
-  );
+  (
+    mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }
+  ).requestDevice.mockResolvedValue(mockDevice);
   mockGPU.getPreferredCanvasFormat.mockReturnValue("bgra8unorm" as GPUTextureFormat);
 
   vi.stubGlobal("navigator", { gpu: mockGPU });
@@ -42,9 +42,9 @@ describe("createGPUDevice()", () => {
   });
 
   it("当 requestDevice() 返回 null 时，拒绝并抛出 'WebGPU device unavailable'", async () => {
-    (mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }).requestDevice.mockResolvedValue(
-      null,
-    );
+    (
+      mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }
+    ).requestDevice.mockResolvedValue(null);
 
     await expect(createGPUDevice()).rejects.toThrow("WebGPU device unavailable");
   });

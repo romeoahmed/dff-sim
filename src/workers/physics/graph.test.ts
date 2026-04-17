@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { CircuitGraph } from "./graph";
-import { ComponentRegistry } from "./components/registry";
-import { DFlipFlop } from "./components/flip-flop";
-import { ClockSource } from "./components/clock-source";
-import { SignalSource } from "./components/signal-source";
 import { DefaultPhysicsConfig } from "@/lib/constants";
 import { createSeededRng } from "@/lib/rng";
 import type { CircuitDefinition } from "@/lib/types";
+import { ClockSource } from "./components/clock-source";
+import { DFlipFlop } from "./components/flip-flop";
+import { ComponentRegistry } from "./components/registry";
+import { SignalSource } from "./components/signal-source";
+import { CircuitGraph } from "./graph";
 
 // NOTE: constructors take ComponentDeps as third arg after the refactor
 const testRegistry = new ComponentRegistry();
@@ -72,8 +72,8 @@ describe("CircuitGraph", () => {
       ...dffDef,
       nets: [{ id: "bad", driver: { componentId: "ghost", port: "out" }, loads: [] }],
     };
-    expect(() =>
-      new CircuitGraph(badDef, testRegistry, DefaultPhysicsConfig, createSeededRng(1)),
+    expect(
+      () => new CircuitGraph(badDef, testRegistry, DefaultPhysicsConfig, createSeededRng(1)),
     ).toThrow("Unknown component");
   });
 
