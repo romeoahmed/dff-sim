@@ -84,3 +84,12 @@ body {
     "zero" 1,
     "ss03" 1;
 }
+
+@keyframes wire-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -12;
+  }
+}
