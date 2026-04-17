@@ -1,0 +1,12 @@
+{
+  "include": ["vite.config.ts", "vitest.config.ts", "lingui.config.ts"],
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node", "bun"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  }
+}
