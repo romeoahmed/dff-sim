@@ -1,5 +1,5 @@
 import { createStore } from "jotai";
-import { voltageAtomFamily, paramAtomFamily, circuitDefAtom } from "./simulation-atoms";
+import { circuitDefAtom, paramAtomFamily, voltageAtomFamily } from "./simulation-atoms";
 
 describe("simulation-atoms", () => {
   it("voltageAtomFamily creates independent atoms per netId", () => {
