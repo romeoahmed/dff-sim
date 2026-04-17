@@ -5,7 +5,7 @@ import { ClockSource } from "./clock-source";
 
 describe("ClockSource", () => {
   it("produces a periodic signal", () => {
-    const clk = new ClockSource("clk", { speed: 50 }, DefaultPhysicsConfig, createSeededRng(1));
+    const clk = new ClockSource("clk", { speed: 50 }, { config: DefaultPhysicsConfig, rng: createSeededRng(1) });
     const dt = 0.0001;
     let transitions = 0;
     let lastLogic = -1;
@@ -24,8 +24,7 @@ describe("ClockSource", () => {
     const clk = new ClockSource(
       "clk",
       { speed: 50, jitterRms: 0.05 },
-      DefaultPhysicsConfig,
-      createSeededRng(42),
+      { config: DefaultPhysicsConfig, rng: createSeededRng(42) },
     );
     const dt = 0.0001;
     const edgeTimes: number[] = [];
@@ -55,7 +54,7 @@ describe("ClockSource", () => {
   });
 
   it("has an output port named 'out'", () => {
-    const clk = new ClockSource("clk", { speed: 30 }, DefaultPhysicsConfig, createSeededRng(1));
+    const clk = new ClockSource("clk", { speed: 30 }, { config: DefaultPhysicsConfig, rng: createSeededRng(1) });
     expect(clk.outputs.has("out")).toBe(true);
     expect(clk.kind).toBe("sequential");
   });

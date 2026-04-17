@@ -1,4 +1,4 @@
-import type { PhysicsConfig, Port, RngFn, SequentialComponent } from "@/lib/types";
+import type { ComponentDeps, Port, RngFn, SequentialComponent } from "@/lib/types";
 import { NoiseGenerator } from "../noise";
 import { Signal } from "../signal";
 import { createPort } from "./base";
@@ -18,9 +18,9 @@ export class ClockSource implements SequentialComponent {
   constructor(
     readonly id: string,
     params: Record<string, unknown>,
-    config: PhysicsConfig,
-    rng: RngFn,
+    deps: ComponentDeps,
   ) {
+    const { config, rng } = deps;
     this.rng = rng;
     this.speed = (params.speed as number) ?? config.simulation.defaultSpeed;
     this.jitterRms = (params.jitterRms as number) ?? 0.02;

@@ -4,7 +4,7 @@ import { createSeededRng } from "@/lib/rng";
 import { DFlipFlop } from "./flip-flop";
 
 function createDFF(seed: number = 42) {
-  return new DFlipFlop("dff0", {}, DefaultPhysicsConfig, createSeededRng(seed));
+  return new DFlipFlop("dff0", {}, { config: DefaultPhysicsConfig, rng: createSeededRng(seed) });
 }
 
 describe("DFlipFlop", () => {

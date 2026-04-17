@@ -1,4 +1,4 @@
-import type { PhysicsConfig, Port, RngFn, SequentialComponent } from "@/lib/types";
+import type { ComponentDeps, Port, SequentialComponent } from "@/lib/types";
 import { NoiseGenerator } from "../noise";
 import { Signal } from "../signal";
 import { createPort } from "./base";
@@ -15,9 +15,9 @@ export class SignalSource implements SequentialComponent {
   constructor(
     readonly id: string,
     params: Record<string, unknown>,
-    config: PhysicsConfig,
-    rng: RngFn,
+    deps: ComponentDeps,
   ) {
+    const { config, rng } = deps;
     const baseHigh =
       (params.baseHigh as number) ?? (config.voltage.logicHighMin + config.voltage.systemMax) / 2;
     const baseLow = (params.baseLow as number) ?? config.voltage.logicLowMax / 2;

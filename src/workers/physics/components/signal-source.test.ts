@@ -8,8 +8,7 @@ describe("SignalSource", () => {
     const src = new SignalSource(
       "d",
       { baseHigh: 1.5, baseLow: 0.1 },
-      DefaultPhysicsConfig,
-      createSeededRng(1),
+      { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
     src.setTargetLogic(1);
     for (let i = 0; i < 5000; i++) {
@@ -22,8 +21,7 @@ describe("SignalSource", () => {
     const src = new SignalSource(
       "d",
       { baseHigh: 1.5, baseLow: 0.1 },
-      DefaultPhysicsConfig,
-      createSeededRng(1),
+      { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
     src.setTargetLogic(0);
     for (let i = 0; i < 5000; i++) {
@@ -33,7 +31,7 @@ describe("SignalSource", () => {
   });
 
   it("has output port named 'out'", () => {
-    const src = new SignalSource("d", {}, DefaultPhysicsConfig, createSeededRng(1));
+    const src = new SignalSource("d", {}, { config: DefaultPhysicsConfig, rng: createSeededRng(1) });
     expect(src.outputs.has("out")).toBe(true);
     expect(src.kind).toBe("sequential");
   });
@@ -42,8 +40,7 @@ describe("SignalSource", () => {
     const src = new SignalSource(
       "d",
       { baseHigh: 1.5, baseLow: 0.1 },
-      DefaultPhysicsConfig,
-      createSeededRng(1),
+      { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
     src.setTargetLogic(true);
     for (let i = 0; i < 5000; i++) src.update(0.0001);
@@ -54,7 +51,7 @@ describe("SignalSource", () => {
   });
 
   it("setNoise adjusts noise amplitude", () => {
-    const src = new SignalSource("d", {}, DefaultPhysicsConfig, createSeededRng(1));
+    const src = new SignalSource("d", {}, { config: DefaultPhysicsConfig, rng: createSeededRng(1) });
     src.setNoise(0);
     const samples: number[] = [];
     for (let i = 0; i < 1000; i++) {

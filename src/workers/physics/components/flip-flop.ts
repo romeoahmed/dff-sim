@@ -1,4 +1,4 @@
-import type { PhysicsConfig, Port, RngFn, SequentialComponent } from "@/lib/types";
+import type { ComponentDeps, PhysicsConfig, Port, RngFn, SequentialComponent } from "@/lib/types";
 import { NoiseGenerator } from "../noise";
 import { Signal } from "../signal";
 import { createPort } from "./base";
@@ -25,9 +25,9 @@ export class DFlipFlop implements SequentialComponent {
   constructor(
     readonly id: string,
     _params: Record<string, unknown>,
-    config: PhysicsConfig,
-    rng: RngFn,
+    deps: ComponentDeps,
   ) {
+    const { config, rng } = deps;
     this.config = config;
     this.rng = rng;
 
