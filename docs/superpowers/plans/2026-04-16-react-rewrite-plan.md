@@ -125,7 +125,11 @@ Create `package.json` with all dependencies from the spec:
 }
 ```
 
-- [ ] **Step 4: Create tsconfig.json**
+- [ ] **Step 4: Create tsconfig.json and tsconfig.node.json**
+
+Split into two configs: browser app code (no Bun) and Node/Bun config files. This prevents `@types/bun` from polluting browser type space (Bun APIs like `Bun.file()` would typecheck without error in browser code, only failing at runtime).
+
+**tsconfig.json** — browser app code only (`src/`):
 
 ```json
 {
@@ -137,10 +141,9 @@ Create `package.json` with all dependencies from the spec:
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
-    "types": ["vite/client", "node", "bun"],
+    "types": ["vite/client"],
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
     "jsx": "react-jsx",
-    "sourceMap": false,
     "declaration": false,
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -151,7 +154,6 @@ Create `package.json` with all dependencies from the spec:
     "noUnusedLocals": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
     "useDefineForClassFields": true,
@@ -159,6 +161,29 @@ Create `package.json` with all dependencies from the spec:
     "paths": {
       "@/*": ["./src/*"]
     }
+  }
+}
+```
+
+Notes:
+- **No `sourceMap: false`**: removing this lets Vite and Vitest control source maps. Vitest needs source maps for accurate error locations; Vite's dev build provides inline source maps by default. The `build: { sourcemap: false }` in `vite.config.ts` already handles prod.
+- **No `@types/bun`**: browser code has no Bun runtime. Config files get their own tsconfig.
+- **No `noUncheckedSideEffectImports`**: too strict with CSS side-effect imports from `@fontsource*` packages (the package's `main` resolves to a CSS file, which may not have matching `.d.ts` declarations).
+- `types: ["vite/client"]` brings in `declare module "*.css" {}` for direct `.css` imports.
+
+**tsconfig.node.json** — config files (`vite.config.ts`, `vitest.config.ts`, `lingui.config.ts`):
+
+```json
+{
+  "include": ["vite.config.ts", "vitest.config.ts", "lingui.config.ts"],
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node", "bun"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
   }
 }
 ```
@@ -317,7 +342,7 @@ export function toCssVars(): string {
   --color-red: #ed8796;
   --color-yellow: #eed49f;
   --color-mauve: #c6a0f6;
-  --color-teal: #7dc4e4;
+  --color-teal: #8bd5ca;
   --color-lavender: #b7bdf8;
   --color-peach: #f5a97f;
   --color-sky: #91d7e3;
@@ -836,7 +861,48 @@ export const circuitDefinitionSchema = z.object({
 });
 ```
 
-- [ ] **Step 4: Verify typecheck**
+- [ ] **Step 4: Create src/lib/throttle.ts**
+
+Leading+trailing throttle used by `useSimulation` to rate-limit Comlink calls from slider drag.
+
+```ts
+// src/lib/throttle.ts
+
+/**
+ * Leading + trailing throttle: fires immediately on first call, then at most
+ * once per `ms`, always delivering the last call as a trailing fire.
+ *
+ * Used to rate-limit Comlink async calls (physicsProxy.setParam) when a slider
+ * fires at ~60 Hz. Without throttle, each drag event creates a Promise that
+ * queues behind all previous ones, causing unbounded queue growth.
+ */
+export function throttle<T extends unknown[]>(
+  fn: (...args: T) => void,
+  ms: number,
+): (...args: T) => void {
+  let lastCall = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return (...args: T): void => {
+    const now = Date.now();
+    const remaining = ms - (now - lastCall);
+    if (remaining <= 0) {
+      clearTimeout(timer);
+      timer = undefined;
+      lastCall = now;
+      fn(...args);
+    } else {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        lastCall = Date.now();
+        timer = undefined;
+        fn(...args);
+      }, remaining);
+    }
+  };
+}
+```
+
+- [ ] **Step 5: Verify typecheck**
 
 ```bash
 bun run typecheck
@@ -844,15 +910,16 @@ bun run typecheck
 
 Expected: No errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/lib/
-git commit -m "feat: add core types, constants, and Zod validation schemas
+git commit -m "feat: add core types, constants, Zod validation, and throttle utility
 
 Defines all shared interfaces (circuit graph, physics config, DI types),
-Catppuccin color palette, default physics constants, and Zod schemas
-for voltage spec and circuit definition validation."
+Catppuccin color palette, default physics constants, Zod schemas for
+voltage spec and circuit definition, and leading+trailing throttle utility
+for Comlink call rate-limiting."
 ```
 
 ---
@@ -5228,6 +5295,7 @@ import {
 } from "@/atoms/simulation-atoms";
 import { activeProbesAtom, shaderStyleAtom } from "@/atoms/ui-atoms";
 import { voltageSpecsAtom } from "@/atoms/settings-atoms";
+import { throttle } from "@/lib/throttle";
 import { Layout } from "@/lib/constants";
 
 export function useSimulation(
@@ -5324,18 +5392,45 @@ export function useSimulation(
     bridgeRef.current?.render.updateProbes(activeProbes);
   }, [activeProbes]);
 
+  // Per-slider throttled senders: slider controls fire at ~60 Hz when dragged.
+  // Each Comlink call creates a Promise; without throttle the queue grows unbounded.
+  // Toggle/momentary controls fire once and are forwarded directly.
+  const throttledSendersRef = useRef<Map<string, (v: number | boolean) => void>>(new Map());
+
   // Subscribe to every param atom and forward changes to Physics
   useEffect(() => {
     if (!circuitDef) return;
+    throttledSendersRef.current.clear();
+
     const unsubs = circuitDef.controls.map((ctrl) => {
       const key = `${ctrl.targetComponent}.${ctrl.param}`;
       const atom = paramAtomFamily(key);
+
+      if (ctrl.type === "slider") {
+        // 16 ms ≈ 60 fps ceiling — matches the frame rate so no update is lost
+        throttledSendersRef.current.set(
+          key,
+          throttle((v: number | boolean) => {
+            bridgeRef.current?.physics.setParam(ctrl.targetComponent, ctrl.param, v);
+          }, 16),
+        );
+      }
+
       return store.sub(atom, () => {
         const value = store.get(atom);
-        bridgeRef.current?.physics.setParam(ctrl.targetComponent, ctrl.param, value);
+        const sender = throttledSendersRef.current.get(key);
+        if (sender) {
+          sender(value);
+        } else {
+          bridgeRef.current?.physics.setParam(ctrl.targetComponent, ctrl.param, value);
+        }
       });
     });
-    return () => unsubs.forEach((u) => u());
+
+    return () => {
+      unsubs.forEach((u) => u());
+      throttledSendersRef.current.clear();
+    };
   }, [circuitDef, store]);
 }
 ```
