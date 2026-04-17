@@ -80,5 +80,7 @@ body {
 .readout {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "zero" 1, "ss03" 1;
+  font-feature-settings:
+    "zero" 1,
+    "ss03" 1;
 }
