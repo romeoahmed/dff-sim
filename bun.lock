@@ -18,6 +18,7 @@
         "class-variance-authority": "^0.7.1",
         "comlink": "^4.4.2",
         "jotai": "^2.19.1",
+        "jotai-family": "^1.0.1",
         "lucide-react": "^1.8.0",
         "motion": "^12.38.0",
         "react": "^19.2.5",
@@ -589,6 +590,8 @@
     "jiti": ["jiti@2.6.1", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ=="],
 
     "jotai": ["jotai@2.19.1", "", { "peerDependencies": { "@babel/core": ">=7.0.0", "@babel/template": ">=7.0.0", "@types/react": ">=17.0.0", "react": ">=17.0.0" }, "optionalPeers": ["@babel/core", "@babel/template", "@types/react", "react"] }, "sha512-sqm9lVZiqBHZH8aSRk32DSiZDHY3yUIlulXYn9GQj7/LvoUdYXSMti7ZPJGo+6zjzKFt5a25k/I6iBCi43PJcw=="],
+
+    "jotai-family": ["jotai-family@1.0.1", "", { "peerDependencies": { "jotai": ">=2.9.0" } }, "sha512-Zb/79GNDhC/z82R+6qTTpeKW4l4H6ZCApfF5W8G4SH37E4mhbysU7r8DkP0KX94hWvjB/6lt/97nSr3wB+64Zg=="],
 
     "js-sha256": ["js-sha256@0.10.1", "", {}, "sha512-5obBtsz9301ULlsgggLg542s/jqtddfOpV5KJc4hajc9JV8GeY2gZHSVpYBn4nWqAUTJ9v+xwtbJ1mIBgIH5Vw=="],
 

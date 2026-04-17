@@ -1,112 +1,312 @@
-# D-FlipFlop Simulation (D触发器物理仿真)
+# DFF·SIM
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.13-646cff)
-![PixiJS](<https://img.shields.io/badge/PixiJS_(WebGPU)-e72264>)
+**Physics-accurate digital logic simulation in the browser.**
 
-这是一个基于 Web 的 D 触发器 (D Flip-Flop) 物理行为仿真项目。
+[中文版本 →](#中文)
 
-与传统的逻辑门模拟器不同，本项目**模拟了数字电路背后的模拟特性**，包括电压波动、高斯白噪声、RC 延迟（压摆率）以及亚稳态（Metastability）现象。
+---
 
-在渲染层，项目已全面升级至 **PixiJS**，优先使用 **WebGPU** 后端，并配合 **Web Workers + OffscreenCanvas** 多线程架构，实现了逻辑计算与图形渲染的完全隔离。
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
+![WebGPU](https://img.shields.io/badge/WebGPU-enabled-ff6b35)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## ✨ 核心特性
+---
 
-### 1. 下一代图形渲染架构 (PixiJS)
+## Overview
 
-- **WebGPU 优先**：渲染核心采用 PixiJS，优先调用 WebGPU API，在不支持的环境下自动回退至 WebGL。
-- **Web Worker 渲染**：利用 `OffscreenCanvas` 将 PixiJS 实例完全运行在 Worker 线程中。**主线程的 DOM 操作（如侧边栏动画、复杂的 CSS 重排）完全不会阻塞示波器的 60FPS/144FPS 渲染循环**。
-- **批处理优化**：采用 PixiJS 的 `Graphics` 与 `MeshRope` 配合 WebGPU 的批处理能力，在同时绘制上千个数据点时，依旧维持极低的 CPU/GPU 开销。
-- **动静分离**：将网格、标签等静态元素与波形动态元素分层管理，大幅减少每帧的 Draw Call。
+DFF·SIM is a browser-based simulation that models digital logic circuits at the **analog voltage level** rather than as ideal binary transitions. Every signal is a continuous voltage that rises and falls with realistic physics — including Gaussian noise, RC slew, second-order ringing, Schmitt-trigger hysteresis, and metastability resolution.
 
-### 2. 硬核物理模拟引擎 (`src/physics.ts`)
+The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a React instrument panel styled with Catppuccin Macchiato.
 
-不仅仅是 0 和 1 的逻辑变换，而是基于电压的连续模拟：
+---
 
-- **真实噪声模拟**：使用 **Marsaglia Polar Method** 生成符合正态分布的高斯白噪声。
-- **帧率无关的 RC 滤波**：实现了**基于时间步进 (Delta Time) 的指数衰减模型**。无论浏览器帧率波动还是卡顿，电压充放电的物理速度始终恒定，不会出现“波形变短”或“动画变慢”的现象。
-- **亚稳态 (Metastability)**：精确模拟时钟沿触发时，输入信号处于未定义电压区间（0.6V~1.0V）时的随机坍缩行为。
+## Features
 
-### 3. 高鲁棒性的工程实践
+### Analog physics engine
 
-- **Actor 模型架构**：主线程与 Worker 线程通过严格定义的消息协议（Message Passing）通信，解耦了 UI 逻辑与仿真核心。
-- **手动渲染循环**：在 Worker 中接管了渲染主循环，**关闭 PixiJS 默认 Ticker**，确保物理计算与图形绘制的严格同步，消除画面撕裂。
-- **Ring Buffer 优化**：使用位运算 (`&`) 代替取模运算，配合 `Float32Array` 实现 O(1) 复杂度的实时数据写入与回绕。
+| Effect | Implementation |
+|--------|----------------|
+| Gaussian white noise | Marsaglia Polar Method |
+| 1/f flicker noise | Voss-McCartney octave accumulator |
+| Voltage slew / RC delay | Damped second-order oscillator (ζ, ω) |
+| Schmitt-trigger hysteresis | Separate HIGH/LOW threshold bands |
+| Metastability | Random collapse when D is in the undefined zone on a clock edge |
+| Frame-rate independence | All physics stepped by explicit `dt` |
 
-### 4. 交互式控制与配置
+### Circuits
 
-- **Input D 控制**：手动切换输入信号的高低电平。
-- **参数动态调节**：实时调节输入噪声强度、时钟频率。
-- **设置侧边栏**：支持动态修改物理电压规范（如逻辑高/低阈值），修改后 Worker 会自动重置缓冲区并重新校准基准线，实现无缝切换。
+| Circuit | Description |
+|---------|-------------|
+| **D Flip-Flop** | Single DFF showing edge-triggered capture, clock jitter, noise, and metastability |
+| **4-Bit Accumulator** | Ripple-carry adder feeding four DFFs; demonstrates combinational + sequential interaction |
 
-## 🛠️ 技术栈
+### Rendering
 
-- **语言**：[TypeScript](https://www.typescriptlang.org/) (全类型覆盖，严格模式)
-- **渲染引擎**：[PixiJS](https://pixijs.com/) (WebGPU / WebGL)
-- **多线程**：Web Workers + OffscreenCanvas
-- **构建工具**：[Vite](https://vitejs.dev/)
-- **样式**：[Sass](https://sass-lang.com/) (Dart Sass) + Catppuccin 主题
-- **图标**：FontAwesome
+- **WebGPU** oscilloscope rendered entirely on a dedicated worker thread via `OffscreenCanvas` — the main thread never blocks waveform drawing
+- Three shader styles: **Clean**, **Glow** (bloom), **Phosphor** (CRT scanline)
+- Direct physics→render `MessagePort` channel: frame data bypasses the main thread entirely
 
-## 🚀 快速开始
+### UI
 
-### 环境要求
+- Per-circuit parameter controls (sliders, toggles, momentary buttons)
+- Probe selector — choose which signals appear on the oscilloscope
+- Circuit selector — switch between loaded circuit definitions at runtime
+- Settings sheet and localisation toggle (English / 中文)
 
-- [Bun](https://bun.sh/) v1.0+ (推荐，用于快速部署)
-- [Node.js](https://nodejs.org/) v18+ (可选，替代 Bun)
-- 支持 WebGPU 或 WebGL 的现代浏览器 (Chrome 113+ 体验最佳)
+---
 
-### 安装依赖
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| UI framework | React 19 |
+| Language | TypeScript 6 (strict) |
+| Build | Vite 8 + Bun |
+| State | Jotai 2 (atomic) |
+| Worker RPC | Comlink 4 |
+| GPU | WebGPU (`@webgpu/types`) |
+| Styling | Tailwind CSS v4 + Catppuccin Macchiato |
+| Components | Radix UI primitives |
+| Animation | Motion (Framer Motion) |
+| i18n | Lingui 5 (en / zh-CN) |
+| Lint + format | Biome 2 |
+| Tests | Vitest 4 + Testing Library |
+
+---
+
+## Quick Start
+
+### Requirements
+
+- [Bun](https://bun.sh/) v1.0+
+- Chrome 113+ or another browser with WebGPU support (falls back to WebGL)
+
+### Install and run
 
 ```bash
+git clone https://github.com/romeoahmed/dff-sim.git
+cd dff-sim
 bun install
-```
-
-### 启动开发服务器
-
-```bash
 bun run dev
 ```
 
-打开浏览器访问 `http://localhost:5173` 即可看到仿真界面。
+Open `http://localhost:5173`.
 
-### 构建生产版本
+### Other commands
 
 ```bash
-bun run build
+bun run build        # Production build → dist/
+bun run preview      # Serve production build
+bun run typecheck    # Type-check without emitting
+bun run check        # Biome lint + format check
+bun run test         # Run all tests
+bun run test:watch   # Watch mode
 ```
 
-## 📂 项目结构
+---
 
-```bash
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│          Main Thread (React)        │
+│  Jotai atoms · hooks · components   │
+│         Comlink RPC ↕               │
+└──────────┬──────────────────────────┘
+           │
+┌──────────▼──────────┐   MessagePort   ┌─────────────────────┐
+│   Physics Worker    │ ─────────────▶  │   Render Worker     │
+│  SimulationEngine   │  Float32 frames │  WebGPU pipelines   │
+│  CircuitGraph       │                 │  WGSL shaders       │
+│  Component tick     │                 │  OffscreenCanvas    │
+└─────────────────────┘                 └─────────────────────┘
+```
+
+**Physics worker** runs the simulation loop: `seq.update → propagate → seq.clock → propagate → evaluateCombinational → propagate → buffer.push`. It owns the `CircuitGraph`, which levelizes combinational components (Kahn topological sort) so carry chains evaluate in the correct order.
+
+**Render worker** receives `Float32Array` frames over a direct `MessagePort` and draws waveforms via custom WGSL shaders. Frame data never passes through the main thread.
+
+---
+
+## Project Structure
+
+```
 src/
-├── archive/                        # 归档的旧版本代码
-│   └── renderer-old.ts
-├── common
-│   ├── constants.ts                # 公共常量定义
-│   └── types.ts                    # 公共类型定义
-├── main
-│   ├── app.ts                      # 主线程仿真应用类
-│   ├── main.ts                     # 主入口文件
-│   └── ui
-│       ├── about.ts                # 关于侧边栏逻辑
-│       └── settings.ts             # 设置侧边栏逻辑
-├── styles/                         # 全局样式文件
-└── worker
-    ├── entry.ts                    # Worker 线程入口文件
-    ├── physics
-    │   ├── buffer.ts               # 波形数据缓冲区
-    │   └── engine.ts               # 物理引擎实现
-    └── render
-        ├── backends
-        │   ├── base.ts             # 渲染器基类定义
-        │   ├── experimental.ts     # 实验性 MeshRope 渲染器
-        │   └── standard.ts         # 标准 Graphics 渲染器
-        └── host.ts                 # PixiJS Host 管理类
-
+├── atoms/                   # Jotai atoms (simulation state, UI state)
+├── circuits/                # Circuit definitions (DFF, 4-bit accumulator)
+├── components/
+│   ├── controls/            # ControlPanel, ParamSlider, ParamToggle, ParamMomentary
+│   ├── nav/                 # Toolbar, CircuitSelector, SettingsSheet
+│   ├── oscilloscope/        # OscilloscopePanel (canvas host)
+│   └── schematic/           # CircuitSchematic (SVG)
+├── hooks/                   # useSimulation (worker bridge integration)
+├── lib/                     # Types, constants, worker bridge, RNG utilities
+├── locales/                 # Lingui i18n catalogs (en, zh-CN)
+├── styles/                  # Catppuccin theme
+├── test/                    # Test setup and component tests
+└── workers/
+    ├── physics/             # SimulationEngine, CircuitGraph, all components
+    └── render/              # WebGPU pipelines, gpu-device, WGSL shaders
 ```
 
-## 📝 许可证
+---
 
-本项目采用 [MIT License](LICENSE) 许可证。
+## License
+
+[MIT](LICENSE)
+
+---
+---
+
+# 中文
+
+**在浏览器中运行的物理精确数字逻辑仿真。**
+
+[English version ↑](#dffsim)
+
+---
+
+## 概述
+
+DFF·SIM 是一个基于浏览器的仿真项目，它在**模拟电压层面**对数字逻辑电路进行建模，而非理想的二进制跳变。每个信号都是一个连续变化的电压，具有真实的物理特性——包括高斯噪声、RC 压摆、二阶振铃、施密特触发器迟滞效应和亚稳态消解。
+
+示波器在独立的 WebGPU 线程上以 60+ FPS 渲染。UI 是一个以 Catppuccin Macchiato 配色的 React 仪器面板。
+
+---
+
+## 特性
+
+### 模拟物理引擎
+
+| 效果 | 实现方式 |
+|------|---------|
+| 高斯白噪声 | Marsaglia 极坐标法 |
+| 1/f 闪烁噪声 | Voss-McCartney 倍频程累加器 |
+| 电压压摆 / RC 延迟 | 有阻尼二阶振荡器（ζ、ω） |
+| 施密特触发器迟滞 | 独立的高/低电平阈值带 |
+| 亚稳态 | 时钟沿时 D 处于未定义区间，输出随机坍缩 |
+| 帧率无关 | 所有物理计算均以显式 `dt` 步进 |
+
+### 电路
+
+| 电路 | 描述 |
+|------|------|
+| **D 触发器** | 单个 DFF，展示边沿触发捕获、时钟抖动、噪声和亚稳态 |
+| **4 位累加器** | 行波进位加法器驱动四个 DFF，演示组合逻辑与时序逻辑的交互 |
+
+### 渲染
+
+- **WebGPU** 示波器完全在独立 Worker 线程通过 `OffscreenCanvas` 渲染——主线程永远不会阻塞波形绘制
+- 三种着色器风格：**Clean**（清晰）、**Glow**（发光/泛光）、**Phosphor**（CRT 磷光屏）
+- 物理→渲染直通 `MessagePort` 通道：帧数据完全绕过主线程传输
+
+### UI
+
+- 各电路的参数控件（滑块、开关、瞬时按钮）
+- 探针选择器——选择哪些信号显示在示波器上
+- 电路选择器——运行时在已加载的电路定义之间切换
+- 设置面板和语言切换（English / 中文）
+
+---
+
+## 技术栈
+
+| 层次 | 技术 |
+|------|------|
+| UI 框架 | React 19 |
+| 语言 | TypeScript 6（严格模式） |
+| 构建 | Vite 8 + Bun |
+| 状态管理 | Jotai 2（原子化） |
+| Worker RPC | Comlink 4 |
+| GPU | WebGPU（`@webgpu/types`） |
+| 样式 | Tailwind CSS v4 + Catppuccin Macchiato |
+| 组件库 | Radix UI 原语 |
+| 动画 | Motion（Framer Motion） |
+| 国际化 | Lingui 5（en / zh-CN） |
+| 代码检查与格式化 | Biome 2 |
+| 测试 | Vitest 4 + Testing Library |
+
+---
+
+## 快速开始
+
+### 环境要求
+
+- [Bun](https://bun.sh/) v1.0+
+- Chrome 113+ 或其他支持 WebGPU 的浏览器（自动降级为 WebGL）
+
+### 安装与运行
+
+```bash
+git clone https://github.com/romeoahmed/dff-sim.git
+cd dff-sim
+bun install
+bun run dev
+```
+
+打开 `http://localhost:5173`。
+
+### 其他命令
+
+```bash
+bun run build        # 生产构建 → dist/
+bun run preview      # 本地预览生产构建
+bun run typecheck    # 仅类型检查，不生成文件
+bun run check        # Biome 代码检查 + 格式验证
+bun run test         # 运行全部测试
+bun run test:watch   # 监视模式
+```
+
+---
+
+## 架构
+
+```
+┌─────────────────────────────────────┐
+│        主线程（React UI）            │
+│  Jotai 原子 · Hooks · 组件           │
+│         Comlink RPC ↕               │
+└──────────┬──────────────────────────┘
+           │
+┌──────────▼──────────┐   MessagePort   ┌─────────────────────┐
+│    物理 Worker       │ ─────────────▶  │   渲染 Worker        │
+│  SimulationEngine   │  Float32 帧数据  │  WebGPU 管线         │
+│  CircuitGraph       │                 │  WGSL 着色器          │
+│  组件 Tick 循环       │                 │  OffscreenCanvas    │
+└─────────────────────┘                 └─────────────────────┘
+```
+
+**物理 Worker** 运行仿真循环：`seq.update → propagate → seq.clock → propagate → evaluateCombinational → propagate → buffer.push`。它持有 `CircuitGraph`，后者通过 Kahn 拓扑排序对组合逻辑组件分层，确保进位链按正确顺序求值。
+
+**渲染 Worker** 通过直通 `MessagePort` 接收 `Float32Array` 帧数据，并使用自定义 WGSL 着色器绘制波形。帧数据完全不经过主线程。
+
+---
+
+## 项目结构
+
+```
+src/
+├── atoms/                   # Jotai 原子（仿真状态、UI 状态）
+├── circuits/                # 电路定义（DFF、4 位累加器）
+├── components/
+│   ├── controls/            # ControlPanel, ParamSlider, ParamToggle, ParamMomentary
+│   ├── nav/                 # Toolbar, CircuitSelector, SettingsSheet
+│   ├── oscilloscope/        # OscilloscopePanel（画布宿主）
+│   └── schematic/           # CircuitSchematic（SVG 示意图）
+├── hooks/                   # useSimulation（Worker 桥接集成）
+├── lib/                     # 类型定义、常量、Worker 桥接、RNG 工具
+├── locales/                 # Lingui 国际化目录（en、zh-CN）
+├── styles/                  # Catppuccin 主题
+├── test/                    # 测试配置和组件测试
+└── workers/
+    ├── physics/             # SimulationEngine、CircuitGraph、所有组件
+    └── render/              # WebGPU 管线、gpu-device、WGSL 着色器
+```
+
+---
+
+## 许可证
+
+[MIT](LICENSE)

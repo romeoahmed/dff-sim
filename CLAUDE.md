@@ -1,72 +1,108 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Project
 
-D-FlipFlop Simulation (D触发器物理仿真) — a web-based physics simulation of D Flip-Flops modeling analog characteristics: voltage fluctuation, Gaussian noise, RC delay (slew rate), and metastability. Built with TypeScript, PixiJS v8, and Vite. Uses Bun as primary package manager.
+**DFF·SIM** — a web-based physics simulation of digital logic circuits. Rather than modelling ideal 0/1 transitions, the engine simulates the underlying analog behaviour: Gaussian noise (white + 1/f flicker), RC-slew via a damped second-order signal model, Schmitt-trigger hysteresis, and metastability resolution. The UI is a React instrument panel with a real-time WebGPU oscilloscope.
+
+Built with **React 19**, **TypeScript 6**, **Vite 8**, **Biome 2**, **Jotai 2**, and **Bun**.
 
 ## Commands
 
 ```bash
-bun install              # Install dependencies
-bun run dev              # Vite dev server (localhost:5173)
-bun run build            # Production build to dist/
-bun run preview          # Preview production build
-bun run typecheck        # tsc --noEmit
-bun run lint             # ESLint (TypeScript files)
-bun run lint:scss        # Stylelint (SCSS files)
-bun run lint:all         # Both lint and lint:scss
-bun run format           # Prettier (write)
-bun run format:check     # Prettier (check only)
+bun install          # Install dependencies
+bun run dev          # Vite dev server → http://localhost:5173
+bun run build        # Production build → dist/
+bun run preview      # Serve production build locally
+bun run typecheck    # tsc --noEmit
+bun run check        # Biome lint + format check (no writes)
+bun run test         # Vitest (single run)
+bun run test:watch   # Vitest in watch mode
+bun run test:ui      # Vitest browser UI
 ```
-
-No automated test framework is configured.
 
 ## Architecture
 
-### Thread Model (Actor Pattern)
+### Thread model
 
-The app splits work across two threads connected by a message protocol:
+Three threads communicate via Comlink and a direct MessagePort channel:
 
-- **Main thread** (`src/main/`): DOM operations, UI event binding, ResizeObserver. `SimulationApp` in `app.ts` caches DOM elements, spawns the Worker, and bridges UI controls to the simulation.
-- **Worker thread** (`src/worker/`): Physics simulation + PixiJS rendering via OffscreenCanvas. `entry.ts` handles the message loop and owns the `SimulationEngine` instance.
+```
+Main thread (React UI)
+   │  Comlink RPC
+   ▼
+Physics Worker          ──MessagePort──▶  Render Worker
+(simulation engine)                       (WebGPU, OffscreenCanvas)
+```
 
-Messages flow Main→Worker (`INIT`, `RESIZE`, `PARAM_UPDATE`, `SETTINGS_UPDATE`, `SWITCH_RENDERER`) and Worker→Main (`STATUS_UPDATE` with current voltages). Types are in `src/common/types.ts`.
+- **Main thread** (`src/`): React 19 + Jotai atoms. Mounts the UI, reads atom state, calls physics/render worker methods via `useSimulation` hook.
+- **Physics worker** (`src/workers/physics/physics.worker.ts`): owns `SimulationEngine` → `CircuitGraph` → component tick loop. Posts frame buffers directly to the render worker via a MessagePort so frame data never touches the main thread.
+- **Render worker** (`src/workers/render/render.worker.ts`): WebGPU pipeline. Receives `Float32Array` frames and draws waveforms via custom WGSL shaders. Three shader styles: `clean`, `glow`, `phosphor`.
 
-### Physics Engine (`src/worker/physics/`)
+### Physics engine
 
-- **Signal** (`engine.ts`): Gaussian noise (Marsaglia Polar Method), frame-rate-independent RC filtering via exponential decay adjusted by deltaTime, voltage clamping.
-- **DFlipFlop** (`engine.ts`): Rising-edge detection with Schmitt trigger hysteresis (thresholds at 0.6V/1.0V). Metastability: D in the undefined zone on a clock edge triggers random output collapse.
-- **WaveformBuffer** (`buffer.ts`): Ring buffer backed by Float32Array. Length must be power of 2 for O(1) bitwise wraparound.
+`src/workers/physics/`
 
-### Rendering (`src/worker/render/`)
+- **`signal.ts`** — `Signal` class: damped second-order oscillator (ζ, ω) for voltage transitions with analog overshoot/ringing. Frame-rate-independent via explicit `dt`.
+- **`noise.ts`** — `NoiseGenerator`: Marsaglia Polar Method for Gaussian white noise plus a Voss-McCartney octave accumulator for 1/f flicker noise.
+- **`graph.ts`** — `CircuitGraph`: instantiates components from a `CircuitDefinition`, wires nets, and levelizes combinational components via a Kahn topological sort so carry chains evaluate in the correct order.
+- **`engine.ts`** — `SimulationEngine`: orchestrates one physics step: `seq.update → propagate → seq.clock → propagate → evaluateCombinational → propagate → buffer.push`.
+- **`waveform-buffer.ts`** — `WaveformBuffer`: multi-channel ring buffer (`Float32Array`). Length is a power of 2; wraparound uses bitwise `&`.
+- **`components/`** — all components implement either `SequentialComponent` (`update`, `clock`) or `CombinationalComponent` (`evaluate`):
+  - Sequential: `DFlipFlop`, `ClockSource`, `SignalSource`
+  - Combinational: `ANDGate`, `ORGate`, `XORGate`, `NOTGate`, `FullAdder`
 
-- **PixiHost** (`host.ts`): Manages two separate PixiJS Applications — analog waveform oscilloscope and digital logic display. WebGPU preferred, WebGL fallback.
-- **Render backends** (`backends/`): `IRenderer` interface with two implementations — `StdRenderer` (Graphics-based, stable) and `ExpRenderer` (MeshRope-based, experimental).
+### Circuit definitions
 
-### Shared Config (`src/common/`)
+`src/circuits/` — each file exports a `CircuitDefinition` object (components, nets, probes, controls). Currently: `dffCircuit` (single D flip-flop) and `adderCircuit` (4-bit ripple-carry accumulator). `src/circuits/index.ts` exports the combined `circuits` array consumed by `CircuitSelector`.
 
-- `constants.ts`: Color palette (Catppuccin Macchiato), voltage specs, simulation params, layout dimensions. All exported as `as const satisfies <Type>`.
-- `types.ts`: All TypeScript interfaces including worker message unions, UI element types, and physics config shapes.
+### State management
 
-### UI (`src/main/ui/`)
+`src/atoms/` — Jotai 2 atoms:
 
-- `settings.ts`: Settings sidebar for editing voltage parameters.
-- `about.ts`: About sidebar. DOM element IDs must match `index.html`.
+- `circuitDefAtom` — the loaded `CircuitDefinition | null`
+- `paramAtomFamily(key)` — per-control parameter values (`number | boolean`)
+- `voltageAtomFamily(netId)` — live probe voltages from the physics worker
+- `settingsOpenAtom`, `shaderStyleAtom`, `localeAtom`, etc.
 
-### Styles (`src/styles/`)
+### UI components
 
-SCSS with `main.scss` as the import root. Organized into `base/` (variables, reset, layout, responsive) and `components/` (oscilloscope, chip, controls, sidebar).
+`src/components/` — React components grouped by role:
+
+| Directory | Contents |
+|-----------|----------|
+| `controls/` | `ControlPanel`, `ParamSlider` (Radix), `ParamToggle` (Radix Switch), `ParamMomentary` |
+| `nav/` | `Toolbar`, `CircuitSelector`, `SettingsSheet` |
+| `oscilloscope/` | `OscilloscopePanel` (canvas host) |
+| `schematic/` | `CircuitSchematic` (SVG net diagram) |
+
+### Styling
+
+Tailwind CSS v4. Theme colours come from `src/styles/theme.ts` which pulls Catppuccin Macchiato hex values from `@catppuccin/palette`. All CSS variable names follow the pattern `--color-<name>`.
+
+### i18n
+
+Lingui 5. Catalogs live in `src/locales/`. Active locale is stored in `localeAtom` (`"en"` | `"zh-CN"`). Only user-visible strings are translated; source code and comments are English-only.
 
 ## Code Style
 
-- **TypeScript strict mode** with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
-- ESLint: `no-var` (error), `prefer-const` (warn), `eqeqeq` (always), unused vars with `_` prefix allowed
-- Console: `console.warn`, `console.error`, `console.info` allowed; other `console.*` warns
-- Prettier with default settings; format-on-save via VS Code
-- Comments in source files are in Chinese (中文注释)
+- **TypeScript** strict mode: `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`
+- **Biome 2** handles all formatting and linting (no ESLint, no Prettier)
+- **No `!` non-null assertions** in production code; extract port refs as `private readonly` fields in component constructors instead
+- **No `as any` or `as unknown as T`** double-casts; use type predicates or runtime checks
+- **No comments** unless the WHY is non-obvious (hidden constraint, subtle invariant, workaround). Never comment what the code already says.
+- **All source comments in English**
+
+## Testing
+
+Vitest 4 + `@testing-library/react` 16 + happy-dom.
+
+- Physics / logic tests are colocated with source files (e.g., `and-gate.test.ts` next to `and-gate.ts`)
+- React component tests live in `src/test/components/`
+- Wrap components with Jotai `<Provider store={createStore()}>` to isolate atom state per test
+- Port extraction in tests: `get("portName")` + `toBeDefined()` guard + early return — never `!`
 
 ## Deployment
 
-Push to `main` triggers GitHub Actions (`.github/workflows/deploy.yaml`) that builds with Bun and deploys to GitHub Pages.
+Push to `main` → GitHub Actions (`.github/workflows/deploy.yaml`) builds with Bun and deploys to GitHub Pages.
