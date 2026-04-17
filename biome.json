@@ -46,7 +46,6 @@
       "enabled": true
     },
     "parser": {
-      "cssModules": false,
       "tailwindDirectives": true
     }
   },
