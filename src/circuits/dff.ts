@@ -1,7 +1,7 @@
 import type { CircuitDefinition } from "@/lib/types";
 import { theme } from "@/styles/theme";
 
-export const dffCircuit: CircuitDefinition = {
+export const dffCircuit = {
   id: "dff",
   name: "D Flip-Flop",
   description:
@@ -67,4 +67,4 @@ export const dffCircuit: CircuitDefinition = {
       defaultValue: false,
     },
   ],
-};
+} satisfies CircuitDefinition;
