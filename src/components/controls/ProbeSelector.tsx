@@ -17,6 +17,7 @@ function ProbeRow({
     <label className="flex items-center gap-2.5 py-1 cursor-pointer group rounded px-1 -mx-1 hover:bg-surface0/60">
       <input
         type="checkbox"
+        name={`probe-${probe.netId}`}
         checked={active}
         onChange={onToggle}
         className="accent-lavender focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-base"

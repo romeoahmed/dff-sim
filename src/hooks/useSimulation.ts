@@ -80,6 +80,11 @@ export function useSimulation(
           ) as Parameters<typeof bridge.render.init>[0],
         );
         if (cancelled) return;
+      } else {
+        // Canvases were already transferred on an earlier mount; reuse the bridge but
+        // rebuild the GPU pipelines for the new circuit's probe count.
+        await bridge.render.reconfigureChannels(activeProbes);
+        if (cancelled) return;
       }
 
       await bridge.physics.loadCircuit(def);

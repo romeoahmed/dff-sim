@@ -28,6 +28,7 @@ export interface RenderAPI {
   resize(width: number, waveformHeight: number, digitalHeight: number, dpr: number): void;
   setShaderStyle(style: ShaderStyle): void;
   updateProbes(probes: readonly Probe[]): void;
+  reconfigureChannels(probes: readonly Probe[]): void;
   registerFrameChannel(port: MessagePort): void;
 }
 
@@ -138,6 +139,49 @@ class RenderWorker implements RenderAPI {
     }
   }
 
+  // Rebuild both pipelines when the probe/channel count changes on circuit switch.
+  // The canvas contexts and GPU device are preserved; only the storage/channel buffers
+  // and pipeline resources are reallocated to match the new channel count.
+  reconfigureChannels(probes: readonly Probe[]): void {
+    if (!this.gpu) return;
+    this.probes = probes;
+    const channelCount = probes.length;
+    const bufferLength = DefaultPhysicsConfig.simulation.bufferLength;
+
+    this.waveformRes = createWaveformPipeline(
+      this.gpu.device,
+      this.gpu.format,
+      channelCount,
+      bufferLength,
+    );
+    this.digitalRes = createDigitalPipeline(
+      this.gpu.device,
+      this.gpu.format,
+      channelCount,
+      bufferLength,
+    );
+
+    uploadWaveformChannels(
+      this.gpu.device,
+      this.waveformRes.channelBuffer,
+      probes,
+      this.waveformHeight,
+    );
+    uploadWaveformChannels(
+      this.gpu.device,
+      this.digitalRes.channelBuffer,
+      probes,
+      this.digitalHeight,
+    );
+
+    // Drop the local ring mirror so the next physics frame reallocates it at the new size.
+    this.ringBuffer = null;
+    this.ringBufferLength = 0;
+    this.ringChannelCount = 0;
+    this.ringDirty = false;
+    this.latestWritePointer = 0;
+  }
+
   registerFrameChannel(port: MessagePort): void {
     port.onmessage = (e) => {
       if (e.data?.type !== "frame") return;
@@ -147,6 +191,17 @@ class RenderWorker implements RenderAPI {
       const startPointer = e.data.startPointer as number;
       const channelCount = e.data.channelCount as number;
       const bufferLength = e.data.bufferLength as number;
+
+      // Drop frames whose dims don't match the current pipeline. Covers the brief
+      // window around circuit switch where the render pipelines have already been
+      // resized but a stale frame from the old physics engine is still in flight.
+      if (
+        !this.waveformRes ||
+        this.waveformRes.channelCount !== channelCount ||
+        this.waveformRes.bufferLength !== bufferLength
+      ) {
+        return;
+      }
 
       if (
         !this.ringBuffer ||

@@ -59,6 +59,7 @@ export function SettingsSheet() {
                   <span className="text-xs text-subtext0">{key}</span>
                   <input
                     type="number"
+                    name={key}
                     step="0.01"
                     value={draft[key]}
                     onChange={(e) => onChange(key, Number(e.target.value))}

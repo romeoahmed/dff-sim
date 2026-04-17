@@ -12,6 +12,7 @@ export function CircuitSelector() {
         Circuit
       </span>
       <select
+        name="circuit"
         value={circuitDef?.id ?? ""}
         onChange={(e) => {
           const def = circuits.find((c) => c.id === e.target.value);
