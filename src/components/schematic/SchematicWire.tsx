@@ -15,14 +15,17 @@ export function SchematicWire({ netId, label, color, points, threshold = 1.0 }: 
 
   const firstPoint = points.split(" ")[0]?.split(",") ?? ["0", "0"];
   const labelX = Number(firstPoint[0] ?? 0);
-  const labelY = Number(firstPoint[1] ?? 0) - 8;
+  const labelY = Number(firstPoint[1] ?? 0) - 12;
+
+  const chipW = Math.max(54, label.length * 6 + 38);
+  const chipH = 14;
 
   return (
     <g>
       <polyline
         points={points}
         fill="none"
-        stroke="var(--color-overlay0)"
+        stroke="var(--color-border-strong)"
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -42,17 +45,29 @@ export function SchematicWire({ netId, label, color, points, threshold = 1.0 }: 
           animation: isActive ? "wire-flow 1s linear infinite" : "none",
         }}
       />
-      <text
-        x={labelX}
-        y={labelY}
-        className="readout fill-subtext0"
-        style={{ fontSize: 10, letterSpacing: 0.3 }}
-      >
-        <tspan fill={color}>{label}</tspan>
-        <tspan dx={6} className="tabular-nums">
-          {voltage.toFixed(2)}V
-        </tspan>
-      </text>
+      <g transform={`translate(${labelX}, ${labelY - chipH / 2})`}>
+        <rect
+          x={0}
+          y={0}
+          width={chipW}
+          height={chipH}
+          rx={3}
+          className="fill-panel-raised stroke-border"
+          strokeWidth={0.5}
+        />
+        <text
+          x={6}
+          y={chipH / 2}
+          dominantBaseline="central"
+          className="readout"
+          style={{ fontSize: 9, letterSpacing: 0.3 }}
+        >
+          <tspan fill={color}>{label}</tspan>
+          <tspan dx={6} className="fill-fg-muted tabular-nums">
+            {voltage.toFixed(2)}V
+          </tspan>
+        </text>
+      </g>
     </g>
   );
 }

@@ -8,7 +8,7 @@ export function CircuitSelector() {
 
   return (
     <label className="relative flex items-center">
-      <span className="readout text-[10px] uppercase tracking-widest text-overlay1 pr-2">
+      <span className="readout text-[10px] uppercase tracking-widest text-fg-subtle pr-2">
         Circuit
       </span>
       <select
@@ -18,7 +18,7 @@ export function CircuitSelector() {
           const def = circuits.find((c) => c.id === e.target.value);
           if (def) setCircuitDef(def);
         }}
-        className="appearance-none bg-surface0 border border-surface1 rounded pl-3 pr-8 py-1 text-xs text-text hover:border-overlay0 transition-colors focus-visible:outline-none focus-visible:border-lavender focus-visible:ring-1 focus-visible:ring-lavender"
+        className="appearance-none bg-panel-muted border border-border rounded-[11px] pl-3 pr-8 h-7 text-[13px] text-fg hover:border-border-strong transition-colors focus-visible:outline-none focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-focus/40"
         aria-label="Select circuit"
       >
         {circuits.map((c) => (
@@ -27,7 +27,7 @@ export function CircuitSelector() {
           </option>
         ))}
       </select>
-      <ChevronDown size={12} className="absolute right-2 pointer-events-none text-subtext0" />
+      <ChevronDown size={12} className="absolute right-2 pointer-events-none text-fg-muted" />
     </label>
   );
 }

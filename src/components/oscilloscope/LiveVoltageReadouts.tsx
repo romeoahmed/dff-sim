@@ -6,10 +6,17 @@ function Readout({ netId, label, color }: { netId: string; label: string; color:
   const v = useAtomValue(voltageAtomFamily(netId));
   return (
     <span
-      className="readout px-2 py-0.5 bg-base/70 backdrop-blur-sm rounded border border-surface0 text-[10px] tabular-nums"
-      style={{ color }}
+      className="readout inline-flex items-center gap-1.5 h-6 px-2.5 rounded-[11px] bg-panel/70
+        backdrop-blur-[20px] backdrop-saturate-[180%] border border-border text-[11px] text-fg
+        tabular-nums"
     >
-      {label}: {v.toFixed(2)}V
+      <span
+        className="inline-block w-1.5 h-1.5 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      />
+      {label}
+      <span className="text-fg-muted">{v.toFixed(2)}V</span>
     </span>
   );
 }
@@ -17,7 +24,7 @@ function Readout({ netId, label, color }: { netId: string; label: string; color:
 export function LiveVoltageReadouts() {
   const probes = useAtomValue(activeProbesAtom);
   return (
-    <div className="absolute top-2 right-2 flex gap-1.5 pointer-events-none">
+    <div className="absolute top-3 right-3 flex flex-wrap gap-1.5 pointer-events-none max-w-[75%] justify-end">
       {probes.map((p) => (
         <Readout key={p.netId} netId={p.netId} label={p.label} color={p.color} />
       ))}

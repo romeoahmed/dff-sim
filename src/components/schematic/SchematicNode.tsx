@@ -27,27 +27,43 @@ export function SchematicNode({ component, x, y, width, height }: Props) {
       <rect
         width={width}
         height={height}
-        rx={2}
-        className="fill-surface1 stroke-overlay0"
+        rx={6}
+        className="fill-panel-raised stroke-border-strong"
         strokeWidth={1}
       />
-      <circle cx={8} cy={8} r={2.5} className="fill-base stroke-overlay0" strokeWidth={0.5} />
+      {/* subtle top-edge highlight: a physical-object chip catches light on its top rim */}
+      <line
+        x1={6}
+        y1={0.5}
+        x2={width - 6}
+        y2={0.5}
+        className="stroke-fg"
+        strokeOpacity={0.08}
+        strokeWidth={1}
+      />
+      <circle
+        cx={9}
+        cy={9}
+        r={2.5}
+        className="fill-canvas stroke-border-strong"
+        strokeWidth={0.5}
+      />
       <text
         x={width / 2}
         y={height / 2 - 4}
         textAnchor="middle"
         dominantBaseline="middle"
-        className="readout fill-text"
-        style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" }}
+        className="readout fill-fg"
+        style={{ fontSize: 12, letterSpacing: 1.5, textTransform: "uppercase" }}
       >
         {partNumber}
       </text>
       <text
         x={width / 2}
-        y={height / 2 + 10}
+        y={height / 2 + 12}
         textAnchor="middle"
         dominantBaseline="middle"
-        className="readout fill-overlay0"
+        className="readout fill-fg-subtle"
         style={{ fontSize: 9 }}
       >
         {component.id}

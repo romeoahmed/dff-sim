@@ -7,9 +7,6 @@ import type {
   VoltageSpecConfig,
 } from "./types";
 
-// 颜色从 @catppuccin/palette 通过 src/styles/theme.ts 获取
-// 此文件不包含硬编码的十六进制颜色值
-
 export const DefaultVoltageSpecs = {
   logicHighMin: 1.0,
   logicLowMax: 0.6,

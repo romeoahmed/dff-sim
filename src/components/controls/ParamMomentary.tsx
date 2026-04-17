@@ -1,24 +1,46 @@
 import { useSetAtom } from "jotai";
+import { useState } from "react";
 import { paramAtomFamily } from "@/atoms/simulation-atoms";
 import type { ControlDef } from "@/lib/types";
 
 export function ParamMomentary({ control }: { control: ControlDef }) {
   const key = `${control.targetComponent}.${control.param}`;
   const setValue = useSetAtom(paramAtomFamily(key));
+  const [active, setActive] = useState(false);
+
+  const on = () => {
+    setActive(true);
+    setValue(true);
+  };
+  const off = () => {
+    setActive(false);
+    setValue(false);
+  };
 
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-2 py-2">
-      <span className="text-xs uppercase tracking-wider text-subtext0">{control.label}</span>
+      <span className="text-[11px] uppercase tracking-[0.15em] text-fg-muted">{control.label}</span>
       <button
         type="button"
-        onPointerDown={() => setValue(true)}
-        onPointerUp={() => setValue(false)}
-        onPointerLeave={() => setValue(false)}
-        onKeyDown={(e) => e.key === " " && setValue(true)}
-        onKeyUp={(e) => e.key === " " && setValue(false)}
-        className="readout px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-widest bg-red/10 border border-red/40 text-red transition-all duration-75 ease-out hover:bg-red/20 hover:border-red active:bg-red active:text-base active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red focus-visible:ring-offset-2 focus-visible:ring-offset-base"
+        onPointerDown={on}
+        onPointerUp={off}
+        onPointerLeave={off}
+        onKeyDown={(e) => e.key === " " && on()}
+        onKeyUp={(e) => e.key === " " && off()}
+        data-active={active}
+        className="readout inline-flex items-center gap-2 h-8 px-4 rounded-full border text-[11px]
+          font-medium uppercase tracking-[0.1em]
+          border-border bg-panel-muted text-fg
+          hover:bg-panel-raised hover:border-border-strong
+          data-[active=true]:bg-danger data-[active=true]:border-danger data-[active=true]:text-white
+          transition-colors duration-75 ease-out
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus
+          focus-visible:ring-offset-2 focus-visible:ring-offset-panel"
       >
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-red mr-2 align-middle" />
+        <span
+          className="inline-block w-1.5 h-1.5 rounded-full bg-danger group-data-[active=true]:bg-white"
+          aria-hidden
+        />
         Hold
       </button>
     </div>

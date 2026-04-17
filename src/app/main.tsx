@@ -2,10 +2,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 
-// Self-hosted fonts (no Google Fonts / FOIT).
-// Plex Sans ships as a variable font (single file, 100-700 weight range).
-// Plex Mono is STATIC ONLY -- no variable distribution exists, so import each weight used.
-import "@fontsource-variable/ibm-plex-sans";
+// Body text uses the platform SF Pro stack (see --font-sans in globals.css).
+// Plex Mono remains self-hosted for the .readout class — instrument numerics
+// demand a predictable tabular-nums mono that doesn't depend on the OS.
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";

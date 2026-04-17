@@ -1,63 +1,84 @@
 @import "tailwindcss";
 
-/* Catppuccin Macchiato -- sourced from @catppuccin/palette (see theme.ts) */
-@theme {
-  /* Colors */
-  --color-base: #24273a;
-  --color-mantle: #1e2030;
-  --color-crust: #181926;
-  --color-surface0: #363a4f;
-  --color-surface1: #494d64;
-  --color-surface2: #5b6078;
-  --color-text: #cad3f5;
-  --color-subtext0: #a5adcb;
-  --color-subtext1: #b8c0e0;
-  --color-overlay0: #6e738d;
-  --color-overlay1: #8087a2;
-  --color-green: #a6da95;
-  --color-blue: #8aadf4;
-  --color-red: #ed8796;
-  --color-yellow: #eed49f;
-  --color-mauve: #c6a0f6;
-  --color-teal: #8bd5ca;
-  --color-lavender: #b7bdf8;
-  --color-peach: #f5a97f;
-  --color-sky: #91d7e3;
-  --color-pink: #f5bde6;
-  --color-flamingo: #f0c6c6;
-  --color-rosewater: #f4dbd6;
-  --color-maroon: #ee99a0;
-  --color-sapphire: #7dc4e4;
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
-  /* Typography -- IBM Plex pair.
-     Sans is variable (single woff2, 100-700); Mono is static per-weight. */
-  --font-sans: "IBM Plex Sans Variable", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+/* Semantic palette. :root gets dark defaults so the app boots dark before the
+   themeAtom hydrates on first paint. [data-theme="light"] overrides live in a
+   separate block so Tailwind's @theme inline block reads identical var names. */
+:root,
+[data-theme="dark"] {
+  --color-canvas: #000000;
+  --color-panel: #1d1d1f;
+  --color-panel-raised: #272729;
+  --color-panel-muted: #2a2a2d;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-fg: #ffffff;
+  --color-fg-muted: rgba(255, 255, 255, 0.72);
+  --color-fg-subtle: rgba(255, 255, 255, 0.48);
+  --color-accent: #2997ff;
+  --color-accent-pressed: #409cff;
+  --color-success: #30d158;
+  --color-danger: #ff453a;
+  --color-focus: #0071e3;
+}
 
-  /* Motion easing */
+[data-theme="light"] {
+  --color-canvas: #f5f5f7;
+  --color-panel: #ffffff;
+  --color-panel-raised: #fafafc;
+  --color-panel-muted: #ededf2;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+  --color-fg: #1d1d1f;
+  --color-fg-muted: rgba(0, 0, 0, 0.72);
+  --color-fg-subtle: rgba(0, 0, 0, 0.48);
+  --color-accent: #0066cc;
+  --color-accent-pressed: #0071e3;
+  --color-success: #34c759;
+  --color-danger: #ff3b30;
+  --color-focus: #0071e3;
+}
+
+@theme inline {
+  --color-canvas: var(--color-canvas);
+  --color-panel: var(--color-panel);
+  --color-panel-raised: var(--color-panel-raised);
+  --color-panel-muted: var(--color-panel-muted);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-fg-subtle: var(--color-fg-subtle);
+  --color-accent: var(--color-accent);
+  --color-accent-pressed: var(--color-accent-pressed);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-focus: var(--color-focus);
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI Variable",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, "Cascadia Mono", monospace;
+
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
 }
 
-/* Base: atmospheric background with subtle radial tint */
 body {
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(138, 173, 244, 0.04), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(198, 160, 246, 0.035), transparent 70%),
-    var(--color-base);
-  color: var(--color-text);
+  background-color: var(--color-canvas);
+  color: var(--color-fg);
   font-family: var(--font-sans);
   overscroll-behavior: none;
 }
 
-/* Global focus-visible ring -- consistent across all interactive elements */
 :focus-visible {
-  outline: 2px solid var(--color-lavender);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-/* Accessibility: respect user motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -69,14 +90,30 @@ body {
   }
 }
 
-/* Selection */
 ::selection {
-  background-color: var(--color-lavender);
-  color: var(--color-base);
+  background-color: var(--color-accent);
+  color: #ffffff;
 }
 
-/* Mono-styled numeric readouts (voltage values, timing).
-   Plex Mono: ss03 + zero = slashed zero (distinct from O). */
+/* SF Pro-echoing typographic utilities: negative tracking at every size, tight
+   leading on display sizes, comfortable leading on body sizes. Used by chrome
+   and modal text — canvas numerics stay on .readout (mono). */
+.text-display {
+  font-weight: 600;
+  letter-spacing: -0.28px;
+  line-height: 1.07;
+}
+
+.text-body {
+  letter-spacing: -0.374px;
+  line-height: 1.47;
+}
+
+.text-caption {
+  letter-spacing: -0.224px;
+  line-height: 1.29;
+}
+
 .readout {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;

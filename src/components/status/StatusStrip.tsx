@@ -1,29 +1,37 @@
 import { useAtomValue } from "jotai";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 
-export function StatusStrip() {
+export function StatusStrip({ className = "" }: { className?: string }) {
   const circuitDef = useAtomValue(circuitDefAtom);
 
   return (
-    <footer className="flex items-center gap-4 px-4 py-1 border-t border-surface0 bg-mantle readout text-[10px] text-subtext0 tracking-wider">
+    <footer
+      className={`h-6 flex items-center gap-3 px-4 border-t border-border bg-panel readout text-[11px] uppercase tracking-[0.1em] text-fg-muted ${className}`}
+    >
       <span className="flex items-center gap-1.5">
         <span
-          className="inline-block w-1.5 h-1.5 rounded-full bg-green animate-pulse"
+          className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse"
           aria-hidden
         />
-        RUNNING
+        Running
       </span>
-      <span className="text-overlay0">·</span>
+      <span className="text-fg-subtle" aria-hidden>
+        •
+      </span>
       <span>10.0 kHz</span>
-      <span className="text-overlay0">·</span>
+      <span className="text-fg-subtle" aria-hidden>
+        •
+      </span>
       <span>WebGPU</span>
       {circuitDef && (
         <>
-          <span className="text-overlay0">·</span>
+          <span className="text-fg-subtle" aria-hidden>
+            •
+          </span>
           <span>{circuitDef.id}</span>
         </>
       )}
-      <span className="ml-auto">DFF-Sim v2.0</span>
+      <span className="ml-auto text-fg-subtle">DFF·SIM v2.0</span>
     </footer>
   );
 }

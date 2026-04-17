@@ -14,26 +14,31 @@ function ProbeRow({
 }) {
   const voltage = useAtomValue(voltageAtomFamily(probe.netId));
   return (
-    <label className="flex items-center gap-2.5 py-1 cursor-pointer group rounded px-1 -mx-1 hover:bg-surface0/60">
+    <label
+      className="flex items-center gap-3 h-10 px-2 -mx-2 rounded-lg cursor-pointer
+        hover:bg-panel-muted/60 transition-colors"
+    >
       <input
         type="checkbox"
         name={`probe-${probe.netId}`}
         checked={active}
         onChange={onToggle}
-        className="accent-lavender focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-base"
+        className="w-4 h-4 accent-accent rounded focus-visible:outline-none
+          focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2
+          focus-visible:ring-offset-panel"
       />
       <span
-        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+        className="inline-block w-2.5 h-2.5 rounded-full shrink-0 transition-shadow"
         style={{
           backgroundColor: probe.color,
-          boxShadow: active ? `0 0 6px ${probe.color}` : undefined,
+          boxShadow: active ? `0 0 8px ${probe.color}` : undefined,
         }}
         aria-hidden
       />
-      <span className="readout text-xs text-text flex-1" style={{ letterSpacing: 0.5 }}>
+      <span className="readout text-[13px] text-fg flex-1" style={{ letterSpacing: 0.5 }}>
         {probe.label}
       </span>
-      <span className="readout text-[10px] text-subtext0 tabular-nums">{voltage.toFixed(2)}V</span>
+      <span className="readout text-[11px] text-fg-muted tabular-nums">{voltage.toFixed(2)}V</span>
     </label>
   );
 }
@@ -53,9 +58,9 @@ export function ProbeSelector() {
   const isActive = (netId: string) => activeIds.size === 0 || activeIds.has(netId);
 
   return (
-    <div className="px-4 py-3 border-b border-surface0">
-      <h3 className="readout text-[10px] uppercase tracking-[0.2em] text-overlay1 mb-2">Probes</h3>
-      <div>
+    <div className="px-5 py-5">
+      <h3 className="readout text-[11px] uppercase tracking-[0.2em] text-fg-subtle mb-3">Probes</h3>
+      <div className="space-y-0.5">
         {circuitDef.probes.map((p) => (
           <ProbeRow
             key={p.netId}

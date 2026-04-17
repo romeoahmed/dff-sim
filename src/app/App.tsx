@@ -15,6 +15,7 @@ import { ShortcutsOverlay, shortcutsOpenAtom } from "@/components/shortcuts/Shor
 import { StatusStrip } from "@/components/status/StatusStrip";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSimulation } from "@/hooks/useSimulation";
+import { useThemeSync } from "@/hooks/useThemeSync";
 import { Providers } from "./providers";
 
 function AppInner() {
@@ -27,21 +28,28 @@ function AppInner() {
     setCircuit(dffCircuit);
   }, [setCircuit]);
 
+  useThemeSync();
   useSimulation(waveformRef, digitalRef);
   useKeyboardShortcuts({ onOpenHelp: () => setShortcutsOpen(true) });
 
   return (
     <AppLayout>
-      <Toolbar />
-      <CircuitSchematic />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_clamp(280px,25vw,400px)] min-h-0">
-        <OscilloscopePanel waveformRef={waveformRef} digitalRef={digitalRef} />
-        <aside className="flex flex-col overflow-y-auto border-l border-surface0">
-          <ControlPanel />
-          <ProbeSelector />
-        </aside>
-      </div>
-      <StatusStrip />
+      <Toolbar className="col-span-full row-start-1" />
+      <CircuitSchematic className="row-start-2 col-span-full 2xl:col-start-3 2xl:row-start-2 2xl:col-span-1 2xl:border-l 2xl:border-border" />
+      <OscilloscopePanel
+        waveformRef={waveformRef}
+        digitalRef={digitalRef}
+        className="row-start-3 col-start-1 2xl:row-start-2 2xl:col-start-2"
+      />
+      <aside
+        className="row-start-4 col-start-1 flex flex-col overflow-y-auto border-t border-border
+          md:row-start-3 md:col-start-2 md:border-t-0 md:border-l
+          2xl:row-start-2 2xl:col-start-1 2xl:border-l-0 2xl:border-r"
+      >
+        <ControlPanel />
+        <ProbeSelector />
+      </aside>
+      <StatusStrip className="col-span-full row-start-5 md:row-start-4 2xl:row-start-3" />
       <SettingsSheet />
       <AboutSheet />
       <ShortcutsOverlay />
