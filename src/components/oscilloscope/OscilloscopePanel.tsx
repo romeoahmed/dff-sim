@@ -3,6 +3,7 @@ import { DigitalCanvas } from "./DigitalCanvas";
 import { InstrumentBezel } from "./InstrumentBezel";
 import { Legend } from "./Legend";
 import { LiveVoltageReadouts } from "./LiveVoltageReadouts";
+import { ProbeStateAnnouncer } from "./ProbeStateAnnouncer";
 import { WaveformCanvas } from "./WaveformCanvas";
 
 interface Props {
@@ -21,6 +22,7 @@ export function OscilloscopePanel({ waveformRef, digitalRef }: Props) {
         <LiveVoltageReadouts />
       </InstrumentBezel>
       <Legend />
+      <ProbeStateAnnouncer />
     </section>
   );
 }

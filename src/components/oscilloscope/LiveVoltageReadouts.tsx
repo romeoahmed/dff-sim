@@ -17,11 +17,7 @@ function Readout({ netId, label, color }: { netId: string; label: string; color:
 export function LiveVoltageReadouts() {
   const probes = useAtomValue(activeProbesAtom);
   return (
-    <div
-      className="absolute top-2 right-2 flex gap-1.5 pointer-events-none"
-      aria-live="polite"
-      aria-atomic="true"
-    >
+    <div className="absolute top-2 right-2 flex gap-1.5 pointer-events-none">
       {probes.map((p) => (
         <Readout key={p.netId} netId={p.netId} label={p.label} color={p.color} />
       ))}
