@@ -5,5 +5,7 @@ interface Props {
 }
 
 export function DigitalCanvas({ ref }: Props) {
-  return <canvas ref={ref} className="w-full h-full block" aria-label="Digital logic view" />;
+  return (
+    <canvas ref={ref} className="w-full h-full block" aria-label="Digital logic waveform display" />
+  );
 }
