@@ -40,7 +40,7 @@ The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a Re
 | Circuit | Description |
 |---------|-------------|
 | **D Flip-Flop** | Single DFF showing edge-triggered capture, clock jitter, noise, and metastability |
-| **4-Bit Accumulator** | Ripple-carry adder feeding four DFFs; demonstrates combinational + sequential interaction |
+| **4-Bit Accumulator** | Ripple-carry adder feeding four DFFs. Each full adder has its own propagation delay `tPD`, so carry propagation cascades visibly on the oscilloscope — Q0 settles before Q1 before Q2 before Q3. |
 
 ### Rendering
 
@@ -194,7 +194,7 @@ DFF·SIM 是一个基于浏览器的仿真项目，它在**模拟电压层面**�
 | 电路 | 描述 |
 |------|------|
 | **D 触发器** | 单个 DFF，展示边沿触发捕获、时钟抖动、噪声和亚稳态 |
-| **4 位累加器** | 行波进位加法器驱动四个 DFF，演示组合逻辑与时序逻辑的交互 |
+| **4 位累加器** | 行波进位加法器驱动四个 DFF。每个全加器都有独立的传播延迟 `tPD`，因此进位传播会在示波器上级联显现——Q0 先稳定，然后 Q1、Q2、Q3 依次跟进。 |
 
 ### 渲染
 
