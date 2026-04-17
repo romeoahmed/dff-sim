@@ -190,14 +190,21 @@ src/
 │   │   ├── sheet.tsx              # Sidebar (slide-over panel)
 │   │   └── ...
 │   ├── oscilloscope/
-│   │   ├── OscilloscopePanel.tsx  # Container: canvas refs, resize observer, auto-height
-│   │   ├── WaveformCanvas.tsx     # Analog waveform canvas element
-│   │   ├── DigitalCanvas.tsx      # Digital logic canvas element
-│   │   └── Legend.tsx             # Channel legend (driven by probes[], N channels)
+│   │   ├── OscilloscopePanel.tsx   # Container: canvas refs, resize observer, auto-height
+│   │   ├── InstrumentBezel.tsx     # Inset-shadow frame, live voltage readouts
+│   │   ├── LiveVoltageReadouts.tsx # Floating per-channel voltage badges
+│   │   ├── WaveformCanvas.tsx      # Analog waveform canvas element
+│   │   ├── DigitalCanvas.tsx       # Digital logic canvas element
+│   │   └── Legend.tsx              # Channel legend (driven by probes[])
 │   ├── schematic/
-│   │   ├── CircuitSchematic.tsx   # Interactive SVG circuit topology (driven by circuit def)
-│   │   ├── SchematicNode.tsx      # Single component in schematic (DFF, gate, source)
-│   │   └── SchematicWire.tsx      # Wire between nodes (highlights with voltage color)
+│   │   ├── CircuitSchematic.tsx    # Interactive SVG circuit topology
+│   │   ├── SchematicGrid.tsx       # PCB grid background (SVG pattern)
+│   │   ├── SchematicNode.tsx       # IC-chip styled component
+│   │   └── SchematicWire.tsx       # Orthogonal-routed wire with glow+flow animation
+│   ├── status/
+│   │   └── StatusStrip.tsx         # Bottom strip: sim state, tick rate, adapter info
+│   ├── shortcuts/
+│   │   └── ShortcutsOverlay.tsx    # Help dialog listing keyboard shortcuts (? key)
 │   ├── controls/
 │   │   ├── ControlPanel.tsx       # Renders controls from circuit def's controls[]
 │   │   ├── ParamSlider.tsx        # Generic slider control (noise, speed, etc.)
@@ -223,9 +230,10 @@ src/
 │   └── ui-atoms.ts                # Jotai: shaderStyle, activeProbes, sidebar, locale
 │
 ├── hooks/
-│   ├── useSimulation.ts           # Worker lifecycle, Comlink proxies, circuit loading
-│   ├── useResizeObserver.ts       # Canvas container resize tracking
-│   └── useProbeVoltages.ts        # Subscribes to probed net voltage updates
+│   ├── useSimulation.ts            # Worker lifecycle, Comlink proxies, circuit loading
+│   ├── useResizeObserver.ts        # Canvas container resize tracking
+│   ├── useKeyboardShortcuts.ts     # Registers global hotkeys (Space, R, [/], etc.)
+│   └── useSimulationStatus.ts      # Subscribes to engine state (running, tick rate)
 │
 ├── workers/
 │   ├── physics/
@@ -322,8 +330,17 @@ export const voltageAtomFamily = atomFamily(
 
 /** One atom per control parameter — keyed by "componentId.paramKey" */
 export const paramAtomFamily = atomFamily(
-  (key: string) => atom<number | boolean>(0),
+  (_key: string) => atom<number | boolean>(0),
 );
+
+/** Cleanup: remove all atom-family entries for a circuit on unload.
+ *  Without this, atoms from previous circuits accumulate in memory. */
+export function clearCircuitAtoms(def: CircuitDefinition): void {
+  for (const probe of def.probes) voltageAtomFamily.remove(probe.netId);
+  for (const ctrl of def.controls) {
+    paramAtomFamily.remove(`${ctrl.targetComponent}.${ctrl.param}`);
+  }
+}
 ```
 
 Each component subscribes to exactly ONE atom:
@@ -496,35 +513,40 @@ All components are **circuit-agnostic** — driven by `CircuitDefinition` data. 
 
 ```
 <App>
-  <LinguiProvider>
-    <div className="grid h-screen grid-rows-[auto_1fr_1fr] bg-base text-text">
+  <Providers>  {/* Jotai + Lingui */}
+    <div className="grid h-screen grid-rows-[auto_minmax(240px,_45vh)_1fr_auto] bg-base text-text">
 
       {/* Row 1: Toolbar */}
       <Toolbar>
         <AppLogo />
         <CircuitSelector circuits={[dffCircuit, adderCircuit]} />
-        <ShaderStyleToggle />
+        <ShaderStyleToggle />  {/* Radix ToggleGroup, not <button> trio */}
         <div className="ml-auto flex gap-2">
           <SettingsButton /> <AboutButton /> <LocaleToggle />
         </div>
       </Toolbar>
 
-      {/* Row 2: Circuit Schematic (full width, hero) */}
+      {/* Row 2: Circuit Schematic (hero) — PCB grid background, IC-chip styling */}
       <CircuitSchematic circuit={circuitDef} className="min-h-0 border-b border-surface0">
+        <SchematicGrid />  {/* SVG <pattern> grid + subtle dot at intersections */}
         {circuitDef.components.map(comp => <SchematicNode />)}
-        {circuitDef.nets.map(net => <SchematicWire />)}
+        {circuitDef.nets.map(net => <SchematicWire />)}  {/* animated dash-offset when active */}
       </CircuitSchematic>
 
-      {/* Row 3: Oscilloscope + Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_16rem] min-h-0">
-        <OscilloscopePanel probes={activeProbes} className="grid grid-rows-subgrid min-h-0">
-          <DigitalCanvas />
-          <WaveformCanvas />
+      {/* Row 3: Oscilloscope (bezel) + Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_clamp(280px,25vw,400px)] min-h-0">
+        <OscilloscopePanel probes={activeProbes} className="min-h-0">
+          <InstrumentBezel>  {/* inset shadow, border, live voltage readouts */}
+            <DigitalCanvas />
+            <WaveformCanvas />
+            <LiveVoltageReadouts />  {/* floating badges, absolute positioned */}
+          </InstrumentBezel>
           <Legend probes={activeProbes} />
         </OscilloscopePanel>
 
         <aside className="grid grid-rows-subgrid overflow-y-auto border-l border-surface0">
           <ControlPanel controls={circuitDef.controls}>
+            {/* Radix Slider/Switch — not native <input type="range"> */}
             {circuitDef.controls.map(ctrl =>
               <ParamSlider /> | <ParamToggle /> | <ParamMomentary />
             )}
@@ -534,13 +556,24 @@ All components are **circuit-agnostic** — driven by `CircuitDefinition` data. 
         </aside>
       </div>
 
+      {/* Row 4: Status strip — sim time, tick rate, WebGPU adapter */}
+      <StatusStrip />
+
       {/* Overlays */}
       <SettingsSheet />
       <AboutSheet description={circuitDef.description} />
+      <ShortcutsOverlay />  {/* triggered by ? key */}
     </div>
-  </LinguiProvider>
+  </Providers>
 </App>
 ```
+
+**Key visual treatments:**
+- **InstrumentBezel** — canvas wrapped in `bg-black/40 shadow-inner border border-surface1 rounded-lg` to suggest a physical oscilloscope screen.
+- **LiveVoltageReadouts** — absolute-positioned badges (`bg-base/60 backdrop-blur`) in the top-right of the scope, showing current voltage per channel in mono font.
+- **SchematicNode** — IC-chip styling: rect with pin-1 notch circle, monospace part number label ("74LV74"), subtle inner shadow.
+- **SchematicWire** — orthogonal routing (90° turns with 4px radius), `stroke-dasharray: 8 4` + `animation: flow 1s linear infinite` on active wires, `drop-shadow` glow for active state.
+- **StatusStrip** — thin footer row, mono font `text-[10px]`, shows: `● RUNNING`, sim time (`T+ 12.345s`), `10.0 kHz`, `WebGPU · <adapter>`, version.
 
 ### Key Hook: useSimulation
 
@@ -567,12 +600,11 @@ function useSimulation(
 }
 ```
 
-### Tailwind + Catppuccin
+### Theme: Typography, Colors, Motion
 
-Colors sourced from **`@catppuccin/palette`** (not hardcoded hex). Two integration points:
-
-1. **CSS** (`globals.css`): `@theme` block defines CSS custom properties for Tailwind's class generation. Values match `@catppuccin/palette` Macchiato flavor.
-2. **JS** (`styles/theme.ts`): Imports `flavors.macchiato` from the package for use in WebGPU color uniforms and probe color lookups where CSS vars aren't accessible.
+**Colors** — Catppuccin Macchiato via `@catppuccin/palette`:
+1. **CSS** (`globals.css`): `@theme` block defines CSS custom properties. Values match Macchiato flavor.
+2. **JS** (`styles/theme.ts`): Imports `flavors.macchiato` for use in WebGPU color uniforms and probe color lookups.
 
 ```ts
 // src/styles/theme.ts
@@ -581,6 +613,43 @@ export const theme = Object.fromEntries(
   Object.entries(flavors.macchiato.colors).map(([name, color]) => [name, color.hex]),
 );
 ```
+
+**Typography** — IBM Plex pair, self-hosted via `@fontsource-variable/ibm-plex-sans` + `@fontsource-variable/ibm-plex-mono`. Variable fonts, ~50KB total, no network fetch.
+
+- `--font-sans: "IBM Plex Sans Variable"` — UI body and headings
+- `--font-mono: "IBM Plex Mono Variable"` — voltage readouts, pin labels, timing values, status strip
+
+Plex is specifically designed for technical/engineering contexts. The `zero` feature makes `0` visually distinct from `O`; `tabular-nums` keeps voltage digits column-aligned; stylistic sets `ss01` and `cv11` give the monospace its characteristic schoolbook-italic look.
+
+Readout class for all numeric displays:
+```css
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero", "ss01";
+}
+```
+
+**Background** — Not flat. Two subtle radial gradients (blue top-left, mauve bottom-right) at ~4% opacity over base color. Adds atmosphere without distraction.
+
+**Motion** — Purposeful, not decorative:
+- Entry: 200ms fade+slide with 50ms stagger (toolbar → schematic → oscilloscope → controls)
+- Circuit switch: old schematic fades (150ms), new one fades in (150ms) — use `motion` library
+- Sheet open/close: Radix's built-in animations, customized via `data-state` selectors
+- No per-frame animations on canvas — the waveform IS the motion
+
+**Accessibility defaults** (global CSS):
+- `:focus-visible` — consistent 2px lavender outline with 2px offset on every interactive element
+- `prefers-reduced-motion: reduce` — disables all animations/transitions
+- `::selection` — lavender highlight, base-color text (never the default blue)
+
+**Keyboard shortcuts** (registered via `useKeyboardShortcuts` hook):
+- `Space` — toggle D input
+- `R` — reset (hold)
+- `[` / `]` — decrease / increase noise
+- `-` / `=` — decrease / increase clock speed
+- `1` / `2` / `3` — switch shader style (clean / glow / phosphor)
+- `?` — open shortcuts help overlay
 
 Dark theme only.
 

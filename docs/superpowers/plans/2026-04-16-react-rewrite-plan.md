@@ -96,7 +96,10 @@ Create `package.json` with all dependencies from the spec:
     "@radix-ui/react-slot": "^1.2.4",
     "tailwind-merge": "^3.5.0",
     "class-variance-authority": "^0.7.1",
-    "@catppuccin/palette": "^1.8.0"
+    "@catppuccin/palette": "^1.8.0",
+    "@fontsource-variable/ibm-plex-sans": "^5.2.7",
+    "@fontsource-variable/ibm-plex-mono": "^5.2.7",
+    "motion": "^12.0.0"
   },
   "devDependencies": {
     "typescript": "^6.0.2",
@@ -108,9 +111,10 @@ Create `package.json` with all dependencies from the spec:
     "@testing-library/jest-dom": "^6.9.1",
     "happy-dom": "^20.9.0",
     "@lingui/cli": "^5.9.5",
-    "@lingui/macro": "^5.9.5",
+    "@lingui/babel-plugin-lingui-macro": "^5.9.5",
     "@lingui/vite-plugin": "^5.9.5",
     "tailwindcss": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/bun": "^1.3.12"
@@ -164,10 +168,11 @@ Create `package.json` with all dependencies from the spec:
 ```ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -179,6 +184,8 @@ export default defineConfig({
   base: "./",
 });
 ```
+
+Note: Tailwind v4 uses a dedicated Vite plugin (`@tailwindcss/vite`). No `tailwind.config.js` is needed — the `@theme` block in `globals.css` is the single source of truth.
 
 - [ ] **Step 6: Create index.html**
 
@@ -205,6 +212,11 @@ export default defineConfig({
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+
+// Self-hosted variable fonts (no Google Fonts / FOIT)
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource-variable/ibm-plex-mono";
+
 import "../styles/globals.css";
 
 const root = document.getElementById("root");
@@ -224,7 +236,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-base text-text">
       <h1 className="text-2xl p-8">D-FlipFlop Simulation</h1>
-      <p className="px-8 text-subtext">React + WebGPU rewrite in progress</p>
+      <p className="px-8 text-subtext0">React + WebGPU rewrite in progress</p>
     </div>
   );
 }
@@ -284,6 +296,7 @@ export function toCssVars(): string {
 
 /* Catppuccin Macchiato — sourced from @catppuccin/palette (see theme.ts) */
 @theme {
+  /* Colors */
   --color-base: #24273a;
   --color-mantle: #1e2030;
   --color-crust: #181926;
@@ -309,12 +322,58 @@ export function toCssVars(): string {
   --color-rosewater: #f4dbd6;
   --color-maroon: #ee99a0;
   --color-sapphire: #7dc4e4;
+
+  /* Typography — IBM Plex pair (display + mono) */
+  --font-sans: "IBM Plex Sans Variable", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono Variable", ui-monospace, "Cascadia Mono", monospace;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
 }
 
+/* Base: atmospheric background with subtle radial tint */
 body {
-  background-color: var(--color-base);
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(138, 173, 244, 0.04), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(198, 160, 246, 0.035), transparent 70%),
+    var(--color-base);
   color: var(--color-text);
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";  /* IBM Plex stylistic sets */
+  overscroll-behavior: none;
+}
+
+/* Global focus-visible ring — consistent across all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--color-lavender);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Accessibility: respect user motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-lavender);
+  color: var(--color-base);
+}
+
+/* Mono-styled numeric readouts (voltage values, timing) */
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero", "ss01";
 }
 ```
 
@@ -350,14 +409,18 @@ and dev dependencies, strict TypeScript config, Catppuccin Macchiato theme."
 
 ```json
 {
-  "$schema": "https://biomejs.dev/schemas/latest/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
-  "organizeImports": {
-    "enabled": true
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   },
   "linter": {
     "enabled": true,
@@ -387,10 +450,12 @@ and dev dependencies, strict TypeScript config, Catppuccin Macchiato theme."
     "formatter": { "enabled": true }
   },
   "files": {
-    "ignore": ["dist/**", "node_modules/**", "*.wgsl"]
+    "includes": ["**", "!dist/**", "!node_modules/**", "!**/*.wgsl"]
   }
 }
 ```
+
+Note: Biome 2 moved `organizeImports` under `assist.actions.source`, and `files.ignore` became `files.includes` with `!` negations. Schema version pinned to 2.4.12 for determinism. If upgrading from an older config, run `bunx @biomejs/biome migrate`.
 
 - [ ] **Step 2: Create vitest.config.ts**
 
@@ -3179,10 +3244,26 @@ export function createWaveformPipeline(
 ): WaveformPipelineResources {
   const vertModule = device.createShaderModule({ code: shaders.waveformVert });
 
+  // Explicit bind group layout so all 3 pipelines share a compatible bind group
+  // (layout: "auto" would generate 3 distinct layouts that can't share a bind group).
+  const bindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: "uniform" } },
+      { binding: 1, visibility: GPUShaderStage.VERTEX,
+        buffer: { type: "read-only-storage" } },
+      { binding: 2, visibility: GPUShaderStage.VERTEX,
+        buffer: { type: "read-only-storage" } },
+    ],
+  });
+  const pipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [bindGroupLayout],
+  });
+
   const makePipeline = (fragCode: string): GPURenderPipeline => {
     const fragModule = device.createShaderModule({ code: fragCode });
     return device.createRenderPipeline({
-      layout: "auto",
+      layout: pipelineLayout,
       vertex: { module: vertModule, entryPoint: "vs_main" },
       fragment: {
         module: fragModule,
@@ -3195,7 +3276,7 @@ export function createWaveformPipeline(
           },
         }],
       },
-      primitive: { topology: "triangle-strip", stripIndexFormat: undefined },
+      primitive: { topology: "triangle-strip" },
     });
   };
 
@@ -3205,7 +3286,8 @@ export function createWaveformPipeline(
     phosphor: makePipeline(shaders.waveformPhosphor),
   };
 
-  // 32 bytes: vec2 canvasSize + 5 floats + 3 u32s, padded
+  // Uniforms: vec2<f32> (canvasSize, aligned 8) + 3 f32s + 3 u32s = 32 bytes.
+  // Pad to 48 to satisfy uniform buffer min-size (16-byte multiple, >=16).
   const uniformBuffer = device.createBuffer({
     size: 48,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -3216,14 +3298,15 @@ export function createWaveformPipeline(
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  // Per-channel config: yOffset (f32) + padding + color (vec4 = 16 bytes) = 32 bytes aligned
+  // Per-channel ChannelConfig: yOffset (f32) at 0, color (vec4<f32>) at 16.
+  // Struct size = 32 bytes, align 16.
   const channelBuffer = device.createBuffer({
     size: Math.max(32 * channelCount, 32),
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
   const bindGroup = device.createBindGroup({
-    layout: pipelines.clean.getBindGroupLayout(0),
+    layout: bindGroupLayout,
     entries: [
       { binding: 0, resource: { buffer: uniformBuffer } },
       { binding: 1, resource: { buffer: storageBuffer } },
@@ -3314,8 +3397,19 @@ export function createDigitalPipeline(
 ): DigitalPipelineResources {
   const module = device.createShaderModule({ code: shaders.digital });
 
+  const bindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: "uniform" } },
+      { binding: 1, visibility: GPUShaderStage.VERTEX,
+        buffer: { type: "read-only-storage" } },
+      { binding: 2, visibility: GPUShaderStage.VERTEX,
+        buffer: { type: "read-only-storage" } },
+    ],
+  });
+
   const pipeline = device.createRenderPipeline({
-    layout: "auto",
+    layout: device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
     vertex: { module, entryPoint: "vs_main" },
     fragment: {
       module,
@@ -3345,7 +3439,7 @@ export function createDigitalPipeline(
   });
 
   const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
+    layout: bindGroupLayout,
     entries: [
       { binding: 0, resource: { buffer: uniformBuffer } },
       { binding: 1, resource: { buffer: storageBuffer } },
@@ -3654,6 +3748,14 @@ export const voltageAtomFamily = atomFamily((_netId: string) => atom(0));
 export const paramAtomFamily = atomFamily((_key: string) =>
   atom<number | boolean>(0),
 );
+
+/** Remove atom-family entries for a circuit on unload to prevent memory accumulation. */
+export function clearCircuitAtoms(def: CircuitDefinition): void {
+  for (const probe of def.probes) voltageAtomFamily.remove(probe.netId);
+  for (const ctrl of def.controls) {
+    paramAtomFamily.remove(`${ctrl.targetComponent}.${ctrl.param}`);
+  }
+}
 ```
 
 - [ ] **Step 2: Create settings atoms**
@@ -3831,9 +3933,17 @@ from @catppuccin/palette via theme.ts."
 // src/components/layout/AppLayout.tsx
 import type { ReactNode } from "react";
 
+/**
+ * Full-viewport grid:
+ * Row 1 (auto): Toolbar
+ * Row 2 (min 240px, max 45vh): Circuit Schematic
+ * Row 3 (1fr): Oscilloscope + Controls
+ * Row 4 (auto): StatusStrip
+ */
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="grid h-screen grid-rows-[auto_1fr_1fr] bg-base text-text overflow-hidden">
+    <div className="grid h-screen grid-rows-[auto_minmax(240px,45vh)_1fr_auto]
+                    bg-base text-text overflow-hidden">
       {children}
     </div>
   );
@@ -3845,9 +3955,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 ```tsx
 // src/components/nav/Toolbar.tsx
 import { useAtom, useSetAtom } from "jotai";
+import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { Settings, Info, Globe, CircuitBoard } from "lucide-react";
 import { shaderStyleAtom, settingsOpenAtom, aboutOpenAtom, localeAtom } from "@/atoms/ui-atoms";
+import type { ShaderStyle } from "@/workers/render/shaders";
 import { CircuitSelector } from "./CircuitSelector";
+
+const SHADER_STYLES: ShaderStyle[] = ["clean", "glow", "phosphor"];
 
 export function Toolbar() {
   const [shaderStyle, setShaderStyle] = useAtom(shaderStyleAtom);
@@ -3856,42 +3970,57 @@ export function Toolbar() {
   const [locale, setLocale] = useAtom(localeAtom);
 
   return (
-    <header className="flex items-center gap-4 px-4 py-2 border-b border-surface0 bg-mantle">
+    <header className="flex items-center gap-4 px-4 py-2 border-b border-surface0 bg-mantle/80 backdrop-blur-sm">
+      {/* Logo + product name */}
       <div className="flex items-center gap-2 font-bold text-lavender">
-        <CircuitBoard size={20} />
-        <span>DFF-Sim</span>
+        <CircuitBoard size={18} strokeWidth={2.25} />
+        <span className="readout tracking-[0.15em]">DFF·SIM</span>
       </div>
 
       <CircuitSelector />
 
-      <div className="ml-auto flex items-center gap-1">
-        <div className="flex rounded overflow-hidden border border-surface1">
-          {(["clean", "glow", "phosphor"] as const).map((style) => (
-            <button
+      <div className="ml-auto flex items-center gap-3">
+        {/* Shader style toggle group */}
+        <ToggleGroup.Root
+          type="single"
+          value={shaderStyle}
+          onValueChange={(v) => v && setShaderStyle(v as ShaderStyle)}
+          className="flex rounded overflow-hidden border border-surface1"
+          aria-label="Shader style"
+        >
+          {SHADER_STYLES.map((style, i) => (
+            <ToggleGroup.Item
               key={style}
-              type="button"
-              onClick={() => setShaderStyle(style)}
-              className={`px-3 py-1 text-xs uppercase ${
-                shaderStyle === style ? "bg-surface2 text-text" : "bg-surface0 text-subtext0"
-              }`}
+              value={style}
+              className="readout px-3 py-1 text-[10px] uppercase tracking-widest
+                         bg-surface0 text-subtext0
+                         data-[state=on]:bg-surface2 data-[state=on]:text-text
+                         hover:bg-surface1 transition-colors
+                         focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lavender focus-visible:ring-inset"
+              aria-label={`${style} shader · press ${i + 1}`}
             >
               {style}
-            </button>
+            </ToggleGroup.Item>
           ))}
-        </div>
+        </ToggleGroup.Root>
+
+        <div className="h-6 w-px bg-surface1" aria-hidden />
 
         <button type="button" onClick={() => setSettingsOpen(true)}
-          className="p-2 rounded hover:bg-surface0" aria-label="Settings">
-          <Settings size={18} />
+          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text transition-colors"
+          aria-label="Settings">
+          <Settings size={16} />
         </button>
         <button type="button" onClick={() => setAboutOpen(true)}
-          className="p-2 rounded hover:bg-surface0" aria-label="About">
-          <Info size={18} />
+          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text transition-colors"
+          aria-label="About">
+          <Info size={16} />
         </button>
         <button type="button"
           onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")}
-          className="p-2 rounded hover:bg-surface0" aria-label="Language">
-          <Globe size={18} />
+          className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text transition-colors"
+          aria-label="Language">
+          <Globe size={16} />
         </button>
       </div>
     </header>
@@ -3904,6 +4033,7 @@ export function Toolbar() {
 ```tsx
 // src/components/nav/CircuitSelector.tsx
 import { useAtom } from "jotai";
+import { ChevronDown } from "lucide-react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { dffCircuit } from "@/circuits/dff";
 
@@ -3913,18 +4043,28 @@ export function CircuitSelector() {
   const [circuitDef, setCircuitDef] = useAtom(circuitDefAtom);
 
   return (
-    <select
-      value={circuitDef?.id ?? ""}
-      onChange={(e) => {
-        const def = circuits.find((c) => c.id === e.target.value);
-        if (def) setCircuitDef(def);
-      }}
-      className="bg-surface0 border border-surface1 rounded px-3 py-1 text-sm text-text"
-    >
-      {circuits.map((c) => (
-        <option key={c.id} value={c.id}>{c.name}</option>
-      ))}
-    </select>
+    <label className="relative flex items-center">
+      <span className="readout text-[10px] uppercase tracking-widest text-overlay1 pr-2">
+        Circuit
+      </span>
+      <select
+        value={circuitDef?.id ?? ""}
+        onChange={(e) => {
+          const def = circuits.find((c) => c.id === e.target.value);
+          if (def) setCircuitDef(def);
+        }}
+        className="appearance-none bg-surface0 border border-surface1 rounded
+                   pl-3 pr-8 py-1 text-xs text-text
+                   hover:border-overlay0 transition-colors
+                   focus-visible:outline-none focus-visible:border-lavender focus-visible:ring-1 focus-visible:ring-lavender"
+        aria-label="Select circuit"
+      >
+        {circuits.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+      <ChevronDown size={12} className="absolute right-2 pointer-events-none text-subtext0" />
+    </label>
   );
 }
 ```
@@ -3947,36 +4087,42 @@ CircuitSelector is a native select driven by circuitDefAtom."
 **Files:**
 - Create: `src/components/oscilloscope/OscilloscopePanel.tsx`, `src/components/oscilloscope/WaveformCanvas.tsx`, `src/components/oscilloscope/DigitalCanvas.tsx`, `src/components/oscilloscope/Legend.tsx`
 
-- [ ] **Step 1: DigitalCanvas**
+- [ ] **Step 1: DigitalCanvas (React 19: ref as prop, no forwardRef)**
 
 ```tsx
 // src/components/oscilloscope/DigitalCanvas.tsx
-import { forwardRef } from "react";
+import type { Ref } from "react";
 
-export const DigitalCanvas = forwardRef<HTMLCanvasElement>((_, ref) => (
-  <canvas
-    ref={ref}
-    className="w-full h-full block"
-    aria-label="Digital logic view"
-  />
-));
-DigitalCanvas.displayName = "DigitalCanvas";
+interface Props { ref?: Ref<HTMLCanvasElement> }
+
+export function DigitalCanvas({ ref }: Props) {
+  return (
+    <canvas
+      ref={ref}
+      className="w-full h-full block"
+      aria-label="Digital logic view"
+    />
+  );
+}
 ```
 
-- [ ] **Step 2: WaveformCanvas**
+- [ ] **Step 2: WaveformCanvas (React 19: ref as prop, no forwardRef)**
 
 ```tsx
 // src/components/oscilloscope/WaveformCanvas.tsx
-import { forwardRef } from "react";
+import type { Ref } from "react";
 
-export const WaveformCanvas = forwardRef<HTMLCanvasElement>((_, ref) => (
-  <canvas
-    ref={ref}
-    className="w-full h-full block"
-    aria-label="Real-time analog oscilloscope"
-  />
-));
-WaveformCanvas.displayName = "WaveformCanvas";
+interface Props { ref?: Ref<HTMLCanvasElement> }
+
+export function WaveformCanvas({ ref }: Props) {
+  return (
+    <canvas
+      ref={ref}
+      className="w-full h-full block"
+      aria-label="Real-time analog oscilloscope"
+    />
+  );
+}
 ```
 
 - [ ] **Step 3: Legend**
@@ -3989,14 +4135,17 @@ import { activeProbesAtom } from "@/atoms/ui-atoms";
 export function Legend() {
   const probes = useAtomValue(activeProbesAtom);
   return (
-    <div className="flex gap-4 px-4 py-2 border-t border-surface0 text-sm">
+    <div className="flex gap-4 px-4 py-2 border-t border-surface0">
       {probes.map((p) => (
-        <div key={p.netId} className="flex items-center gap-2">
+        <div key={p.netId} className="flex items-center gap-1.5">
           <span
-            className="inline-block w-3 h-3 rounded-full"
-            style={{ backgroundColor: p.color }}
+            className="inline-block w-2 h-2 rounded-full"
+            style={{ backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
+            aria-hidden
           />
-          <span className="text-subtext0">{p.label}</span>
+          <span className="readout text-[10px] uppercase tracking-widest text-subtext0">
+            {p.label}
+          </span>
         </div>
       ))}
     </div>
@@ -4004,45 +4153,112 @@ export function Legend() {
 }
 ```
 
-- [ ] **Step 4: OscilloscopePanel**
+- [ ] **Step 4: LiveVoltageReadouts (floating per-channel badges)**
+
+```tsx
+// src/components/oscilloscope/LiveVoltageReadouts.tsx
+import { useAtomValue } from "jotai";
+import { activeProbesAtom } from "@/atoms/ui-atoms";
+import { voltageAtomFamily } from "@/atoms/simulation-atoms";
+
+function Readout({ netId, label, color }: { netId: string; label: string; color: string }) {
+  const v = useAtomValue(voltageAtomFamily(netId));
+  return (
+    <span
+      className="readout px-2 py-0.5 bg-base/70 backdrop-blur-sm rounded border border-surface0
+                 text-[10px] tabular-nums"
+      style={{ color }}
+    >
+      {label}: {v.toFixed(2)}V
+    </span>
+  );
+}
+
+export function LiveVoltageReadouts() {
+  const probes = useAtomValue(activeProbesAtom);
+  return (
+    <div className="absolute top-2 right-2 flex gap-1.5 pointer-events-none" aria-live="polite" aria-atomic="true">
+      {probes.map((p) => (
+        <Readout key={p.netId} netId={p.netId} label={p.label} color={p.color} />
+      ))}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 5: InstrumentBezel (physical oscilloscope screen framing)**
+
+```tsx
+// src/components/oscilloscope/InstrumentBezel.tsx
+import type { ReactNode } from "react";
+
+interface Props {
+  children: ReactNode;
+  label?: string;
+}
+
+/**
+ * Wraps a canvas in a bezel that evokes a physical oscilloscope screen:
+ * inset shadow, darker background, rounded corners, subtle grid texture.
+ */
+export function InstrumentBezel({ children, label }: Props) {
+  return (
+    <div className="relative flex flex-col min-h-0 m-2 rounded-lg border border-surface1
+                    bg-crust/60 shadow-[inset_0_2px_8px_rgba(0,0,0,0.35)]
+                    overflow-hidden">
+      {label && (
+        <div className="readout absolute top-2 left-3 text-[9px] uppercase tracking-[0.2em] text-overlay0 pointer-events-none">
+          {label}
+        </div>
+      )}
+      <div className="relative flex-1 min-h-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 6: OscilloscopePanel (with bezel + readouts)**
 
 ```tsx
 // src/components/oscilloscope/OscilloscopePanel.tsx
-import { type RefObject } from "react";
+import type { RefObject } from "react";
 import { DigitalCanvas } from "./DigitalCanvas";
 import { WaveformCanvas } from "./WaveformCanvas";
 import { Legend } from "./Legend";
+import { InstrumentBezel } from "./InstrumentBezel";
+import { LiveVoltageReadouts } from "./LiveVoltageReadouts";
 
 interface Props {
-  waveformRef: RefObject<HTMLCanvasElement>;
-  digitalRef: RefObject<HTMLCanvasElement>;
+  waveformRef: RefObject<HTMLCanvasElement | null>;
+  digitalRef: RefObject<HTMLCanvasElement | null>;
 }
 
 export function OscilloscopePanel({ waveformRef, digitalRef }: Props) {
   return (
-    <section className="grid grid-rows-[auto_1fr_1fr_auto] min-h-0 bg-base">
-      <div className="px-4 py-1 text-xs uppercase tracking-wider text-subtext0 border-b border-surface0">
-        Digital Logic View
-      </div>
-      <div className="min-h-0">
+    <section className="grid grid-rows-[1fr_1fr_auto] min-h-0">
+      <InstrumentBezel label="Digital Logic">
         <DigitalCanvas ref={digitalRef} />
-      </div>
-      <div className="min-h-0 border-t border-surface0">
+      </InstrumentBezel>
+      <InstrumentBezel label="Oscilloscope">
         <WaveformCanvas ref={waveformRef} />
-      </div>
+        <LiveVoltageReadouts />
+      </InstrumentBezel>
       <Legend />
     </section>
   );
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/components/oscilloscope/
 git commit -m "feat: add OscilloscopePanel with Digital/Waveform canvases and Legend
 
-Canvases via forwardRef for OffscreenCanvas transfer. Legend driven
+Canvases accept ref as prop (React 19 pattern, no forwardRef).
+Parent transfers OffscreenCanvas via canvas ref. Legend driven
 by activeProbesAtom. Panel uses subgrid-compatible layout."
 ```
 
@@ -4053,42 +4269,61 @@ by activeProbesAtom. Panel uses subgrid-compatible layout."
 **Files:**
 - Create: `src/components/controls/ControlPanel.tsx`, `src/components/controls/ParamSlider.tsx`, `src/components/controls/ParamToggle.tsx`, `src/components/controls/ParamMomentary.tsx`, `src/components/controls/ProbeSelector.tsx`
 
-- [ ] **Step 1: ParamSlider**
+- [ ] **Step 1: ParamSlider (Radix Slider, not native range input)**
 
 ```tsx
 // src/components/controls/ParamSlider.tsx
 import { useAtom } from "jotai";
+import * as Slider from "@radix-ui/react-slider";
 import { paramAtomFamily } from "@/atoms/simulation-atoms";
 import type { ControlDef } from "@/lib/types";
 
 export function ParamSlider({ control }: { control: ControlDef }) {
   const key = `${control.targetComponent}.${control.param}`;
   const [value, setValue] = useAtom(paramAtomFamily(key));
+  const numValue = typeof value === "number"
+    ? value
+    : (control.defaultValue as number) ?? 0;
 
   return (
-    <label className="grid grid-cols-[1fr_auto] items-center gap-2 py-1">
-      <span className="text-xs text-subtext0">{control.label}</span>
-      <input
-        type="range"
+    <div className="grid grid-cols-[1fr_auto] gap-2 items-center py-2">
+      <label className="text-xs uppercase tracking-wider text-subtext0">
+        {control.label}
+      </label>
+      <span className="readout text-xs text-text tabular-nums">
+        {numValue.toFixed(0)}
+      </span>
+      <Slider.Root
+        className="col-span-2 relative flex items-center h-6 group select-none touch-none"
         min={control.min ?? 0}
         max={control.max ?? 100}
-        value={typeof value === "number" ? value : (control.defaultValue as number) ?? 0}
-        onChange={(e) => setValue(Number(e.target.value))}
-        className="col-span-2 w-full accent-lavender"
-      />
-      <span className="col-span-2 text-xs text-right text-subtext1 font-mono">
-        {typeof value === "number" ? value.toFixed(0) : 0}
-      </span>
-    </label>
+        step={1}
+        value={[numValue]}
+        onValueChange={([v]) => v !== undefined && setValue(v)}
+        aria-label={control.label}
+      >
+        <Slider.Track className="relative h-[2px] grow bg-surface1 rounded-full">
+          <Slider.Range className="absolute h-full bg-gradient-to-r from-lavender to-blue rounded-full" />
+        </Slider.Track>
+        <Slider.Thumb
+          className="block w-4 h-4 bg-text rounded-full border-2 border-base shadow-lg
+                     transition-transform duration-75 ease-out
+                     hover:scale-110 active:scale-95
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender
+                     focus-visible:ring-offset-2 focus-visible:ring-offset-base"
+        />
+      </Slider.Root>
+    </div>
   );
 }
 ```
 
-- [ ] **Step 2: ParamToggle**
+- [ ] **Step 2: ParamToggle (Radix Switch, physical-toggle styling)**
 
 ```tsx
 // src/components/controls/ParamToggle.tsx
 import { useAtom } from "jotai";
+import * as Switch from "@radix-ui/react-switch";
 import { paramAtomFamily } from "@/atoms/simulation-atoms";
 import type { ControlDef } from "@/lib/types";
 
@@ -4099,22 +4334,35 @@ export function ParamToggle({ control }: { control: ControlDef }) {
 
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-2 py-2">
-      <span className="text-xs text-subtext0">{control.label}</span>
-      <button
-        type="button"
-        onClick={() => setValue(!isOn)}
-        className={`px-3 py-1 rounded text-xs font-bold uppercase ${
-          isOn ? "bg-blue text-base" : "bg-surface1 text-subtext0"
-        }`}
+      <label className="text-xs uppercase tracking-wider text-subtext0">
+        {control.label}
+      </label>
+      <Switch.Root
+        checked={isOn}
+        onCheckedChange={setValue}
+        className="relative w-14 h-7 rounded-full bg-surface1
+                   data-[state=checked]:bg-green
+                   transition-colors duration-200 ease-out
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender
+                   focus-visible:ring-offset-2 focus-visible:ring-offset-base"
+        aria-label={control.label}
       >
-        {isOn ? "HIGH" : "LOW"}
-      </button>
+        <Switch.Thumb
+          className="block w-5 h-5 bg-text rounded-full shadow-md
+                     translate-x-1 data-[state=checked]:translate-x-8
+                     transition-transform duration-200 ease-out"
+        />
+        <span className="readout absolute left-2 top-1/2 -translate-y-1/2
+                         text-[9px] font-bold text-base pointer-events-none
+                         opacity-0 data-[state=checked]:opacity-100
+                         transition-opacity" aria-hidden>ON</span>
+      </Switch.Root>
     </div>
   );
 }
 ```
 
-- [ ] **Step 3: ParamMomentary**
+- [ ] **Step 3: ParamMomentary (hold-to-activate with press animation)**
 
 ```tsx
 // src/components/controls/ParamMomentary.tsx
@@ -4128,15 +4376,26 @@ export function ParamMomentary({ control }: { control: ControlDef }) {
 
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-2 py-2">
-      <span className="text-xs text-subtext0">{control.label}</span>
+      <label className="text-xs uppercase tracking-wider text-subtext0">
+        {control.label}
+      </label>
       <button
         type="button"
         onPointerDown={() => setValue(true)}
         onPointerUp={() => setValue(false)}
         onPointerLeave={() => setValue(false)}
-        className="px-3 py-1 rounded text-xs font-bold uppercase bg-red/70 active:bg-red text-base"
+        onKeyDown={(e) => e.key === " " && setValue(true)}
+        onKeyUp={(e) => e.key === " " && setValue(false)}
+        className="readout px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-widest
+                   bg-red/10 border border-red/40 text-red
+                   transition-all duration-75 ease-out
+                   hover:bg-red/20 hover:border-red
+                   active:bg-red active:text-base active:translate-y-px active:shadow-inner
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red
+                   focus-visible:ring-offset-2 focus-visible:ring-offset-base"
       >
-        HOLD
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-red mr-2 align-middle" />
+        Hold
       </button>
     </div>
   );
@@ -4159,7 +4418,9 @@ export function ControlPanel() {
 
   return (
     <div className="px-4 py-3 border-b border-surface0">
-      <h3 className="text-xs uppercase tracking-wider text-subtext0 mb-2">Controls</h3>
+      <h3 className="readout text-[10px] uppercase tracking-[0.2em] text-overlay1 mb-2">
+        Controls
+      </h3>
       {circuitDef.controls.map((ctrl) => {
         const key = `${ctrl.targetComponent}.${ctrl.param}`;
         if (ctrl.type === "slider") return <ParamSlider key={key} control={ctrl} />;
@@ -4177,8 +4438,36 @@ export function ControlPanel() {
 ```tsx
 // src/components/controls/ProbeSelector.tsx
 import { useAtom, useAtomValue } from "jotai";
-import { circuitDefAtom } from "@/atoms/simulation-atoms";
+import { circuitDefAtom, voltageAtomFamily } from "@/atoms/simulation-atoms";
 import { activeProbeIdsAtom } from "@/atoms/ui-atoms";
+import type { Probe } from "@/lib/types";
+
+function ProbeRow({ probe, active, onToggle }: {
+  probe: Probe; active: boolean; onToggle: () => void;
+}) {
+  const voltage = useAtomValue(voltageAtomFamily(probe.netId));
+  return (
+    <label className="flex items-center gap-2.5 py-1 cursor-pointer group rounded px-1 -mx-1 hover:bg-surface0/60">
+      <input
+        type="checkbox"
+        checked={active}
+        onChange={onToggle}
+        className="accent-lavender focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 focus-visible:ring-offset-base"
+      />
+      <span
+        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+        style={{ backgroundColor: probe.color, boxShadow: active ? `0 0 6px ${probe.color}` : undefined }}
+        aria-hidden
+      />
+      <span className="readout text-xs text-text flex-1" style={{ letterSpacing: 0.5 }}>
+        {probe.label}
+      </span>
+      <span className="readout text-[10px] text-subtext0 tabular-nums">
+        {voltage.toFixed(2)}V
+      </span>
+    </label>
+  );
+}
 
 export function ProbeSelector() {
   const circuitDef = useAtomValue(circuitDefAtom);
@@ -4192,27 +4481,22 @@ export function ProbeSelector() {
     setActiveIds(next);
   };
 
-  const isActive = (netId: string) =>
-    activeIds.size === 0 || activeIds.has(netId);
+  // Empty set means all probes active (default)
+  const isActive = (netId: string) => activeIds.size === 0 || activeIds.has(netId);
 
   return (
     <div className="px-4 py-3 border-b border-surface0">
-      <h3 className="text-xs uppercase tracking-wider text-subtext0 mb-2">Probes</h3>
-      <div className="space-y-1">
+      <h3 className="readout text-[10px] uppercase tracking-[0.2em] text-overlay1 mb-2">
+        Probes
+      </h3>
+      <div>
         {circuitDef.probes.map((p) => (
-          <label key={p.netId} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isActive(p.netId)}
-              onChange={() => toggleProbe(p.netId)}
-              className="accent-lavender"
-            />
-            <span
-              className="inline-block w-3 h-3 rounded-full"
-              style={{ backgroundColor: p.color }}
-            />
-            <span className="text-sm text-text">{p.label}</span>
-          </label>
+          <ProbeRow
+            key={p.netId}
+            probe={p}
+            active={isActive(p.netId)}
+            onToggle={() => toggleProbe(p.netId)}
+          />
         ))}
       </div>
     </div>
@@ -4224,12 +4508,15 @@ export function ProbeSelector() {
 
 ```bash
 git add src/components/controls/
-git commit -m "feat: add dynamic control components driven by circuit def
+git commit -m "feat: add Radix-primitive control components with instrument styling
 
-ParamSlider/Toggle/Momentary each subscribe to one paramAtomFamily
-atom — per-atom subscriptions eliminate cross-control re-renders.
-ControlPanel iterates circuitDef.controls[]. ProbeSelector toggles
-activeProbeIdsAtom; empty set means all probes active."
+ParamSlider uses @radix-ui/react-slider with gradient track and
+scale/press animations. ParamToggle uses @radix-ui/react-switch
+with physical-toggle sliding thumb. ParamMomentary is a
+hold-to-activate button with press-down visual feedback. All with
+consistent focus-visible rings. Each subscribes to a single
+paramAtomFamily atom — per-atom subscriptions eliminate
+cross-control re-renders."
 ```
 
 ---
@@ -4239,13 +4526,11 @@ activeProbeIdsAtom; empty set means all probes active."
 **Files:**
 - Create: `src/components/schematic/CircuitSchematic.tsx`, `src/components/schematic/SchematicNode.tsx`, `src/components/schematic/SchematicWire.tsx`
 
-- [ ] **Step 1: SchematicNode**
+- [ ] **Step 1: SchematicNode (IC-chip styling with pin-1 notch)**
 
 ```tsx
 // src/components/schematic/SchematicNode.tsx
 import type { ComponentDef } from "@/lib/types";
-import { useAtomValue } from "jotai";
-import { voltageAtomFamily } from "@/atoms/simulation-atoms";
 
 interface Props {
   component: ComponentDef;
@@ -4255,31 +4540,52 @@ interface Props {
   height: number;
 }
 
+/** Maps component type to datasheet-style part number */
+const PART_NUMBER: Record<string, string> = {
+  DFlipFlop: "74LV74",
+  ClockSource: "CLK-GEN",
+  SignalSource: "INPUT",
+  ANDGate: "74LV08",
+  ORGate: "74LV32",
+  XORGate: "74LV86",
+  NOTGate: "74LV04",
+  FullAdder: "74LS283",
+};
+
 export function SchematicNode({ component, x, y, width, height }: Props) {
-  const label = component.type === "DFlipFlop" ? "D-FF" : component.type;
+  const partNumber = PART_NUMBER[component.type] ?? component.type;
+
   return (
     <g transform={`translate(${x}, ${y})`}>
+      {/* Chip body with subtle gradient for depth */}
       <rect
         width={width}
         height={height}
-        rx={8}
+        rx={2}
         className="fill-surface1 stroke-overlay0"
-        strokeWidth={2}
+        strokeWidth={1}
       />
+      {/* Pin-1 notch — small circle in top-left, standard IC marking */}
+      <circle cx={8} cy={8} r={2.5} className="fill-base stroke-overlay0" strokeWidth={0.5} />
+      {/* Part number — uppercase, tabular */}
       <text
         x={width / 2}
-        y={height / 2}
+        y={height / 2 - 4}
         textAnchor="middle"
         dominantBaseline="middle"
-        className="fill-text font-mono text-sm"
+        className="readout fill-text"
+        style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" }}
       >
-        {label}
+        {partNumber}
       </text>
+      {/* Instance ID — small, overlay color */}
       <text
         x={width / 2}
-        y={height + 16}
+        y={height / 2 + 10}
         textAnchor="middle"
-        className="fill-subtext0 text-xs"
+        dominantBaseline="middle"
+        className="readout fill-overlay0"
+        style={{ fontSize: 9 }}
       >
         {component.id}
       </text>
@@ -4288,7 +4594,30 @@ export function SchematicNode({ component, x, y, width, height }: Props) {
 }
 ```
 
-- [ ] **Step 2: SchematicWire**
+- [ ] **Step 1b: SchematicGrid (PCB background pattern)**
+
+```tsx
+// src/components/schematic/SchematicGrid.tsx
+export function SchematicGrid() {
+  return (
+    <>
+      <defs>
+        <pattern id="pcb-grid" width={24} height={24} patternUnits="userSpaceOnUse">
+          <path d="M 24 0 L 0 0 0 24" fill="none"
+                stroke="var(--color-surface0)" strokeWidth={0.5} />
+          <circle cx={0} cy={0} r={0.8} fill="var(--color-overlay0)" opacity={0.35} />
+        </pattern>
+        <filter id="wire-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation={2.5} />
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#pcb-grid)" />
+    </>
+  );
+}
+```
+
+- [ ] **Step 2: SchematicWire (orthogonal routing + glow + flow)**
 
 ```tsx
 // src/components/schematic/SchematicWire.tsx
@@ -4306,28 +4635,59 @@ interface Props {
 export function SchematicWire({ netId, label, color, points, threshold = 1.0 }: Props) {
   const voltage = useAtomValue(voltageAtomFamily(netId));
   const isActive = voltage > threshold;
+
+  const firstPoint = points.split(" ")[0]?.split(",") ?? ["0", "0"];
+  const labelX = Number(firstPoint[0] ?? 0);
+  const labelY = Number(firstPoint[1] ?? 0) - 8;
+
   return (
     <g>
+      {/* Base wire — always visible, subdued */}
       <polyline
         points={points}
         fill="none"
-        stroke={isActive ? color : "currentColor"}
-        strokeWidth={isActive ? 3 : 2}
-        className={isActive ? "" : "text-overlay0"}
+        stroke="var(--color-overlay0)"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Active overlay — glowing, dashed flow when signal is HIGH */}
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray="8 4"
+        filter="url(#wire-glow)"
         style={{
-          filter: isActive ? `drop-shadow(0 0 4px ${color})` : undefined,
-          transition: "stroke-width 100ms, filter 100ms",
+          opacity: isActive ? 1 : 0,
+          transition: "opacity 80ms ease-out",
+          animation: isActive ? "wire-flow 1s linear infinite" : "none",
         }}
       />
+      {/* Voltage annotation */}
       <text
-        x={points.split(" ")[0]?.split(",")[0] ?? 0}
-        y={Number(points.split(" ")[0]?.split(",")[1] ?? 0) - 6}
-        className="fill-subtext0 text-xs font-mono"
+        x={labelX}
+        y={labelY}
+        className="readout fill-subtext0"
+        style={{ fontSize: 10, letterSpacing: 0.3 }}
       >
-        {label}: {voltage.toFixed(2)}V
+        <tspan fill={color}>{label}</tspan>
+        <tspan dx={6} className="tabular-nums">{voltage.toFixed(2)}V</tspan>
       </text>
     </g>
   );
+}
+```
+
+Also add the flow keyframes to globals.css:
+```css
+/* Append to src/styles/globals.css */
+@keyframes wire-flow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -12; }
 }
 ```
 
@@ -4337,6 +4697,7 @@ export function SchematicWire({ netId, label, color, points, threshold = 1.0 }: 
 // src/components/schematic/CircuitSchematic.tsx
 import { useAtomValue } from "jotai";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
+import { SchematicGrid } from "./SchematicGrid";
 import { SchematicNode } from "./SchematicNode";
 import { SchematicWire } from "./SchematicWire";
 
@@ -4383,15 +4744,22 @@ export function CircuitSchematic() {
   }).filter(Boolean);
 
   return (
-    <section className="bg-mantle overflow-hidden min-h-0">
-      <div className="px-4 py-1 text-xs uppercase tracking-wider text-subtext0 border-b border-surface0">
-        Circuit Schematic — {circuitDef.name}
+    <section className="relative bg-mantle/80 overflow-hidden min-h-0">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-1.5 flex items-baseline gap-3
+                      text-xs uppercase tracking-[0.2em] text-subtext0
+                      bg-mantle/60 backdrop-blur-sm border-b border-surface0">
+        <span className="readout text-overlay1">Schematic</span>
+        <span className="text-text">{circuitDef.name}</span>
+        <span className="ml-auto readout text-[10px] text-overlay0">
+          {circuitDef.components.length} components · {circuitDef.nets.length} nets
+        </span>
       </div>
       <svg
         viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
         preserveAspectRatio="xMidYMid meet"
-        className="w-full h-[calc(100%-2rem)]"
+        className="w-full h-full"
       >
+        <SchematicGrid />
         {wires.map((w, i) => w && (
           <SchematicWire
             key={`${w.netId}-${i}`}
@@ -4508,7 +4876,10 @@ export function SettingsSheet() {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-base/80 backdrop-blur-sm z-40" />
-        <Dialog.Content className="fixed top-0 right-0 h-full w-96 bg-mantle border-l border-surface0 p-6 z-50 overflow-y-auto">
+        <Dialog.Content
+          className="fixed top-0 right-0 h-full w-96 bg-mantle border-l border-surface0 p-6 z-50 overflow-y-auto"
+          aria-describedby={undefined}
+        >
           <div className="flex items-center justify-between mb-4">
             <Dialog.Title className="text-lg font-bold">Voltage Settings</Dialog.Title>
             <Dialog.Close asChild>
@@ -4570,7 +4941,10 @@ export function AboutSheet() {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-base/80 backdrop-blur-sm z-40" />
-        <Dialog.Content className="fixed top-0 right-0 h-full w-96 bg-mantle border-l border-surface0 p-6 z-50 overflow-y-auto">
+        <Dialog.Content
+          className="fixed top-0 right-0 h-full w-96 bg-mantle border-l border-surface0 p-6 z-50 overflow-y-auto"
+          aria-describedby={undefined}
+        >
           <div className="flex items-center justify-between mb-4">
             <Dialog.Title className="text-lg font-bold">About</Dialog.Title>
             <Dialog.Close asChild>
@@ -4611,6 +4985,192 @@ displayed when navigator.gpu is absent."
 
 ---
 
+### Task 24b: StatusStrip, keyboard shortcuts, ShortcutsOverlay
+
+**Files:**
+- Create: `src/components/status/StatusStrip.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/components/shortcuts/ShortcutsOverlay.tsx`
+
+- [ ] **Step 1: StatusStrip (bottom info bar)**
+
+```tsx
+// src/components/status/StatusStrip.tsx
+import { useAtomValue } from "jotai";
+import { circuitDefAtom } from "@/atoms/simulation-atoms";
+
+export function StatusStrip() {
+  const circuitDef = useAtomValue(circuitDefAtom);
+
+  return (
+    <footer className="flex items-center gap-4 px-4 py-1 border-t border-surface0
+                       bg-mantle readout text-[10px] text-subtext0 tracking-wider">
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green animate-pulse" aria-hidden />
+        RUNNING
+      </span>
+      <span className="text-overlay0">·</span>
+      <span>10.0 kHz</span>
+      <span className="text-overlay0">·</span>
+      <span>WebGPU</span>
+      {circuitDef && (
+        <>
+          <span className="text-overlay0">·</span>
+          <span>{circuitDef.id}</span>
+        </>
+      )}
+      <span className="ml-auto">DFF-Sim v2.0</span>
+    </footer>
+  );
+}
+```
+
+- [ ] **Step 2: useKeyboardShortcuts hook**
+
+```ts
+// src/hooks/useKeyboardShortcuts.ts
+import { useEffect } from "react";
+import { useSetAtom, useStore } from "jotai";
+import {
+  circuitDefAtom,
+  paramAtomFamily,
+} from "@/atoms/simulation-atoms";
+import { shaderStyleAtom } from "@/atoms/ui-atoms";
+
+export function useKeyboardShortcuts(options: { onOpenHelp: () => void }) {
+  const setShaderStyle = useSetAtom(shaderStyleAtom);
+  const store = useStore();
+
+  useEffect(() => {
+    function bump(key: string, delta: number) {
+      const def = store.get(circuitDefAtom);
+      if (!def) return;
+      const ctrl = def.controls.find((c) => c.param === key);
+      if (!ctrl) return;
+      const atom = paramAtomFamily(`${ctrl.targetComponent}.${ctrl.param}`);
+      const current = store.get(atom);
+      const next = Math.max(ctrl.min ?? 0, Math.min(ctrl.max ?? 100, Number(current) + delta));
+      store.set(atom, next);
+    }
+
+    function toggle(key: string) {
+      const def = store.get(circuitDefAtom);
+      if (!def) return;
+      const ctrl = def.controls.find((c) => c.param === key);
+      if (!ctrl) return;
+      const atom = paramAtomFamily(`${ctrl.targetComponent}.${ctrl.param}`);
+      const current = store.get(atom);
+      store.set(atom, !current);
+    }
+
+    function momentary(key: string, active: boolean) {
+      const def = store.get(circuitDefAtom);
+      if (!def) return;
+      const ctrl = def.controls.find((c) => c.param === key);
+      if (!ctrl) return;
+      const atom = paramAtomFamily(`${ctrl.targetComponent}.${ctrl.param}`);
+      store.set(atom, active);
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      // Don't fire when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.repeat) return;
+
+      switch (e.key) {
+        case " ": e.preventDefault(); toggle("targetLogic"); break;
+        case "r": case "R": momentary("reset", true); break;
+        case "[": bump("noise", -5); break;
+        case "]": bump("noise", 5); break;
+        case "-": bump("speed", -5); break;
+        case "=": bump("speed", 5); break;
+        case "1": setShaderStyle("clean"); break;
+        case "2": setShaderStyle("glow"); break;
+        case "3": setShaderStyle("phosphor"); break;
+        case "?": options.onOpenHelp(); break;
+      }
+    }
+
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.key === "r" || e.key === "R") momentary("reset", false);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [store, setShaderStyle, options]);
+}
+```
+
+- [ ] **Step 3: ShortcutsOverlay**
+
+```tsx
+// src/components/shortcuts/ShortcutsOverlay.tsx
+import * as Dialog from "@radix-ui/react-dialog";
+import { atom, useAtom } from "jotai";
+import { X } from "lucide-react";
+
+export const shortcutsOpenAtom = atom(false);
+
+const SHORTCUTS: Array<[string, string]> = [
+  ["Space", "Toggle D input"],
+  ["R", "Reset (hold)"],
+  ["[  /  ]", "Decrease / increase noise"],
+  ["−  /  =", "Decrease / increase clock speed"],
+  ["1 / 2 / 3", "Shader style: Clean / Glow / Phosphor"],
+  ["?", "Show this help"],
+  ["Esc", "Close this help"],
+];
+
+export function ShortcutsOverlay() {
+  const [open, setOpen] = useAtom(shortcutsOpenAtom);
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-base/80 backdrop-blur-sm z-40" />
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50
+                     w-[32rem] max-w-[90vw] bg-mantle border border-surface1 rounded-lg
+                     shadow-2xl p-6"
+          aria-describedby={undefined}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <Dialog.Title className="text-lg font-bold">Keyboard Shortcuts</Dialog.Title>
+            <Dialog.Close asChild>
+              <button type="button" className="p-1 rounded hover:bg-surface0" aria-label="Close">
+                <X size={18} />
+              </button>
+            </Dialog.Close>
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+            {SHORTCUTS.map(([keys, desc]) => (
+              <div key={keys} className="contents">
+                <dt className="readout text-xs text-lavender tabular-nums">{keys}</dt>
+                <dd className="text-sm text-subtext0">{desc}</dd>
+              </div>
+            ))}
+          </dl>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/status/ src/components/shortcuts/ src/hooks/useKeyboardShortcuts.ts
+git commit -m "feat: add StatusStrip, keyboard shortcuts, ShortcutsOverlay
+
+StatusStrip: bottom info bar with sim state, tick rate, adapter info.
+useKeyboardShortcuts: global hotkeys (Space, R, [/], -/=, 1/2/3, ?).
+ShortcutsOverlay: help dialog opened with ? key, listing all bindings."
+```
+
+---
+
 ## Phase 12: useSimulation Hook (Integration)
 
 ### Task 25: useSimulation hook
@@ -4626,10 +5186,14 @@ import { useEffect, useRef, type RefObject } from "react";
 import { useAtomValue, useStore } from "jotai";
 import * as Comlink from "comlink";
 import { createWorkerBridge, type WorkerBridge } from "@/lib/worker-bridge";
-import { circuitDefAtom, voltageAtomFamily, paramAtomFamily } from "@/atoms/simulation-atoms";
+import {
+  circuitDefAtom,
+  voltageAtomFamily,
+  paramAtomFamily,
+  clearCircuitAtoms,
+} from "@/atoms/simulation-atoms";
 import { activeProbesAtom, shaderStyleAtom } from "@/atoms/ui-atoms";
 import { voltageSpecsAtom } from "@/atoms/settings-atoms";
-import type { Probe } from "@/lib/types";
 import { Layout } from "@/lib/constants";
 
 export function useSimulation(
@@ -4682,10 +5246,13 @@ export function useSimulation(
 
       await bridge.physics.loadCircuit(circuitDef);
 
-      // Status callback: write voltages into atoms
+      // Status callback: read the CURRENT active probes from the store each time,
+      // not the snapshot captured at effect-setup. This prevents stale-closure bugs
+      // when user toggles probes mid-simulation.
       await bridge.physics.registerStatusCallback(
         Comlink.proxy((voltages: number[]) => {
-          for (const probe of activeProbes) {
+          const currentProbes = store.get(activeProbesAtom);
+          for (const probe of currentProbes) {
             const v = voltages[probe.channelIndex];
             if (v !== undefined) {
               store.set(voltageAtomFamily(probe.netId), v);
@@ -4703,6 +5270,8 @@ export function useSimulation(
       cancelled = true;
       bridgeRef.current?.terminate();
       bridgeRef.current = null;
+      // Clean up atom family entries to prevent memory accumulation
+      if (circuitDef) clearCircuitAtoms(circuitDef);
     };
   }, [circuitDef]);
 
@@ -4776,7 +5345,7 @@ export function Providers({ children }: { children: ReactNode }) {
 ```tsx
 // src/app/App.tsx
 import { useEffect, useRef } from "react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Toolbar } from "@/components/nav/Toolbar";
 import { OscilloscopePanel } from "@/components/oscilloscope/OscilloscopePanel";
@@ -4786,7 +5355,10 @@ import { ProbeSelector } from "@/components/controls/ProbeSelector";
 import { SettingsSheet } from "@/components/settings/SettingsSheet";
 import { AboutSheet } from "@/components/about/AboutSheet";
 import { WebGPUUnavailable } from "@/components/fallback/WebGPUUnavailable";
+import { StatusStrip } from "@/components/status/StatusStrip";
+import { ShortcutsOverlay, shortcutsOpenAtom } from "@/components/shortcuts/ShortcutsOverlay";
 import { useSimulation } from "@/hooks/useSimulation";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { dffCircuit } from "@/circuits/dff";
 import { Providers } from "./providers";
@@ -4795,26 +5367,30 @@ function AppInner() {
   const waveformRef = useRef<HTMLCanvasElement>(null);
   const digitalRef = useRef<HTMLCanvasElement>(null);
   const setCircuit = useSetAtom(circuitDefAtom);
+  const setShortcutsOpen = useSetAtom(shortcutsOpenAtom);
 
   useEffect(() => {
     setCircuit(dffCircuit);
   }, [setCircuit]);
 
   useSimulation(waveformRef, digitalRef);
+  useKeyboardShortcuts({ onOpenHelp: () => setShortcutsOpen(true) });
 
   return (
     <AppLayout>
       <Toolbar />
       <CircuitSchematic />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_clamp(280px,25vw,400px)] min-h-0">
         <OscilloscopePanel waveformRef={waveformRef} digitalRef={digitalRef} />
         <aside className="flex flex-col overflow-y-auto border-l border-surface0">
           <ControlPanel />
           <ProbeSelector />
         </aside>
       </div>
+      <StatusStrip />
       <SettingsSheet />
       <AboutSheet />
+      <ShortcutsOverlay />
     </AppLayout>
   );
 }
@@ -4846,17 +5422,28 @@ Expected: No errors, dist/ produced.
 bun run dev
 ```
 
-Expected: Open http://localhost:5173, see toolbar, schematic with CLK/D/DFF nodes, oscilloscope with waveforms, controls responsive. Toggle D, move sliders — waveforms update.
+Open http://localhost:5173. Expected:
+- Dark Catppuccin Macchiato theme with IBM Plex typography
+- Toolbar: DFF·SIM logo, circuit dropdown, Clean/Glow/Phosphor toggle group, settings/about/language buttons
+- Schematic panel: PCB-grid background, IC-chip styled components, orthogonal wires that glow with animated flow when HIGH
+- Oscilloscope: two canvases in framed "instrument bezels" with floating voltage readouts, legend below
+- Controls: Radix slider with gradient track, Radix switch with sliding thumb, red momentary button
+- Status strip at the bottom with running indicator, tick rate, adapter, version
+- Keyboard shortcuts work: Space toggles D, R holds reset, [/] changes noise, -/= changes speed, 1/2/3 switches shaders, ? opens help
+- Focus rings appear when tabbing through interactive elements
+- Waveforms animate in real-time, voltages update in readouts
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/app/
-git commit -m "feat: integrate all components into full-viewport dashboard
+git commit -m "feat: integrate all components into full-viewport instrument panel
 
 App.tsx mounts Toolbar, Schematic, OscilloscopePanel, Controls,
-sheets. useSimulation wires Workers to atoms. DFF circuit loaded
-on mount. WebGPU fallback if navigator.gpu absent."
+StatusStrip, sheets, shortcuts overlay. useSimulation wires
+Workers to atoms, useKeyboardShortcuts registers global hotkeys.
+DFF circuit loaded on mount. WebGPU fallback if navigator.gpu absent.
+Responsive clamp() width on control sidebar."
 ```
 
 ---
@@ -4887,19 +5474,23 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 2: Update vite.config.ts**
+- [ ] **Step 2: Update vite.config.ts (Lingui + Tailwind + React)**
 
 ```ts
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { lingui } from "@lingui/vite-plugin";
 import path from "node:path";
 
 export default defineConfig({
   plugins: [
+    // Lingui macros require babel transform. @vitejs/plugin-react v6 removed
+    // built-in Babel, but accepts a `babel` option that still works.
     react({ babel: { plugins: ["@lingui/babel-plugin-lingui-macro"] } }),
     lingui(),
+    tailwindcss(),
   ],
   resolve: {
     alias: {
@@ -4910,6 +5501,8 @@ export default defineConfig({
   base: "./",
 });
 ```
+
+Note: in Lingui 5, the `@lingui/macro` package is split. Import macros from `@lingui/core/macro` (for `t`, `plural`, `msg`, `defineMessage`) or `@lingui/react/macro` (for `<Trans>`, `<Plural>`). The Babel plugin transforms these at build time.
 
 - [ ] **Step 3: Create i18n init**
 
@@ -5077,18 +5670,43 @@ gh pr create --title "React + WebGPU rewrite" --body "Complete ground-up rewrite
 
 ## Completion Checklist
 
-After all 28 tasks:
+After all tasks (1-28 + 24b):
 
+**Correctness**
 - [ ] All unit tests pass: `bun run test`
 - [ ] Typecheck passes: `bun run typecheck`
 - [ ] Lint passes: `bun run check`
 - [ ] Build succeeds: `bun run build`
 - [ ] Dev server runs: `bun run dev`
-- [ ] Browser verification: DFF simulation visible, waveforms animate, controls responsive
-- [ ] Shader styles switchable (clean/glow/phosphor)
-- [ ] Settings sheet opens, validates, saves
-- [ ] Schematic wires highlight with voltage
-- [ ] Probe selector toggles channels
-- [ ] i18n locale switch works
-- [ ] CI pipeline green
+- [ ] No console errors in browser
+
+**Functional**
+- [ ] DFF simulation runs, waveforms animate smoothly at 60fps
+- [ ] Toggle D flips the input signal
+- [ ] Noise slider varies visible noise
+- [ ] Speed slider varies clock frequency
+- [ ] Reset button (hold) drives Q low
+- [ ] Metastability visible: when D is held mid-rail, Q shows mid-rail oscillation before resolving
+- [ ] Shader styles switch correctly (clean / glow / phosphor)
+- [ ] Settings sheet: form validates, save applies, reset restores defaults
+- [ ] About sheet: shows current circuit description
+- [ ] Schematic wires highlight + animate flow when HIGH
+- [ ] Voltage annotations on wires update in real-time
+- [ ] Probe selector toggles channels (affects both oscilloscope and schematic)
+- [ ] i18n locale toggle switches UI strings (en ↔ zh-CN)
+
+**Design / UX**
+- [ ] IBM Plex fonts loaded (not fallback system font)
+- [ ] Focus rings visible on every interactive element when tabbing
+- [ ] Keyboard shortcuts work: Space, R, [/], -/=, 1/2/3, ?
+- [ ] Shortcuts overlay opens with ? key
+- [ ] Status strip shows sim state, tick rate, WebGPU adapter
+- [ ] Live voltage readouts in oscilloscope top-right update smoothly
+- [ ] `prefers-reduced-motion` disables animations when set in OS
+- [ ] No layout shifts on mount
+- [ ] Responsive: control column clamps to sensible widths on different viewports
+
+**Ops**
+- [ ] CI pipeline green (Biome + typecheck + test + build)
+- [ ] GitHub Pages deployment works
 
