@@ -1,6 +1,6 @@
-import type { CombinationalComponent, ComponentDeps, Port } from "@/lib/types";
+import type { CombinationalComponent, ComponentDeps, PhysicsConfig, Port } from "@/lib/types";
 import { AnalogOutput, mergeGateParams } from "../analog-output";
-import { createPort } from "./base";
+import { createPort, readLogicInput } from "./base";
 
 export class NOTGate implements CombinationalComponent {
   readonly kind = "combinational" as const;
@@ -10,14 +10,21 @@ export class NOTGate implements CombinationalComponent {
   private readonly inPort: Port;
   private readonly outPort: Port;
   private readonly out: AnalogOutput;
-  private readonly threshold: number;
+  private readonly params: Record<string, unknown>;
+  private config: PhysicsConfig;
+  private highThreshold: number;
+  private lowThreshold: number;
+  private lastIn: 0 | 1 = 0;
 
   constructor(
     readonly id: string,
     params: Record<string, unknown>,
     deps: ComponentDeps,
   ) {
-    this.threshold = deps.config.voltage.logicHighMin;
+    this.config = deps.config;
+    this.params = params;
+    this.highThreshold = deps.config.voltage.logicHighMin;
+    this.lowThreshold = deps.config.voltage.logicLowMax;
 
     const inp = createPort("in");
     const outP = createPort("out");
@@ -30,12 +37,28 @@ export class NOTGate implements CombinationalComponent {
   }
 
   evaluate(): void {
-    const inHigh = this.inPort.voltage > this.threshold;
-    this.out.set(inHigh ? 0 : 1);
+    this.lastIn = readLogicInput(
+      this.inPort.voltage,
+      this.lastIn,
+      this.highThreshold,
+      this.lowThreshold,
+    );
+    this.out.set(this.lastIn === 1 ? 0 : 1);
   }
 
   update(dt: number): void {
     this.out.update(dt);
     this.outPort.voltage = this.out.voltage;
+  }
+
+  setNoise(percent: number): void {
+    this.out.setNoise(percent, this.config);
+  }
+
+  applyConfig(config: PhysicsConfig): void {
+    this.config = config;
+    this.highThreshold = config.voltage.logicHighMin;
+    this.lowThreshold = config.voltage.logicLowMax;
+    this.out.applyConfig(mergeGateParams(config, this.params));
   }
 }

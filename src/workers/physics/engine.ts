@@ -1,4 +1,3 @@
-// SimulationEngine: 持有 CircuitGraph 和 WaveformBuffer，以固定时间步运行物理仿真
 import type {
   CircuitDefinition,
   Component,
@@ -10,12 +9,22 @@ import type { ComponentRegistry } from "./components/registry";
 import { CircuitGraph } from "./graph";
 import { WaveformBuffer } from "./waveform-buffer";
 
+interface ConfigurableComponent {
+  applyConfig(cfg: PhysicsConfig): void;
+}
+
+function isConfigurable(c: Component): c is Component & ConfigurableComponent {
+  return typeof (c as Component & Partial<ConfigurableComponent>).applyConfig === "function";
+}
+
 export class SimulationEngine {
   private readonly graph: CircuitGraph;
   private readonly buffer: WaveformBuffer;
   private readonly probes: CircuitDefinition["probes"];
   private readonly sequentialList: readonly SequentialComponent[];
-  private readonly dt: number;
+  private readonly probeScratch: Float64Array;
+  private config: PhysicsConfig;
+  private dt: number;
   private accumulator: number = 0;
 
   constructor(
@@ -28,6 +37,8 @@ export class SimulationEngine {
     this.probes = definition.probes;
     this.buffer = new WaveformBuffer(definition.probes.length, config.simulation.bufferLength);
     this.sequentialList = this.graph.getSequential();
+    this.probeScratch = new Float64Array(definition.probes.length);
+    this.config = config;
     this.dt = config.simulation.physicsDt;
   }
 
@@ -55,6 +66,18 @@ export class SimulationEngine {
     return this.graph.collectProbeVoltages(this.probes);
   }
 
+  applyConfig(config: PhysicsConfig): void {
+    this.config = config;
+    this.dt = config.simulation.physicsDt;
+    for (const comp of this.graph.getAllComponents()) {
+      if (isConfigurable(comp)) comp.applyConfig(config);
+    }
+  }
+
+  getConfig(): PhysicsConfig {
+    return this.config;
+  }
+
   private stepPhysics(dt: number): void {
     for (const seq of this.sequentialList) seq.update(dt);
     this.graph.propagate();
@@ -62,6 +85,7 @@ export class SimulationEngine {
     this.graph.evaluateCombinational();
     this.graph.updateCombinational(dt);
     this.graph.propagate();
-    this.buffer.push(this.graph.collectProbeVoltages(this.probes));
+    this.graph.collectProbeVoltagesInto(this.probes, this.probeScratch);
+    this.buffer.push(this.probeScratch);
   }
 }

@@ -8,10 +8,12 @@ import {
   paramAtomFamily,
   voltageAtomFamily,
 } from "@/atoms/simulation-atoms";
-import { activeProbesAtom, shaderStyleAtom } from "@/atoms/ui-atoms";
+import { activeProbeIdsAtom, activeProbesAtom, shaderStyleAtom } from "@/atoms/ui-atoms";
 import { Layout } from "@/lib/constants";
 import { throttle } from "@/lib/throttle";
 import { createWorkerBridge, type WorkerBridge } from "@/lib/worker-bridge";
+
+type StatusCallback = (voltages: number[]) => void;
 
 export function useSimulation(
   waveformRef: RefObject<HTMLCanvasElement | null>,
@@ -24,52 +26,66 @@ export function useSimulation(
   const store = useStore();
 
   const bridgeRef = useRef<WorkerBridge | null>(null);
+  const bridgeInFlightRef = useRef<Promise<WorkerBridge> | null>(null);
+  const offscreensTransferredRef = useRef(false);
+  const statusCallbackProxyRef = useRef<StatusCallback | null>(null);
+  // Defer termination across React 19 StrictMode's setup→cleanup→setup cycle:
+  // transferControlToOffscreen and Comlink.transfer can each only run ONCE per canvas/port,
+  // so we must reuse the same bridge rather than rebuild it.
+  const pendingTerminationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Re-initialize the Worker bridge only when the circuit changes.
-  // activeProbes and store are read inside callbacks via store.get() to avoid stale closures
-  // and must NOT appear in the dependency array.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — only re-init on circuit change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-init on circuit change
   useEffect(() => {
     if (!circuitDef || !waveformRef.current || !digitalRef.current) return;
-    let cancelled = false;
-    // Capture non-null refs after the guard for use inside the async function
     const def = circuitDef;
+
+    if (pendingTerminationRef.current !== null) {
+      clearTimeout(pendingTerminationRef.current);
+      pendingTerminationRef.current = null;
+    }
+
+    let cancelled = false;
 
     async function setup() {
       const waveCanvas = waveformRef.current;
       const digitalCanvas = digitalRef.current;
       if (!waveCanvas || !digitalCanvas) return;
 
-      const waveOffscreen = waveCanvas.transferControlToOffscreen();
-      const digitalOffscreen = digitalCanvas.transferControlToOffscreen();
-
-      const bridge = await createWorkerBridge();
-      if (cancelled) {
-        bridge.terminate();
-        return;
+      if (!bridgeInFlightRef.current && !bridgeRef.current) {
+        bridgeInFlightRef.current = createWorkerBridge().then((b) => {
+          bridgeRef.current = b;
+          return b;
+        });
       }
+      const bridge = bridgeRef.current ?? (await bridgeInFlightRef.current);
+      if (!bridge || cancelled) return;
 
-      const dpr = window.devicePixelRatio || 1;
-      await bridge.render.init(
-        Comlink.transfer(
-          {
-            waveformCanvas: waveOffscreen,
-            digitalCanvas: digitalOffscreen,
-            width: waveCanvas.clientWidth || 800,
-            waveformHeight: Layout.canvasHeight,
-            digitalHeight: Layout.digitalScopeHeight,
-            dpr,
-            probes: activeProbes,
-          },
-          [waveOffscreen, digitalOffscreen],
-        ) as Parameters<typeof bridge.render.init>[0], // Comlink.transfer strips the call-site type
-      );
+      if (!offscreensTransferredRef.current) {
+        offscreensTransferredRef.current = true;
+        const waveOffscreen = waveCanvas.transferControlToOffscreen();
+        const digitalOffscreen = digitalCanvas.transferControlToOffscreen();
+        const dpr = window.devicePixelRatio || 1;
+        await bridge.render.init(
+          Comlink.transfer(
+            {
+              waveformCanvas: waveOffscreen,
+              digitalCanvas: digitalOffscreen,
+              width: waveCanvas.clientWidth || 800,
+              waveformHeight: Layout.canvasHeight,
+              digitalHeight: Layout.digitalScopeHeight,
+              dpr,
+              probes: activeProbes,
+            },
+            [waveOffscreen, digitalOffscreen],
+          ) as Parameters<typeof bridge.render.init>[0],
+        );
+        if (cancelled) return;
+      }
 
       await bridge.physics.loadCircuit(def);
 
-      // Read the latest probe list from the store on each callback to avoid stale closures
-      await bridge.physics.registerStatusCallback(
-        Comlink.proxy((voltages: number[]) => {
+      if (!statusCallbackProxyRef.current) {
+        const callback: StatusCallback = (voltages) => {
           const currentProbes = store.get(activeProbesAtom);
           for (const probe of currentProbes) {
             const v = voltages[probe.channelIndex];
@@ -77,19 +93,33 @@ export function useSimulation(
               store.set(voltageAtomFamily(probe.netId), v);
             }
           }
-        }),
-      );
+        };
+        statusCallbackProxyRef.current = callback;
+        await bridge.physics.registerStatusCallback(Comlink.proxy(callback));
+      }
 
       await bridge.physics.start();
-      bridgeRef.current = bridge;
     }
 
     setup();
+
     return () => {
       cancelled = true;
-      bridgeRef.current?.terminate();
-      bridgeRef.current = null;
-      if (circuitDef) clearCircuitAtoms(circuitDef);
+      pendingTerminationRef.current = setTimeout(() => {
+        const cb = statusCallbackProxyRef.current as unknown as
+          | (StatusCallback & { [Comlink.releaseProxy]?: () => void })
+          | null;
+        cb?.[Comlink.releaseProxy]?.();
+        statusCallbackProxyRef.current = null;
+        bridgeRef.current?.terminate();
+        bridgeRef.current = null;
+        bridgeInFlightRef.current = null;
+        offscreensTransferredRef.current = false;
+        pendingTerminationRef.current = null;
+        // Clear active probe IDs so a circuit switch starts fresh (probes fixed per circuit).
+        store.set(activeProbeIdsAtom, new Set<string>());
+        clearCircuitAtoms(def);
+      }, 0);
     };
   }, [circuitDef]);
 

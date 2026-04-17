@@ -13,7 +13,7 @@ export function throttle<T extends unknown[]>(
   let lastCall = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   return (...args: T): void => {
-    const now = Date.now();
+    const now = performance.now();
     const remaining = ms - (now - lastCall);
     if (remaining <= 0) {
       clearTimeout(timer);
@@ -23,7 +23,7 @@ export function throttle<T extends unknown[]>(
     } else {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        lastCall = Date.now();
+        lastCall = performance.now();
         timer = undefined;
         fn(...args);
       }, remaining);

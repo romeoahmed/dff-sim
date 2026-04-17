@@ -13,16 +13,18 @@ export interface AnalogOutputConfig {
   readonly noiseLevel: number;
 }
 
+function computeNoiseLevel(config: PhysicsConfig, noisePercent: number): number {
+  return (
+    (noisePercent / 100) * config.simulation.maxNoiseLevel * config.simulation.outputNoiseRatio
+  );
+}
+
 export function mergeGateParams(
   config: PhysicsConfig,
   params: Record<string, unknown>,
 ): AnalogOutputConfig {
   const numeric = (k: string): number | undefined =>
     typeof params[k] === "number" ? (params[k] as number) : undefined;
-  const noiseLevel =
-    (config.simulation.defaultNoise / 100) *
-    config.simulation.maxNoiseLevel *
-    config.simulation.outputNoiseRatio;
   return {
     tPD: numeric("tPD") ?? config.gates.tPD,
     zeta: numeric("zeta") ?? config.gates.zeta,
@@ -31,20 +33,26 @@ export function mergeGateParams(
     baseLow: config.voltage.outputLowMax / 2,
     clampMin: config.voltage.clampMin,
     clampMax: config.voltage.systemMax,
-    noiseLevel,
+    noiseLevel: computeNoiseLevel(config, config.simulation.defaultNoise),
   };
 }
 
 export class AnalogOutput {
   private readonly signal: Signal;
-  private readonly tPD: number;
+  private readonly noise: NoiseGenerator;
+  private tPD: number;
   private currentTarget: 0 | 1 = 0;
   private pending: 0 | 1 | null = null;
   private pendingTimer: number = 0;
 
   constructor(cfg: AnalogOutputConfig, rng: RngFn) {
     this.tPD = cfg.tPD;
-    const signalCfg: SignalConfig = {
+    this.noise = new NoiseGenerator(rng, cfg.noiseLevel);
+    this.signal = new Signal(this.toSignalConfig(cfg), this.noise);
+  }
+
+  private toSignalConfig(cfg: AnalogOutputConfig): SignalConfig {
+    return {
       baseHigh: cfg.baseHigh,
       baseLow: cfg.baseLow,
       zeta: cfg.zeta,
@@ -52,7 +60,6 @@ export class AnalogOutput {
       clampMin: cfg.clampMin,
       clampMax: cfg.clampMax,
     };
-    this.signal = new Signal(signalCfg, new NoiseGenerator(rng, cfg.noiseLevel));
   }
 
   get voltage(): number {
@@ -89,5 +96,15 @@ export class AnalogOutput {
     this.pendingTimer = 0;
     this.signal.targetLogic = logic;
     this.signal.snapTo(logic === 1 ? cfg.baseHigh : cfg.baseLow);
+  }
+
+  setNoise(noisePercent: number, config: PhysicsConfig): void {
+    this.noise.setSigma(computeNoiseLevel(config, noisePercent));
+  }
+
+  applyConfig(cfg: AnalogOutputConfig): void {
+    this.tPD = cfg.tPD;
+    this.signal.applyConfig(this.toSignalConfig(cfg));
+    this.noise.setSigma(cfg.noiseLevel);
   }
 }

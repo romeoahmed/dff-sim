@@ -7,12 +7,14 @@ export class Signal {
 
   private x1: number = 0;
   private x2: number = 0;
-  private readonly wn: number;
+  private config: SignalConfig;
+  private wn: number;
 
   constructor(
-    private readonly config: SignalConfig,
+    config: SignalConfig,
     private readonly noise: NoiseGenerator,
   ) {
+    this.config = config;
     this.wn = 2 * Math.PI * config.ringFreq;
   }
 
@@ -34,5 +36,10 @@ export class Signal {
     this.x1 = voltage;
     this.x2 = 0;
     this.voltage = voltage;
+  }
+
+  applyConfig(config: SignalConfig): void {
+    this.config = config;
+    this.wn = 2 * Math.PI * config.ringFreq;
   }
 }

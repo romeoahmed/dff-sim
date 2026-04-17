@@ -1,6 +1,8 @@
 import type { Probe } from "@/lib/types";
 import { type ShaderStyle, shaders, waveformFragShaders } from "../shaders";
 
+const WAVEFORM_UNIFORM_BUFFER_SIZE = 48;
+
 export interface WaveformPipelineResources {
   pipelines: Record<ShaderStyle, GPURenderPipeline>;
   uniformBuffer: GPUBuffer;
@@ -64,8 +66,14 @@ export function createWaveformPipeline(
     phosphor: makePipeline(waveformFragShaders.phosphor),
   };
 
+  // WGSL Uniforms layout (std140-compatible, vec2/vec4 aligned to 16 B):
+  //   f32 width          @0   f32 height        @4
+  //   f32 scaleY         @8   f32 voltageHeadroom @12
+  //   f32 lineWidth      @16  u32 writePointer  @20
+  //   u32 bufferLength   @24  u32 channelCount  @28
+  //   padding to 16 B    @32..@48
   const uniformBuffer = device.createBuffer({
-    size: 48,
+    size: WAVEFORM_UNIFORM_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 

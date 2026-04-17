@@ -1,5 +1,7 @@
 import { shaders } from "../shaders";
 
+const DIGITAL_UNIFORM_BUFFER_SIZE = 48;
+
 export interface DigitalPipelineResources {
   pipeline: GPURenderPipeline;
   uniformBuffer: GPUBuffer;
@@ -49,8 +51,14 @@ export function createDigitalPipeline(
     primitive: { topology: "triangle-strip" },
   });
 
+  // WGSL Uniforms layout (std140-compatible):
+  //   f32 width        @0   f32 height       @4
+  //   f32 threshold    @8   f32 yHigh        @12
+  //   f32 yLow         @16  f32 lineWidth    @20
+  //   u32 writePointer @24  u32 bufferLength @28
+  //   u32 channelCount @32  padding to 16 B  @36..@48
   const uniformBuffer = device.createBuffer({
-    size: 48,
+    size: DIGITAL_UNIFORM_BUFFER_SIZE,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   const storageBuffer = device.createBuffer({

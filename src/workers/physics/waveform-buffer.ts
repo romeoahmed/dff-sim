@@ -24,7 +24,7 @@ export class WaveformBuffer {
     return this._writePointer;
   }
 
-  push(values: readonly number[]): void {
+  push(values: ArrayLike<number>): void {
     if (values.length !== this.channelCount) {
       throw new Error(`Expected ${this.channelCount} values, got ${values.length}`);
     }

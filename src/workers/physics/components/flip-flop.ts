@@ -4,21 +4,33 @@ import { NoiseGenerator } from "../noise";
 import { Signal } from "../signal";
 import { createPort } from "./base";
 
+function dffNoiseLevel(config: PhysicsConfig, percent: number): number {
+  return (percent / 100) * config.simulation.maxNoiseLevel * config.simulation.outputNoiseRatio;
+}
+
 export class DFlipFlop implements SequentialComponent {
   readonly kind = "sequential" as const;
   readonly inputs: Map<string, Port>;
   readonly outputs: Map<string, Port>;
 
   private readonly qSignal: Signal;
+  private readonly qNoise: NoiseGenerator;
   private readonly qPort: Port;
   private readonly clkPort: Port;
   private readonly dPort: Port;
-  private readonly config: PhysicsConfig;
+  private config: PhysicsConfig;
   private readonly rng: RngFn;
   private readonly gaussianSample: () => number;
-  private readonly vMid: number;
+  private vMid: number;
 
   private lastClkLogic: 0 | 1 = 0;
+  private lastDLogic: 0 | 1 = 0;
+  // Time since the last observed D transition. Consumed by the setup/hold checks at clock edges.
+  private timeSinceDEdge: number = Number.POSITIVE_INFINITY;
+  // When a rising clock edge is detected, we open a hold-window of tHold during which another D
+  // transition also counts as a violation; negative value means no hold check pending.
+  private holdWindowRemaining: number = -1;
+  private holdWindowDValue: 0 | 1 = 0;
   private resetActive: boolean = false;
 
   private metastable: boolean = false;
@@ -54,11 +66,7 @@ export class DFlipFlop implements SequentialComponent {
     ]);
     this.outputs = new Map([["q", qPort]]);
 
-    const noiseLevel =
-      (config.simulation.defaultNoise / 100) *
-      config.simulation.maxNoiseLevel *
-      config.simulation.outputNoiseRatio;
-
+    this.qNoise = new NoiseGenerator(rng, dffNoiseLevel(config, config.simulation.defaultNoise));
     this.qSignal = new Signal(
       {
         baseHigh: (config.voltage.outputHighMin + config.voltage.outputHighMax) / 2,
@@ -68,11 +76,18 @@ export class DFlipFlop implements SequentialComponent {
         clampMin: config.voltage.clampMin,
         clampMax: config.voltage.systemMax,
       },
-      new NoiseGenerator(rng, noiseLevel),
+      this.qNoise,
     );
   }
 
   update(dt: number): void {
+    this.trackDEdges(dt);
+
+    if (this.holdWindowRemaining > 0) {
+      this.holdWindowRemaining -= dt;
+      if (this.holdWindowRemaining <= 0) this.holdWindowRemaining = -1;
+    }
+
     if (this.pendingQ !== null) {
       this.pendingTimer -= dt;
       if (this.pendingTimer <= 0) {
@@ -90,7 +105,9 @@ export class DFlipFlop implements SequentialComponent {
         const noisy = this.metaInputVoltage + jitter;
         this.qSignal.targetLogic = noisy > this.vMid ? 1 : 0;
       } else {
-        this.qSignal.snapTo(this.vMid);
+        // Q hovers around vMid with colored noise, rather than a perfectly flat line.
+        const wobble = this.qNoise.sample();
+        this.qSignal.snapTo(this.vMid + wobble);
         this.qPort.voltage = this.qSignal.voltage;
         return;
       }
@@ -102,9 +119,9 @@ export class DFlipFlop implements SequentialComponent {
 
   clock(_dt: number): void {
     if (this.resetActive) {
-      this.qSignal.targetLogic = 0;
+      // Async reset still respects tCQ so the Q transition matches other clocked events.
+      this.scheduleQ(0);
       this.metastable = false;
-      this.pendingQ = null;
       return;
     }
 
@@ -126,21 +143,71 @@ export class DFlipFlop implements SequentialComponent {
     if (!isRisingEdge) return;
 
     const dVoltage = this.dPort.voltage;
+    const { tSetup, tHold } = this.config.timing;
+
+    // Setup violation: D transitioned too close to the rising edge.
+    if (this.timeSinceDEdge < tSetup) {
+      this.enterMetastable();
+      return;
+    }
 
     if (dVoltage > logicHighMin) {
       this.scheduleQ(1);
+      this.holdWindowDValue = 1;
     } else if (dVoltage < logicLowMax) {
       this.scheduleQ(0);
+      this.holdWindowDValue = 0;
     } else {
       this.enterMetastable();
+      return;
     }
+
+    // Open the hold window; trackDEdges() will trip us metastable if D flips inside it.
+    this.holdWindowRemaining = tHold;
   }
 
   setReset(active: boolean): void {
     this.resetActive = active;
   }
 
+  setNoise(percent: number): void {
+    this.qNoise.setSigma(dffNoiseLevel(this.config, percent));
+  }
+
+  applyConfig(config: PhysicsConfig): void {
+    this.config = config;
+    this.vMid = (config.voltage.logicHighMin + config.voltage.logicLowMax) / 2;
+    this.qSignal.applyConfig({
+      baseHigh: (config.voltage.outputHighMin + config.voltage.outputHighMax) / 2,
+      baseLow: config.voltage.outputLowMax / 2,
+      zeta: 0.4,
+      ringFreq: 120,
+      clampMin: config.voltage.clampMin,
+      clampMax: config.voltage.systemMax,
+    });
+  }
+
+  private trackDEdges(dt: number): void {
+    const { logicHighMin, logicLowMax } = this.config.voltage;
+    const v = this.dPort.voltage;
+    let curr: 0 | 1 | null = null;
+    if (v > logicHighMin) curr = 1;
+    else if (v < logicLowMax) curr = 0;
+
+    this.timeSinceDEdge += dt;
+    if (curr !== null && curr !== this.lastDLogic) {
+      this.lastDLogic = curr;
+      this.timeSinceDEdge = 0;
+      if (this.holdWindowRemaining > 0 && curr !== this.holdWindowDValue) {
+        // Hold violation: D flipped inside the hold window of the last capture.
+        this.enterMetastable();
+        this.holdWindowRemaining = -1;
+      }
+    }
+  }
+
   private scheduleQ(logic: 0 | 1): void {
+    if (this.pendingQ === logic) return; // already pending — don't reset the timer
     this.pendingQ = logic;
     this.pendingTimer = this.config.timing.tCQ;
   }
@@ -152,5 +219,6 @@ export class DFlipFlop implements SequentialComponent {
     this.metaResolveTime = -this.config.timing.tauMeta * Math.log(u || 1e-10);
     this.metaInputVoltage = this.dPort.voltage;
     this.qSignal.snapTo(this.vMid);
+    this.pendingQ = null;
   }
 }

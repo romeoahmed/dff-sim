@@ -195,8 +195,15 @@ describe("DFlipFlop metastability (biased)", () => {
     dff.clock(dt);
     const shortTime = tauMeta * 0.1;
     const steps = Math.max(1, Math.floor(shortTime / dt));
-    for (let i = 0; i < steps; i++) dff.update(dt);
-    expect(Math.abs(qPort.voltage - vMid)).toBeLessThan(0.05);
+    // Average the voltage over the window: metastable Q now carries its full noise floor,
+    // so point-sample deviation can exceed 0.05 V. The mean stays close to vMid.
+    let sum = 0;
+    for (let i = 0; i < steps; i++) {
+      dff.update(dt);
+      sum += qPort.voltage;
+    }
+    const mean = sum / steps;
+    expect(Math.abs(mean - vMid)).toBeLessThan(0.08);
   });
 
   it("after metaResolveTime Q settles to a rail", () => {

@@ -39,6 +39,10 @@ export class NoiseGenerator {
   }
 
   private flickerSample(): number {
+    // Pre-increment so counter is always ≥ 1; this avoids the ctz(0)=32 skip on every
+    // 2^32-sample wraparound (cosmetic, but keeps octave updates deterministic).
+    this.counter = (this.counter + 1) >>> 0;
+    if (this.counter === 0) this.counter = 1;
     const idx = this.ctz(this.counter);
     if (idx < this.octaves) {
       this.runningSum -= this.generators[idx] ?? 0;
@@ -46,12 +50,10 @@ export class NoiseGenerator {
       this.generators[idx] = newVal;
       this.runningSum += newVal;
     }
-    this.counter++;
     return this.runningSum / this.octaves;
   }
 
   private ctz(n: number): number {
-    if (n === 0) return 32;
     return Math.log2(n & -n) | 0;
   }
 }

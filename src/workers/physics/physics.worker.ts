@@ -1,6 +1,7 @@
 import * as Comlink from "comlink";
 import { DefaultPhysicsConfig } from "@/lib/constants";
-import type { CircuitDefinition, PhysicsConfig, VoltageSpecConfig } from "@/lib/types";
+import { createSeededRng } from "@/lib/rng";
+import type { CircuitDefinition, PhysicsConfig, RngFn, VoltageSpecConfig } from "@/lib/types";
 import { createDefaultRegistry } from "./components/default-registry";
 import { SimulationEngine } from "./engine";
 
@@ -13,8 +14,13 @@ function resolveMethod(target: unknown, name: string): ((v: number | boolean) =>
   return typeof method === "function" ? (method as (v: number | boolean) => void) : undefined;
 }
 
+export interface LoadCircuitOptions {
+  /** Optional RNG seed for deterministic simulation (tests / bug repro). */
+  readonly seed?: number;
+}
+
 export interface PhysicsAPI {
-  loadCircuit(definition: CircuitDefinition): void;
+  loadCircuit(definition: CircuitDefinition, opts?: LoadCircuitOptions): void;
   setParam(componentId: string, key: string, value: number | boolean): void;
   setSettings(specs: Partial<VoltageSpecConfig>): void;
   registerRenderPort(port: MessagePort): void;
@@ -32,9 +38,14 @@ class PhysicsWorker implements PhysicsAPI {
   private statusCallback: ((v: number[]) => void) | null = null;
   private lastStatusTime: number = 0;
   private lastTickTime: number = 0;
+  private lastSentWritePointer: number = 0;
+  private firstFrameSent: boolean = false;
 
-  loadCircuit(definition: CircuitDefinition): void {
-    this.engine = new SimulationEngine(definition, this.registry, this.config, Math.random);
+  loadCircuit(definition: CircuitDefinition, opts?: LoadCircuitOptions): void {
+    const rng: RngFn = opts?.seed !== undefined ? createSeededRng(opts.seed) : Math.random;
+    this.engine = new SimulationEngine(definition, this.registry, this.config, rng);
+    this.lastSentWritePointer = 0;
+    this.firstFrameSent = false;
   }
 
   setParam(componentId: string, key: string, value: number | boolean): void {
@@ -58,6 +69,7 @@ class PhysicsWorker implements PhysicsAPI {
       ...this.config,
       voltage: { ...this.config.voltage, ...specs },
     };
+    this.engine?.applyConfig(this.config);
   }
 
   registerRenderPort(port: MessagePort): void {
@@ -92,26 +104,69 @@ class PhysicsWorker implements PhysicsAPI {
     if (!this.engine) return;
     this.engine.tick(dt);
 
-    if (this.renderPort) {
-      const buf = this.engine.getBuffer();
-      const payload = buf.toChannelMajorBuffer();
-      this.renderPort.postMessage(
-        {
-          type: "frame",
-          data: payload,
-          writePointer: buf.writePointer,
-          channelCount: buf.channelCount,
-          length: buf.length,
-        },
-        [payload.buffer],
-      );
-    }
+    if (this.renderPort) this.sendDeltaFrame();
 
     const now = performance.now();
     if (now - this.lastStatusTime >= 50 && this.statusCallback) {
       this.statusCallback(this.engine.getProbeVoltages());
       this.lastStatusTime = now;
     }
+  }
+
+  private sendDeltaFrame(): void {
+    if (!this.engine || !this.renderPort) return;
+    const buf = this.engine.getBuffer();
+    const writePointer = buf.writePointer;
+    const length = buf.length;
+    const channelCount = buf.channelCount;
+    const mask = length - 1;
+
+    // First frame: send the full buffer so the render worker has an initial snapshot.
+    if (!this.firstFrameSent) {
+      const payload = buf.toChannelMajorBuffer();
+      this.renderPort.postMessage(
+        {
+          type: "frame",
+          data: payload,
+          startPointer: 0,
+          newSamples: length,
+          writePointer,
+          channelCount,
+          bufferLength: length,
+        },
+        [payload.buffer],
+      );
+      this.firstFrameSent = true;
+      this.lastSentWritePointer = writePointer;
+      return;
+    }
+
+    const newSamples = (writePointer - this.lastSentWritePointer) & mask;
+    if (newSamples === 0) return;
+
+    const payload = new Float32Array(channelCount * newSamples);
+    const startPointer = this.lastSentWritePointer;
+    for (let c = 0; c < channelCount; c++) {
+      const channel = buf.getChannel(c);
+      const base = c * newSamples;
+      for (let i = 0; i < newSamples; i++) {
+        payload[base + i] = channel[(startPointer + i) & mask] ?? 0;
+      }
+    }
+
+    this.renderPort.postMessage(
+      {
+        type: "frame",
+        data: payload,
+        startPointer,
+        newSamples,
+        writePointer,
+        channelCount,
+        bufferLength: length,
+      },
+      [payload.buffer],
+    );
+    this.lastSentWritePointer = writePointer;
   }
 }
 

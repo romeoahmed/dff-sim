@@ -38,6 +38,9 @@ export interface GatesConfig {
   readonly tPD: number;
   readonly zeta: number;
   readonly ringFreq: number;
+  // Full-adder cout path is typically faster than sum (~2 vs ~3 gate delays).
+  // Optional override; defaults to tPD * 0.6 when absent.
+  readonly tPD_cout?: number;
 }
 
 export interface SignalConfig {

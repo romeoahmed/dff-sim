@@ -31,6 +31,7 @@ export class CircuitGraph {
       if (isCombinational(comp)) this.combinationalList.push(comp);
     }
 
+    const drivenOutputs = new Set<Port>();
     for (const netDef of definition.nets) {
       const driverComp = this.components.get(netDef.driver.componentId);
       if (!driverComp) {
@@ -40,6 +41,12 @@ export class CircuitGraph {
       if (!driverPort) {
         throw new Error(`Unknown output port: ${netDef.driver.componentId}.${netDef.driver.port}`);
       }
+      if (drivenOutputs.has(driverPort)) {
+        throw new Error(
+          `Output port already driven: ${netDef.driver.componentId}.${netDef.driver.port}`,
+        );
+      }
+      drivenOutputs.add(driverPort);
       const loadPorts: Port[] = [];
       for (const load of netDef.loads) {
         const loadComp = this.components.get(load.componentId);
@@ -106,5 +113,14 @@ export class CircuitGraph {
       if (net) out[probe.channelIndex] = net.voltage;
     }
     return out;
+  }
+
+  // Writes probe voltages into a caller-owned buffer to avoid per-tick allocation.
+  collectProbeVoltagesInto(probes: readonly Probe[], out: Float64Array): void {
+    out.fill(0);
+    for (const probe of probes) {
+      const net = this.nets.get(probe.netId);
+      if (net) out[probe.channelIndex] = net.voltage;
+    }
   }
 }

@@ -1,7 +1,11 @@
-import type { ComponentDeps, Port, SequentialComponent } from "@/lib/types";
+import type { ComponentDeps, PhysicsConfig, Port, SequentialComponent } from "@/lib/types";
 import { NoiseGenerator } from "../noise";
 import { Signal } from "../signal";
 import { createPort } from "./base";
+
+function signalNoiseLevel(config: PhysicsConfig, percent: number): number {
+  return (percent / 100) * config.simulation.maxNoiseLevel;
+}
 
 export class SignalSource implements SequentialComponent {
   readonly kind = "sequential" as const;
@@ -11,7 +15,8 @@ export class SignalSource implements SequentialComponent {
   private readonly signal: Signal;
   private readonly outPort: Port;
   private readonly noise: NoiseGenerator;
-  private readonly maxNoiseLevel: number;
+  private readonly params: Record<string, unknown>;
+  private config: PhysicsConfig;
 
   constructor(
     readonly id: string,
@@ -19,17 +24,15 @@ export class SignalSource implements SequentialComponent {
     deps: ComponentDeps,
   ) {
     const { config, rng } = deps;
-    const baseHigh =
-      (params.baseHigh as number) ?? (config.voltage.logicHighMin + config.voltage.systemMax) / 2;
-    const baseLow = (params.baseLow as number) ?? config.voltage.logicLowMax / 2;
+    this.config = config;
+    this.params = params;
+    const { baseHigh, baseLow } = this.resolveRails(config);
 
     const outPort = createPort("out");
     this.outPort = outPort;
     this.outputs = new Map([["out", outPort]]);
 
-    this.maxNoiseLevel = config.simulation.maxNoiseLevel;
-    const noiseLevel = (config.simulation.defaultNoise / 100) * this.maxNoiseLevel;
-    this.noise = new NoiseGenerator(rng, noiseLevel);
+    this.noise = new NoiseGenerator(rng, signalNoiseLevel(config, config.simulation.defaultNoise));
 
     this.signal = new Signal(
       {
@@ -44,6 +47,14 @@ export class SignalSource implements SequentialComponent {
     );
   }
 
+  private resolveRails(config: PhysicsConfig): { baseHigh: number; baseLow: number } {
+    const baseHigh =
+      (this.params.baseHigh as number | undefined) ??
+      (config.voltage.logicHighMin + config.voltage.systemMax) / 2;
+    const baseLow = (this.params.baseLow as number | undefined) ?? config.voltage.logicLowMax / 2;
+    return { baseHigh, baseLow };
+  }
+
   update(dt: number): void {
     this.signal.update(dt);
     this.outPort.voltage = this.signal.voltage;
@@ -56,7 +67,19 @@ export class SignalSource implements SequentialComponent {
   }
 
   setNoise(percent: number): void {
-    const sigma = (percent / 100) * this.maxNoiseLevel;
-    this.noise.setSigma(sigma);
+    this.noise.setSigma(signalNoiseLevel(this.config, percent));
+  }
+
+  applyConfig(config: PhysicsConfig): void {
+    this.config = config;
+    const { baseHigh, baseLow } = this.resolveRails(config);
+    this.signal.applyConfig({
+      baseHigh,
+      baseLow,
+      zeta: 0.8,
+      ringFreq: 80,
+      clampMin: config.voltage.clampMin,
+      clampMax: config.voltage.systemMax,
+    });
   }
 }

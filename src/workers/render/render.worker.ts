@@ -44,7 +44,12 @@ class RenderWorker implements RenderAPI {
   private probes: readonly Probe[] = [];
   private shaderStyle: ShaderStyle = "clean";
 
-  private latestFrame: Float32Array | null = null;
+  // Local channel-major ring mirror of the physics waveform buffer; the render worker owns
+  // this copy and the physics worker ships per-tick deltas into it. Allocated on first frame.
+  private ringBuffer: Float32Array | null = null;
+  private ringBufferLength: number = 0;
+  private ringChannelCount: number = 0;
+  private ringDirty: boolean = false;
   private latestWritePointer = 0;
 
   private rafHandle: number | null = null;
@@ -135,11 +140,37 @@ class RenderWorker implements RenderAPI {
 
   registerFrameChannel(port: MessagePort): void {
     port.onmessage = (e) => {
-      if (e.data?.type === "frame") {
-        const raw = e.data.data as ArrayBuffer | Float32Array;
-        this.latestFrame = raw instanceof Float32Array ? raw : new Float32Array(raw);
-        this.latestWritePointer = e.data.writePointer as number;
+      if (e.data?.type !== "frame") return;
+      const raw = e.data.data as ArrayBuffer | Float32Array;
+      const data = raw instanceof Float32Array ? raw : new Float32Array(raw);
+      const newSamples = e.data.newSamples as number;
+      const startPointer = e.data.startPointer as number;
+      const channelCount = e.data.channelCount as number;
+      const bufferLength = e.data.bufferLength as number;
+
+      if (
+        !this.ringBuffer ||
+        this.ringChannelCount !== channelCount ||
+        this.ringBufferLength !== bufferLength
+      ) {
+        this.ringBuffer = new Float32Array(channelCount * bufferLength);
+        this.ringChannelCount = channelCount;
+        this.ringBufferLength = bufferLength;
       }
+
+      const mask = bufferLength - 1;
+      const ring = this.ringBuffer;
+      for (let c = 0; c < channelCount; c++) {
+        const srcBase = c * newSamples;
+        const dstBase = c * bufferLength;
+        for (let i = 0; i < newSamples; i++) {
+          const value = data[srcBase + i];
+          ring[dstBase + ((startPointer + i) & mask)] = value ?? 0;
+        }
+      }
+
+      this.latestWritePointer = e.data.writePointer as number;
+      this.ringDirty = true;
     };
   }
 
@@ -159,9 +190,10 @@ class RenderWorker implements RenderAPI {
     const bufferLength = this.waveformRes.bufferLength;
     const channelCount = this.waveformRes.channelCount;
 
-    if (this.latestFrame) {
-      device.queue.writeBuffer(this.waveformRes.storageBuffer, 0, this.latestFrame);
-      device.queue.writeBuffer(this.digitalRes.storageBuffer, 0, this.latestFrame);
+    if (this.ringBuffer && this.ringDirty) {
+      device.queue.writeBuffer(this.waveformRes.storageBuffer, 0, this.ringBuffer);
+      device.queue.writeBuffer(this.digitalRes.storageBuffer, 0, this.ringBuffer);
+      this.ringDirty = false;
     }
 
     uploadWaveformUniforms(device, this.waveformRes.uniformBuffer, {
