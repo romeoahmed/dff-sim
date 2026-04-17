@@ -1,6 +1,7 @@
 // CircuitGraph: 从定义实例化组件和网络，传播电压，拓扑排序组合逻辑
 import type {
   CircuitDefinition,
+  CombinationalComponent,
   Component,
   Net,
   PhysicsConfig,
@@ -8,10 +9,9 @@ import type {
   Probe,
   RngFn,
   SequentialComponent,
-  CombinationalComponent,
 } from "@/lib/types";
-import type { ComponentRegistry } from "./components/registry";
 import { isCombinational, isSequential } from "./components/base";
+import type { ComponentRegistry } from "./components/registry";
 
 export class CircuitGraph {
   private readonly components = new Map<string, Component>();

@@ -6,9 +6,9 @@ import type {
   RngFn,
   SequentialComponent,
 } from "@/lib/types";
+import type { ComponentRegistry } from "./components/registry";
 import { CircuitGraph } from "./graph";
 import { WaveformBuffer } from "./waveform-buffer";
-import type { ComponentRegistry } from "./components/registry";
 
 export class SimulationEngine {
   private readonly graph: CircuitGraph;
@@ -21,7 +21,7 @@ export class SimulationEngine {
   constructor(
     definition: CircuitDefinition,
     registry: ComponentRegistry,
-    private readonly config: PhysicsConfig,
+    config: PhysicsConfig,
     rng: RngFn,
   ) {
     this.graph = new CircuitGraph(definition, registry, config, rng);

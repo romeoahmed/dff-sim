@@ -31,6 +31,7 @@ export class WaveformBuffer {
     }
     const ptr = this._writePointer;
     for (let i = 0; i < this.channelCount; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: i is bounded by channelCount; channels and values lengths are validated
       this.channels[i]![ptr] = values[i]!;
     }
     this._writePointer = (ptr + 1) & this.mask;
@@ -50,6 +51,7 @@ export class WaveformBuffer {
   toInterleavedBuffer(): Float32Array {
     const buf = new Float32Array(this.channelCount * this.length);
     for (let c = 0; c < this.channelCount; c++) {
+      // biome-ignore lint/style/noNonNullAssertion: c is bounded by channelCount
       buf.set(this.channels[c]!, c * this.length);
     }
     return buf;
