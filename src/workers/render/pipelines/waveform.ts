@@ -64,7 +64,6 @@ export function createWaveformPipeline(
     phosphor: makePipeline(waveformFragShaders.phosphor),
   };
 
-  // Uniform 布局: vec2<f32>(8) + f32*3(12) + u32*3(12) = 32字节，填充至48（16字节对齐）
   const uniformBuffer = device.createBuffer({
     size: 48,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,

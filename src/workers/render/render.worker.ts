@@ -2,7 +2,11 @@ import * as Comlink from "comlink";
 import { DefaultPhysicsConfig, Layout } from "@/lib/constants";
 import type { Probe } from "@/lib/types";
 import { configureCanvas, createGPUDevice, type GPUDeviceBundle } from "./gpu-device";
-import { createDigitalPipeline, type DigitalPipelineResources } from "./pipelines/digital";
+import {
+  createDigitalPipeline,
+  type DigitalPipelineResources,
+  uploadDigitalUniforms,
+} from "./pipelines/digital";
 import {
   createWaveformPipeline,
   uploadChannels as uploadWaveformChannels,
@@ -43,10 +47,7 @@ class RenderWorker implements RenderAPI {
   private latestFrame: Float32Array | null = null;
   private latestWritePointer = 0;
 
-  // 渲染循环句柄，保留用于未来实现 destroy() 时取消动画帧
-  // @ts-expect-error -- write-only field intentionally kept for future destroy() implementation
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: reserved for future destroy()
-  private _rafHandle: number | null = null;
+  private rafHandle: number | null = null;
 
   async init(args: Parameters<RenderAPI["init"]>[0]): Promise<void> {
     this.width = args.width;
@@ -80,6 +81,12 @@ class RenderWorker implements RenderAPI {
       args.probes,
       args.waveformHeight,
     );
+    uploadWaveformChannels(
+      this.gpu.device,
+      this.digitalRes.channelBuffer,
+      args.probes,
+      args.digitalHeight,
+    );
 
     this.startRenderLoop();
   }
@@ -88,12 +95,18 @@ class RenderWorker implements RenderAPI {
     this.width = width;
     this.waveformHeight = waveformHeight;
     this.digitalHeight = digitalHeight;
-    if (this.gpu && this.waveformRes) {
+    if (this.gpu && this.waveformRes && this.digitalRes) {
       uploadWaveformChannels(
         this.gpu.device,
         this.waveformRes.channelBuffer,
         this.probes,
         waveformHeight,
+      );
+      uploadWaveformChannels(
+        this.gpu.device,
+        this.digitalRes.channelBuffer,
+        this.probes,
+        digitalHeight,
       );
     }
   }
@@ -104,12 +117,18 @@ class RenderWorker implements RenderAPI {
 
   updateProbes(probes: readonly Probe[]): void {
     this.probes = probes;
-    if (this.gpu && this.waveformRes) {
+    if (this.gpu && this.waveformRes && this.digitalRes) {
       uploadWaveformChannels(
         this.gpu.device,
         this.waveformRes.channelBuffer,
         probes,
         this.waveformHeight,
+      );
+      uploadWaveformChannels(
+        this.gpu.device,
+        this.digitalRes.channelBuffer,
+        probes,
+        this.digitalHeight,
       );
     }
   }
@@ -117,17 +136,18 @@ class RenderWorker implements RenderAPI {
   registerFrameChannel(port: MessagePort): void {
     port.onmessage = (e) => {
       if (e.data?.type === "frame") {
-        this.latestFrame = e.data.data as Float32Array;
+        const raw = e.data.data as ArrayBuffer | Float32Array;
+        this.latestFrame = raw instanceof Float32Array ? raw : new Float32Array(raw);
         this.latestWritePointer = e.data.writePointer as number;
       }
     };
-    port.start();
   }
 
   private startRenderLoop(): void {
+    if (this.rafHandle !== null) return;
     const loop = () => {
       this.renderFrame();
-      this._rafHandle = requestAnimationFrame(loop);
+      this.rafHandle = requestAnimationFrame(loop);
     };
     loop();
   }
@@ -173,18 +193,17 @@ class RenderWorker implements RenderAPI {
       pass.end();
     }
     {
-      const f = new Float32Array(12);
-      const u = new Uint32Array(f.buffer);
-      f[0] = this.width;
-      f[1] = this.digitalHeight;
-      f[2] = DefaultPhysicsConfig.voltage.logicHighMin;
-      f[3] = -Layout.channelRowHeight * 0.25;
-      f[4] = Layout.channelRowHeight * 0.25;
-      f[5] = Layout.waveformLineWidth;
-      u[6] = this.latestWritePointer;
-      u[7] = bufferLength;
-      u[8] = channelCount;
-      device.queue.writeBuffer(this.digitalRes.uniformBuffer, 0, f);
+      uploadDigitalUniforms(device, this.digitalRes.uniformBuffer, {
+        width: this.width,
+        height: this.digitalHeight,
+        threshold: DefaultPhysicsConfig.voltage.logicHighMin,
+        yHigh: -Layout.channelRowHeight * 0.25,
+        yLow: Layout.channelRowHeight * 0.25,
+        lineWidth: Layout.waveformLineWidth,
+        writePointer: this.latestWritePointer,
+        bufferLength,
+        channelCount,
+      });
 
       const pass = encoder.beginRenderPass({
         colorAttachments: [

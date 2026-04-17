@@ -6,6 +6,8 @@ export interface DigitalPipelineResources {
   channelBuffer: GPUBuffer;
   storageBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
+  bufferLength: number;
+  channelCount: number;
 }
 
 export function createDigitalPipeline(
@@ -69,5 +71,42 @@ export function createDigitalPipeline(
     ],
   });
 
-  return { pipeline, uniformBuffer, channelBuffer, storageBuffer, bindGroup };
+  return {
+    pipeline,
+    uniformBuffer,
+    channelBuffer,
+    storageBuffer,
+    bindGroup,
+    bufferLength,
+    channelCount,
+  };
+}
+
+export function uploadDigitalUniforms(
+  device: GPUDevice,
+  buffer: GPUBuffer,
+  args: {
+    width: number;
+    height: number;
+    threshold: number;
+    yHigh: number;
+    yLow: number;
+    lineWidth: number;
+    writePointer: number;
+    bufferLength: number;
+    channelCount: number;
+  },
+): void {
+  const f = new Float32Array(12);
+  const u = new Uint32Array(f.buffer);
+  f[0] = args.width;
+  f[1] = args.height;
+  f[2] = args.threshold;
+  f[3] = args.yHigh;
+  f[4] = args.yLow;
+  f[5] = args.lineWidth;
+  u[6] = args.writePointer;
+  u[7] = args.bufferLength;
+  u[8] = args.channelCount;
+  device.queue.writeBuffer(buffer, 0, f);
 }
