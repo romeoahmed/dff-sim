@@ -1,0 +1,3 @@
+msgid ""
+msgstr ""
+"Language: zh-CN\n"
