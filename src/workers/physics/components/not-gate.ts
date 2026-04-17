@@ -30,4 +30,8 @@ export class NOTGate implements CombinationalComponent {
   evaluate(): void {
     this.outPort.voltage = this.inPort.voltage > this.threshold ? 0.0 : this.vHigh;
   }
+
+  update(_dt: number): void {
+    // No-op until Task 5 wires AnalogOutput.
+  }
 }

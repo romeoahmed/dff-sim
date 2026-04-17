@@ -88,9 +88,19 @@ export class CircuitGraph {
     }
   }
 
+  getCombinational(): readonly CombinationalComponent[] {
+    return this.combinationalOrder;
+  }
+
   evaluateCombinational(): void {
     for (const comp of this.combinationalOrder) {
       comp.evaluate();
+    }
+  }
+
+  updateCombinational(dt: number): void {
+    for (const comp of this.combinationalOrder) {
+      comp.update(dt);
     }
   }
 

@@ -52,4 +52,8 @@ export class FullAdder implements CombinationalComponent {
     this.sumPort.voltage = sumHigh ? this.vHigh : 0.0;
     this.coutPort.voltage = coutHigh ? this.vHigh : 0.0;
   }
+
+  update(_dt: number): void {
+    // No-op until Task 5 wires AnalogOutput.
+  }
 }

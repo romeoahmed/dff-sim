@@ -72,6 +72,7 @@ export interface Component {
 export interface CombinationalComponent extends Component {
   readonly kind: "combinational";
   evaluate(): void;
+  update(dt: number): void;
 }
 
 export interface SequentialComponent extends Component {

@@ -38,4 +38,8 @@ export class ANDGate implements CombinationalComponent {
     const bHigh = this.bPort.voltage > this.threshold;
     this.outPort.voltage = aHigh && bHigh ? this.vHigh : 0.0;
   }
+
+  update(_dt: number): void {
+    // No-op until Task 5 wires AnalogOutput.
+  }
 }

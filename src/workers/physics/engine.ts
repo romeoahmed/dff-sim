@@ -56,19 +56,12 @@ export class SimulationEngine {
   }
 
   private stepPhysics(dt: number): void {
-    // 1. 时序组件 update（RC 滤波、噪声）
     for (const seq of this.sequentialList) seq.update(dt);
-    // 2. 传播电压
     this.graph.propagate();
-    // 3. 时序组件 clock（边沿检测、触发器采样）
     for (const seq of this.sequentialList) seq.clock(dt);
-    // 4. 再次传播（触发器输出已更新）
-    this.graph.propagate();
-    // 5. 求值组合逻辑
     this.graph.evaluateCombinational();
-    // 6. 最终传播
+    this.graph.updateCombinational(dt);
     this.graph.propagate();
-    // 7. 写入波形缓冲区
     this.buffer.push(this.graph.collectProbeVoltages(this.probes));
   }
 }
