@@ -2,9 +2,7 @@
 
 **Physics-accurate digital logic simulation in the browser.**
 
-[中文版本 →](#中文)
-
----
+English · [中文](./README.zh-CN.md)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
@@ -16,48 +14,59 @@
 
 ## Overview
 
-DFF·SIM is a browser-based simulation that models digital logic circuits at the **analog voltage level** rather than as ideal binary transitions. Every signal is a continuous voltage that rises and falls with realistic physics — including Gaussian noise, RC slew, second-order ringing, Schmitt-trigger hysteresis, and metastability resolution.
+DFF·SIM is a browser simulator of digital logic circuits at the **analog voltage level**, not as ideal binary transitions. Every wire carries a continuous voltage that rises and falls with real physics — Gaussian noise, RC slew, second-order ringing, Schmitt-trigger hysteresis, per-gate propagation delay, and metastability that visibly hovers at the midpoint before snapping to a rail.
+
+It is an instrument panel, not an HDL simulator. The goal is to see the physics of digital logic on an oscilloscope the way a lab bench would show it — with all the imperfections that textbook diagrams hide.
 
 The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a React instrument panel styled with Catppuccin Macchiato.
 
 ---
 
-## Features
-
-### Analog physics engine
+## Physics model
 
 | Effect | Implementation |
 |--------|----------------|
-| Gaussian white noise | Marsaglia Polar Method |
+| Gaussian white noise | Marsaglia polar method |
 | 1/f flicker noise | Voss-McCartney octave accumulator |
-| Voltage slew / RC delay | Damped second-order oscillator (ζ, ω) |
-| Schmitt-trigger hysteresis | Separate HIGH/LOW threshold bands |
-| Metastability | Random collapse when D is in the undefined zone on a clock edge |
-| Frame-rate independence | All physics stepped by explicit `dt` |
+| Voltage slew & ringing | Damped second-order oscillator (ζ, ωₙ) |
+| Schmitt-trigger hysteresis | Two-level threshold band; sub-band voltages latch the previous state |
+| Propagation delay | Per-gate `tPD` via a pending-target timer on each analog output |
+| Metastability | Exponential-distributed resolution time; Q visibly hovers at mid-voltage; resolution is biased by the D voltage at the clock edge plus Gaussian jitter, not a fair coin |
+| Frame-rate independence | All physics stepped by an explicit `dt` |
 
-### Circuits
-
-| Circuit | Description |
-|---------|-------------|
-| **D Flip-Flop** | Single DFF showing edge-triggered capture, clock jitter, noise, and metastability |
-| **4-Bit Accumulator** | Ripple-carry adder feeding four DFFs. Each full adder has its own propagation delay `tPD`, so carry propagation cascades visibly on the oscilloscope — Q0 settles before Q1 before Q2 before Q3. |
-
-### Rendering
-
-- **WebGPU** oscilloscope rendered entirely on a dedicated worker thread via `OffscreenCanvas` — the main thread never blocks waveform drawing
-- Three shader styles: **Clean**, **Glow** (bloom), **Phosphor** (CRT scanline)
-- Direct physics→render `MessagePort` channel: frame data bypasses the main thread entirely
-
-### UI
-
-- Per-circuit parameter controls (sliders, toggles, momentary buttons)
-- Probe selector — choose which signals appear on the oscilloscope
-- Circuit selector — switch between loaded circuit definitions at runtime
-- Settings sheet and localisation toggle (English / 中文)
+Every combinational gate (`ANDGate`, `ORGate`, `XORGate`, `NOTGate`, `FullAdder`) owns its own `AnalogOutput` — a `Signal` plus a `NoiseGenerator` plus a `tPD` timer — so the same dynamics DFFs have are present end-to-end. Feedback circuits (SR latches, ring oscillators, astables) are valid; there is no topological-sort rejection.
 
 ---
 
-## Tech Stack
+## Circuits
+
+| Circuit | What you see |
+|---------|--------------|
+| **D Flip-Flop** | A single DFF demonstrating edge-triggered capture, clock jitter, output noise, and metastability. Park the D input inside the Schmitt band just before a rising edge and Q hovers at mid for a visible random interval before snapping to HIGH or LOW, biased by where D actually sat. |
+| **4-bit Accumulator** | Ripple-carry adder feeding four DFFs. Each full adder has its own `tPD`, so on every clock edge you can watch the carry cascade through the chain — Q0 settles, then Q1, then Q2, then Q3 — instead of all four bits flipping simultaneously. |
+
+---
+
+## Rendering
+
+- **WebGPU** oscilloscope rendered entirely on a dedicated worker thread via `OffscreenCanvas`. The main thread never blocks waveform drawing.
+- Three fragment-shader styles: **Clean**, **Glow** (bloom halo), and **Phosphor** (CRT scanline with age fade).
+- **Per-channel dash patterns** (solid, long-dash, dot, dash-dot) so traces are distinguishable without colour — the patterns apply to both the analog waveform and the digital-logic views under every shader style.
+- Direct physics → render `MessagePort` channel: frame data bypasses the main thread entirely.
+
+---
+
+## UI and accessibility
+
+- Per-circuit parameter controls (sliders, toggles, momentary buttons) via Radix primitives.
+- Probe selector — choose which signals appear on the oscilloscope.
+- Circuit selector — switch between loaded circuit definitions at runtime.
+- Settings sheet and localisation toggle (English / 中文).
+- **Accessibility**: canvases and SVG schematic carry proper `aria-label` / `role="img"` / `<title>` / `<desc>`; the schematic description is derived from the `CircuitDefinition` (component-type counts + net count + definition text). A visually-hidden live region announces probe logic transitions (HIGH ↔ LOW) only on Schmitt-band crossings — no 60 Hz voltage flood. Dash patterns give a second, non-colour channel for distinguishing traces.
+
+---
+
+## Tech stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -72,16 +81,16 @@ The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a Re
 | Animation | Motion (Framer Motion) |
 | i18n | Lingui 5 (en / zh-CN) |
 | Lint + format | Biome 2 |
-| Tests | Vitest 4 + Testing Library |
+| Tests | Vitest 4 + Testing Library + happy-dom |
 
 ---
 
-## Quick Start
+## Quick start
 
 ### Requirements
 
 - [Bun](https://bun.sh/) v1.0+
-- Chrome 113+ or another browser with WebGPU support (falls back to WebGL)
+- Chrome 113+ or another WebGPU-capable browser
 
 ### Install and run
 
@@ -101,212 +110,73 @@ bun run build        # Production build → dist/
 bun run preview      # Serve production build
 bun run typecheck    # Type-check without emitting
 bun run check        # Biome lint + format check
-bun run test         # Run all tests
+bun run test         # Run all tests (Vitest)
 bun run test:watch   # Watch mode
+bun run test:ui      # Browser test UI
 ```
 
 ---
 
 ## Architecture
 
+Three threads, two hops:
+
 ```
 ┌─────────────────────────────────────┐
-│          Main Thread (React)        │
-│  Jotai atoms · hooks · components   │
-│         Comlink RPC ↕               │
+│         Main thread (React)         │
+│   Jotai atoms · hooks · components  │
+│            Comlink RPC ↕            │
 └──────────┬──────────────────────────┘
            │
 ┌──────────▼──────────┐   MessagePort   ┌─────────────────────┐
-│   Physics Worker    │ ─────────────▶  │   Render Worker     │
+│   Physics worker    │ ─────────────▶  │   Render worker     │
 │  SimulationEngine   │  Float32 frames │  WebGPU pipelines   │
 │  CircuitGraph       │                 │  WGSL shaders       │
 │  Component tick     │                 │  OffscreenCanvas    │
 └─────────────────────┘                 └─────────────────────┘
 ```
 
-**Physics worker** runs the simulation loop: `seq.update → propagate → seq.clock → evaluateCombinational → updateCombinational(dt) → propagate → buffer.push`. It owns the `CircuitGraph`. Each combinational gate carries its own `tPD` and Signal dynamics, so intra-tick ordering is not required — feedback circuits (SR latches, ring oscillators) are valid.
+Each physics tick runs the following phases in order:
 
-**Render worker** receives `Float32Array` frames over a direct `MessagePort` and draws waveforms via custom WGSL shaders. Frame data never passes through the main thread.
+```
+seq.update(dt)           // DFF Signal step, pending Q timer
+propagate                // DFF outputs fan out to nets
+seq.clock(dt)            // DFF edge detect, sample D, queue pending
+evaluateCombinational()  // gates read inputs, queue pending output
+updateCombinational(dt)  // gates tick tPD, advance Signal, write output port
+propagate                // gate outputs fan out
+buffer.push              // probe voltages written to the ring buffer
+```
+
+Frame data flows physics → render through a direct `MessagePort` — never through the main thread. The render worker uploads the frame to a GPU storage buffer and draws each trace as an instanced triangle strip.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 src/
 ├── atoms/                   # Jotai atoms (simulation state, UI state)
-├── circuits/                # Circuit definitions (DFF, 4-bit accumulator)
+├── circuits/                # Circuit definitions (DFF, accumulator, …)
 ├── components/
-│   ├── controls/            # ControlPanel, ParamSlider, ParamToggle, ParamMomentary
+│   ├── controls/            # ParamSlider, ParamToggle, ParamMomentary, ControlPanel, ProbeSelector
 │   ├── nav/                 # Toolbar, CircuitSelector, SettingsSheet
-│   ├── oscilloscope/        # OscilloscopePanel (canvas host)
-│   └── schematic/           # CircuitSchematic (SVG)
+│   ├── oscilloscope/        # OscilloscopePanel, WaveformCanvas, DigitalCanvas, LiveVoltageReadouts, ProbeStateAnnouncer, Legend
+│   └── schematic/           # CircuitSchematic, SchematicGrid/Node/Wire, describe helper
 ├── hooks/                   # useSimulation (worker bridge integration)
 ├── lib/                     # Types, constants, worker bridge, RNG utilities
 ├── locales/                 # Lingui i18n catalogs (en, zh-CN)
 ├── styles/                  # Catppuccin theme
 ├── test/                    # Test setup and component tests
 └── workers/
-    ├── physics/             # SimulationEngine, CircuitGraph, all components
-    └── render/              # WebGPU pipelines, gpu-device, WGSL shaders
+    ├── physics/             # SimulationEngine, CircuitGraph, Signal, NoiseGenerator, AnalogOutput, gaussian, components/
+    └── render/              # WebGPU pipelines, gpu-device, WGSL shaders (vert + clean/glow/phosphor/digital)
 ```
+
+The `docs/superpowers/` directory holds the specs and implementation plans that produced the current behaviour — useful if you want to see the reasoning behind a design decision rather than the code that resulted from it.
 
 ---
 
 ## License
-
-[MIT](LICENSE)
-
----
----
-
-# 中文
-
-**在浏览器中运行的物理精确数字逻辑仿真。**
-
-[English version ↑](#dffsim)
-
----
-
-## 概述
-
-DFF·SIM 是一个基于浏览器的仿真项目，它在**模拟电压层面**对数字逻辑电路进行建模，而非理想的二进制跳变。每个信号都是一个连续变化的电压，具有真实的物理特性——包括高斯噪声、RC 压摆、二阶振铃、施密特触发器迟滞效应和亚稳态消解。
-
-示波器在独立的 WebGPU 线程上以 60+ FPS 渲染。UI 是一个以 Catppuccin Macchiato 配色的 React 仪器面板。
-
----
-
-## 特性
-
-### 模拟物理引擎
-
-| 效果 | 实现方式 |
-|------|---------|
-| 高斯白噪声 | Marsaglia 极坐标法 |
-| 1/f 闪烁噪声 | Voss-McCartney 倍频程累加器 |
-| 电压压摆 / RC 延迟 | 有阻尼二阶振荡器（ζ、ω） |
-| 施密特触发器迟滞 | 独立的高/低电平阈值带 |
-| 亚稳态 | 时钟沿时 D 处于未定义区间，输出随机坍缩 |
-| 帧率无关 | 所有物理计算均以显式 `dt` 步进 |
-
-### 电路
-
-| 电路 | 描述 |
-|------|------|
-| **D 触发器** | 单个 DFF，展示边沿触发捕获、时钟抖动、噪声和亚稳态 |
-| **4 位累加器** | 行波进位加法器驱动四个 DFF。每个全加器都有独立的传播延迟 `tPD`，因此进位传播会在示波器上级联显现——Q0 先稳定，然后 Q1、Q2、Q3 依次跟进。 |
-
-### 渲染
-
-- **WebGPU** 示波器完全在独立 Worker 线程通过 `OffscreenCanvas` 渲染——主线程永远不会阻塞波形绘制
-- 三种着色器风格：**Clean**（清晰）、**Glow**（发光/泛光）、**Phosphor**（CRT 磷光屏）
-- 物理→渲染直通 `MessagePort` 通道：帧数据完全绕过主线程传输
-
-### UI
-
-- 各电路的参数控件（滑块、开关、瞬时按钮）
-- 探针选择器——选择哪些信号显示在示波器上
-- 电路选择器——运行时在已加载的电路定义之间切换
-- 设置面板和语言切换（English / 中文）
-
----
-
-## 技术栈
-
-| 层次 | 技术 |
-|------|------|
-| UI 框架 | React 19 |
-| 语言 | TypeScript 6（严格模式） |
-| 构建 | Vite 8 + Bun |
-| 状态管理 | Jotai 2（原子化） |
-| Worker RPC | Comlink 4 |
-| GPU | WebGPU（`@webgpu/types`） |
-| 样式 | Tailwind CSS v4 + Catppuccin Macchiato |
-| 组件库 | Radix UI 原语 |
-| 动画 | Motion（Framer Motion） |
-| 国际化 | Lingui 5（en / zh-CN） |
-| 代码检查与格式化 | Biome 2 |
-| 测试 | Vitest 4 + Testing Library |
-
----
-
-## 快速开始
-
-### 环境要求
-
-- [Bun](https://bun.sh/) v1.0+
-- Chrome 113+ 或其他支持 WebGPU 的浏览器（自动降级为 WebGL）
-
-### 安装与运行
-
-```bash
-git clone https://github.com/romeoahmed/dff-sim.git
-cd dff-sim
-bun install
-bun run dev
-```
-
-打开 `http://localhost:5173`。
-
-### 其他命令
-
-```bash
-bun run build        # 生产构建 → dist/
-bun run preview      # 本地预览生产构建
-bun run typecheck    # 仅类型检查，不生成文件
-bun run check        # Biome 代码检查 + 格式验证
-bun run test         # 运行全部测试
-bun run test:watch   # 监视模式
-```
-
----
-
-## 架构
-
-```
-┌─────────────────────────────────────┐
-│        主线程（React UI）            │
-│  Jotai 原子 · Hooks · 组件           │
-│         Comlink RPC ↕               │
-└──────────┬──────────────────────────┘
-           │
-┌──────────▼──────────┐   MessagePort   ┌─────────────────────┐
-│    物理 Worker       │ ─────────────▶  │   渲染 Worker        │
-│  SimulationEngine   │  Float32 帧数据  │  WebGPU 管线         │
-│  CircuitGraph       │                 │  WGSL 着色器          │
-│  组件 Tick 循环       │                 │  OffscreenCanvas    │
-└─────────────────────┘                 └─────────────────────┘
-```
-
-**物理 Worker** 运行仿真循环：`seq.update → propagate → seq.clock → evaluateCombinational → updateCombinational(dt) → propagate → buffer.push`。它持有 `CircuitGraph`。每个组合逻辑门都有独立的 `tPD` 和 Signal 动力学，因此无需在单个 tick 内排序——反馈电路（SR 锁存器、环形振荡器）是合法的电路。
-
-**渲染 Worker** 通过直通 `MessagePort` 接收 `Float32Array` 帧数据，并使用自定义 WGSL 着色器绘制波形。帧数据完全不经过主线程。
-
----
-
-## 项目结构
-
-```
-src/
-├── atoms/                   # Jotai 原子（仿真状态、UI 状态）
-├── circuits/                # 电路定义（DFF、4 位累加器）
-├── components/
-│   ├── controls/            # ControlPanel, ParamSlider, ParamToggle, ParamMomentary
-│   ├── nav/                 # Toolbar, CircuitSelector, SettingsSheet
-│   ├── oscilloscope/        # OscilloscopePanel（画布宿主）
-│   └── schematic/           # CircuitSchematic（SVG 示意图）
-├── hooks/                   # useSimulation（Worker 桥接集成）
-├── lib/                     # 类型定义、常量、Worker 桥接、RNG 工具
-├── locales/                 # Lingui 国际化目录（en、zh-CN）
-├── styles/                  # Catppuccin 主题
-├── test/                    # 测试配置和组件测试
-└── workers/
-    ├── physics/             # SimulationEngine、CircuitGraph、所有组件
-    └── render/              # WebGPU 管线、gpu-device、WGSL 着色器
-```
-
----
-
-## 许可证
 
 [MIT](LICENSE)
