@@ -11,7 +11,8 @@ struct Uniforms {
 struct ChannelConfig {
   color: vec4<f32>,
   yOffset: f32,
-  _pad: vec3<f32>,
+  dashPattern: u32,
+  _pad: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -23,6 +24,8 @@ struct VSOut {
   @location(0) color: vec4<f32>,
   @location(1) edgeDist: f32,
   @location(2) age: f32,
+  @location(3) dashDist: f32,
+  @location(4) @interpolate(flat) dashPattern: u32,
 };
 
 fn readSample(channel: u32, i: u32) -> f32 {
@@ -41,17 +44,15 @@ fn vs_main(
   @builtin(instance_index) iid: u32,
 ) -> VSOut {
   let sampleIdx = vid / 2u;
-  let side = f32(vid & 1u) * 2.0 - 1.0; // +1 or -1
+  let side = f32(vid & 1u) * 2.0 - 1.0;
   let ch = channels[iid];
 
-  // Read current and neighbor sample for direction
   let curV = readSample(iid, sampleIdx);
 
   let stepX = u.canvasSize.x / f32(u.bufferLength - 1u);
   let x = f32(sampleIdx) * stepX;
   let y = voltageToY(curV, ch.yOffset);
 
-  // At last sample use previous direction to avoid zero-length segment
   let isLast = sampleIdx >= u.bufferLength - 1u;
   let refIdx = select(sampleIdx + 1u, sampleIdx - 1u, isLast);
   let refSign = select(1.0, -1.0, isLast);
@@ -62,7 +63,6 @@ fn vs_main(
   let dx = (refX - x) * refSign;
   let dy = (refY - y) * refSign;
   let len = max(sqrt(dx * dx + dy * dy), 0.001);
-  // Normal (perpendicular): (-dy, dx) normalized
   let nx = -dy / len;
   let ny = dx / len;
 
@@ -75,7 +75,9 @@ fn vs_main(
   var out: VSOut;
   out.pos = vec4<f32>(screenX, screenY, 0.0, 1.0);
   out.color = ch.color;
-  out.edgeDist = side; // -1 at one edge, +1 at the other
+  out.edgeDist = side;
   out.age = f32(u.bufferLength - sampleIdx) / f32(u.bufferLength);
+  out.dashDist = x;
+  out.dashPattern = ch.dashPattern;
   return out;
 }

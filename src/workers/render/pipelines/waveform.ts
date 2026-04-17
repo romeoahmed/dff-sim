@@ -106,20 +106,20 @@ export function uploadChannels(
   probes: readonly Probe[],
   canvasHeight: number,
 ): void {
-  // 8 floats per channel (32 B): color[0-3], yOffset[4], _pad[5-7]
-  const data = new Float32Array(8 * probes.length);
+  const f = new Float32Array(8 * probes.length);
+  const u = new Uint32Array(f.buffer);
   const rowHeight = canvasHeight / Math.max(probes.length, 1);
   for (const [i, probe] of probes.entries()) {
     const yOffset = rowHeight * probe.channelIndex + rowHeight * 0.5 - canvasHeight * 0.5;
     const color = hexToRgba(probe.color);
-    data[i * 8 + 0] = color[0];
-    data[i * 8 + 1] = color[1];
-    data[i * 8 + 2] = color[2];
-    data[i * 8 + 3] = color[3];
-    data[i * 8 + 4] = yOffset;
-    // indices 5-7 are _pad, default 0
+    f[i * 8 + 0] = color[0];
+    f[i * 8 + 1] = color[1];
+    f[i * 8 + 2] = color[2];
+    f[i * 8 + 3] = color[3];
+    f[i * 8 + 4] = yOffset;
+    u[i * 8 + 5] = probe.channelIndex % 4;
   }
-  device.queue.writeBuffer(buffer, 0, data);
+  device.queue.writeBuffer(buffer, 0, f);
 }
 
 export function uploadUniforms(
