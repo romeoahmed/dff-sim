@@ -1,5 +1,5 @@
 // The font package lacks TypeScript type declarations;
-// these must be declared manually here to avoid `TS2882` errors.
+// these must be declared manually here to avoid `TS2307` errors.
 declare module "@fontsource-variable/ibm-plex-sans" {
   const css: string;
   export default css;

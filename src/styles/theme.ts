@@ -30,6 +30,7 @@ export const theme = {
   sapphire: macchiato.colors.sapphire.hex,
 } as const;
 
+// 供无法访问 CSS 变量的 JS 上下文使用（例如 WebGPU uniforms）
 export function toCssVars(): string {
   return Object.entries(theme)
     .map(([name, hex]) => `  --color-${name}: ${hex};`)
