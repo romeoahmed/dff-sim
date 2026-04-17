@@ -1,9 +1,9 @@
 import type { RefObject } from "react";
 import { DigitalCanvas } from "./DigitalCanvas";
-import { WaveformCanvas } from "./WaveformCanvas";
-import { Legend } from "./Legend";
 import { InstrumentBezel } from "./InstrumentBezel";
+import { Legend } from "./Legend";
 import { LiveVoltageReadouts } from "./LiveVoltageReadouts";
+import { WaveformCanvas } from "./WaveformCanvas";
 
 interface Props {
   waveformRef: RefObject<HTMLCanvasElement | null>;

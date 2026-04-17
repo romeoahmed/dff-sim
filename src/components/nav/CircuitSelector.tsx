@@ -23,7 +23,9 @@ export function CircuitSelector() {
         aria-label="Select circuit"
       >
         {circuits.map((c) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
         ))}
       </select>
       <ChevronDown size={12} className="absolute right-2 pointer-events-none text-subtext0" />

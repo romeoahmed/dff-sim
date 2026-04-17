@@ -1,8 +1,8 @@
-import { useAtom, useSetAtom } from "jotai";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
+import { useAtom, useSetAtom } from "jotai";
+import { CircuitBoard, Globe, Info, Settings } from "lucide-react";
 import { motion } from "motion/react";
-import { Settings, Info, Globe, CircuitBoard } from "lucide-react";
-import { shaderStyleAtom, settingsOpenAtom, aboutOpenAtom, localeAtom } from "@/atoms/ui-atoms";
+import { aboutOpenAtom, localeAtom, settingsOpenAtom, shaderStyleAtom } from "@/atoms/ui-atoms";
 import type { ShaderStyle } from "@/workers/render/shaders";
 import { CircuitSelector } from "./CircuitSelector";
 
@@ -30,7 +30,10 @@ export function Toolbar() {
       initial="hidden"
       animate="show"
     >
-      <motion.div variants={toolbarItem} className="flex items-center gap-2 font-bold text-lavender">
+      <motion.div
+        variants={toolbarItem}
+        className="flex items-center gap-2 font-bold text-lavender"
+      >
         <CircuitBoard size={18} strokeWidth={2.25} />
         <span className="readout tracking-[0.15em]">DFF·SIM</span>
       </motion.div>
@@ -61,23 +64,34 @@ export function Toolbar() {
 
         <div className="h-6 w-px bg-surface1" aria-hidden />
 
-        <motion.button type="button" onClick={() => setSettingsOpen(true)}
-          whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+        <motion.button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.94 }}
           className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text"
-          aria-label="Settings">
+          aria-label="Settings"
+        >
           <Settings size={16} />
         </motion.button>
-        <motion.button type="button" onClick={() => setAboutOpen(true)}
-          whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+        <motion.button
+          type="button"
+          onClick={() => setAboutOpen(true)}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.94 }}
           className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text"
-          aria-label="About">
+          aria-label="About"
+        >
           <Info size={16} />
         </motion.button>
-        <motion.button type="button"
+        <motion.button
+          type="button"
           onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")}
-          whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.94 }}
           className="p-1.5 rounded hover:bg-surface0 text-subtext0 hover:text-text"
-          aria-label="Language">
+          aria-label="Language"
+        >
           <Globe size={16} />
         </motion.button>
       </motion.div>

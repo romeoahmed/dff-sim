@@ -1,6 +1,6 @@
 import { useAtomValue } from "jotai";
-import { activeProbesAtom } from "@/atoms/ui-atoms";
 import { voltageAtomFamily } from "@/atoms/simulation-atoms";
+import { activeProbesAtom } from "@/atoms/ui-atoms";
 
 function Readout({ netId, label, color }: { netId: string; label: string; color: string }) {
   const v = useAtomValue(voltageAtomFamily(netId));
@@ -17,7 +17,11 @@ function Readout({ netId, label, color }: { netId: string; label: string; color:
 export function LiveVoltageReadouts() {
   const probes = useAtomValue(activeProbesAtom);
   return (
-    <div className="absolute top-2 right-2 flex gap-1.5 pointer-events-none" aria-live="polite" aria-atomic="true">
+    <div
+      className="absolute top-2 right-2 flex gap-1.5 pointer-events-none"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {probes.map((p) => (
         <Readout key={p.netId} netId={p.netId} label={p.label} color={p.color} />
       ))}

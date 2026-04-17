@@ -13,9 +13,7 @@ export function InstrumentBezel({ children, label }: Props) {
           {label}
         </div>
       )}
-      <div className="relative flex-1 min-h-0">
-        {children}
-      </div>
+      <div className="relative flex-1 min-h-0">{children}</div>
     </div>
   );
 }
