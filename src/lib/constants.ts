@@ -36,6 +36,7 @@ export const DefaultTiming = {
   tHold: 0.001,
   tCQ: 0.002,
   tauMeta: 0.005,
+  metaResolveNoiseSigma: 0.15,
 } as const satisfies TimingConfig;
 
 export const DefaultGates = {

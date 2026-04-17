@@ -31,6 +31,7 @@ export interface TimingConfig {
   readonly tHold: number;
   readonly tCQ: number;
   readonly tauMeta: number;
+  readonly metaResolveNoiseSigma: number;
 }
 
 export interface GatesConfig {
