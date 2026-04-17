@@ -1,9 +1,7 @@
 import { useAtom } from "jotai";
 import { ChevronDown } from "lucide-react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
-import { dffCircuit } from "@/circuits/dff";
-
-const circuits = [dffCircuit];
+import { circuits } from "@/circuits";
 
 export function CircuitSelector() {
   const [circuitDef, setCircuitDef] = useAtom(circuitDefAtom);
