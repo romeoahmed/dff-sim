@@ -94,7 +94,7 @@ class PhysicsWorker implements PhysicsAPI {
 
     if (this.renderPort) {
       const buf = this.engine.getBuffer();
-      const payload = buf.toInterleavedBuffer();
+      const payload = buf.toChannelMajorBuffer();
       this.renderPort.postMessage(
         {
           type: "frame",

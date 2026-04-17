@@ -46,7 +46,7 @@ export class WaveformBuffer {
     this._writePointer = 0;
   }
 
-  toInterleavedBuffer(): Float32Array {
+  toChannelMajorBuffer(): Float32Array {
     const buf = new Float32Array(this.channelCount * this.length);
     for (let c = 0; c < this.channelCount; c++) {
       buf.set(this.getChannel(c), c * this.length);
