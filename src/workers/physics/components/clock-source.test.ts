@@ -10,6 +10,10 @@ describe("ClockSource", () => {
       { speed: 50 },
       { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
+    const outPort = clk.outputs.get("out");
+    expect(outPort).toBeDefined();
+    if (!outPort) return;
+
     const dt = 0.0001;
     let transitions = 0;
     let lastLogic = -1;
@@ -17,7 +21,7 @@ describe("ClockSource", () => {
     for (let i = 0; i < 50000; i++) {
       clk.update(dt);
       clk.clock(dt);
-      const logic = clk.outputs.get("out")!.voltage > 1.0 ? 1 : 0;
+      const logic = outPort.voltage > 1.0 ? 1 : 0;
       if (lastLogic >= 0 && logic !== lastLogic) transitions++;
       lastLogic = logic;
     }
@@ -30,6 +34,10 @@ describe("ClockSource", () => {
       { speed: 50, jitterRms: 0.05 },
       { config: DefaultPhysicsConfig, rng: createSeededRng(42) },
     );
+    const outPort = clk.outputs.get("out");
+    expect(outPort).toBeDefined();
+    if (!outPort) return;
+
     const dt = 0.0001;
     const edgeTimes: number[] = [];
     let lastLogic = 0;
@@ -38,7 +46,7 @@ describe("ClockSource", () => {
     for (let i = 0; i < 100000; i++) {
       clk.update(dt);
       clk.clock(dt);
-      const logic = clk.outputs.get("out")!.voltage > 1.0 ? 1 : 0;
+      const logic = outPort.voltage > 1.0 ? 1 : 0;
       if (logic === 1 && lastLogic === 0) {
         edgeTimes.push(time);
       }
@@ -48,7 +56,7 @@ describe("ClockSource", () => {
 
     const periods: number[] = [];
     for (let i = 1; i < edgeTimes.length; i++) {
-      periods.push(edgeTimes[i]! - edgeTimes[i - 1]!);
+      periods.push((edgeTimes[i] ?? 0) - (edgeTimes[i - 1] ?? 0));
     }
 
     if (periods.length >= 2) {

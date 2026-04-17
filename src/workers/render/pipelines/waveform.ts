@@ -19,8 +19,8 @@ export function createWaveformPipeline(
 ): WaveformPipelineResources {
   const vertModule = device.createShaderModule({ code: shaders.waveformVert });
 
-  // 显式绑定组布局，使三个管线共享同一个兼容的绑定组
-  // （layout: "auto" 会为每个管线生成独立的不兼容布局）
+  // Explicit bind group layout so all three pipelines share one compatible bind group.
+  // layout: "auto" would generate a separate incompatible layout per pipeline.
   const bindGroupLayout = device.createBindGroupLayout({
     entries: [
       {
@@ -74,7 +74,7 @@ export function createWaveformPipeline(
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  // ChannelConfig: color(vec4=16字节) + yOffset(f32=4字节) + _pad(vec3=12字节) = 每通道32字节
+  // ChannelConfig: color(vec4=16 B) + yOffset(f32=4 B) + _pad(vec3=12 B) = 32 B per channel
   const channelBuffer = device.createBuffer({
     size: Math.max(32 * channelCount, 32),
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -106,12 +106,10 @@ export function uploadChannels(
   probes: readonly Probe[],
   canvasHeight: number,
 ): void {
-  // 每通道8个浮点数（32字节）: color[0-3], yOffset[4], _pad[5-7]
+  // 8 floats per channel (32 B): color[0-3], yOffset[4], _pad[5-7]
   const data = new Float32Array(8 * probes.length);
   const rowHeight = canvasHeight / Math.max(probes.length, 1);
-  for (let i = 0; i < probes.length; i++) {
-    // biome-ignore lint/style/noNonNullAssertion: index is within bounds of the loop
-    const probe = probes[i]!;
+  for (const [i, probe] of probes.entries()) {
     const yOffset = rowHeight * probe.channelIndex + rowHeight * 0.5 - canvasHeight * 0.5;
     const color = hexToRgba(probe.color);
     data[i * 8 + 0] = color[0];
@@ -119,7 +117,7 @@ export function uploadChannels(
     data[i * 8 + 2] = color[2];
     data[i * 8 + 3] = color[3];
     data[i * 8 + 4] = yOffset;
-    // 索引 5-7 为 _pad，默认为 0
+    // indices 5-7 are _pad, default 0
   }
   device.queue.writeBuffer(buffer, 0, data);
 }

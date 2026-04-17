@@ -10,8 +10,7 @@ export function ParamSlider({ control }: { control: ControlDef }) {
 
   return (
     <div className="grid grid-cols-[1fr_auto] gap-2 items-center py-2">
-      {/* biome-ignore lint/a11y/noLabelWithoutControl: aria-label on Slider.Root handles a11y */}
-      <label className="text-xs uppercase tracking-wider text-subtext0">{control.label}</label>
+      <span className="text-xs uppercase tracking-wider text-subtext0">{control.label}</span>
       <span className="readout text-xs text-text tabular-nums">{numValue.toFixed(0)}</span>
       <Slider.Root
         className="col-span-2 relative flex items-center h-6 group select-none touch-none"

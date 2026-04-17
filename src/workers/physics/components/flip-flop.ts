@@ -9,6 +9,9 @@ export class DFlipFlop implements SequentialComponent {
   readonly outputs: Map<string, Port>;
 
   private readonly qSignal: Signal;
+  private readonly qPort: Port;
+  private readonly clkPort: Port;
+  private readonly dPort: Port;
   private readonly config: PhysicsConfig;
   private readonly rng: RngFn;
 
@@ -34,6 +37,10 @@ export class DFlipFlop implements SequentialComponent {
     const dPort = createPort("d");
     const clkPort = createPort("clk");
     const qPort = createPort("q");
+
+    this.dPort = dPort;
+    this.clkPort = clkPort;
+    this.qPort = qPort;
 
     this.inputs = new Map([
       ["d", dPort],
@@ -77,7 +84,7 @@ export class DFlipFlop implements SequentialComponent {
     }
 
     this.qSignal.update(dt);
-    this.outputs.get("q")!.voltage = this.qSignal.voltage;
+    this.qPort.voltage = this.qSignal.voltage;
   }
 
   clock(_dt: number): void {
@@ -88,7 +95,7 @@ export class DFlipFlop implements SequentialComponent {
       return;
     }
 
-    const clkVoltage = this.inputs.get("clk")!.voltage;
+    const clkVoltage = this.clkPort.voltage;
     const { logicHighMin, logicLowMax } = this.config.voltage;
 
     let clkLogic: 0 | 1;
@@ -105,7 +112,7 @@ export class DFlipFlop implements SequentialComponent {
 
     if (!isRisingEdge) return;
 
-    const dVoltage = this.inputs.get("d")!.voltage;
+    const dVoltage = this.dPort.voltage;
 
     if (dVoltage > logicHighMin) {
       this.scheduleQ(1);

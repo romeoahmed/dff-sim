@@ -65,7 +65,7 @@ export class NoiseGenerator {
   private flickerSample(): number {
     const idx = this.ctz(this.counter);
     if (idx < this.octaves) {
-      this.runningSum -= this.generators[idx]!;
+      this.runningSum -= this.generators[idx] ?? 0;
       const newVal = this.gaussianSample();
       this.generators[idx] = newVal;
       this.runningSum += newVal;

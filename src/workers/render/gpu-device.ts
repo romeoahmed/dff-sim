@@ -27,10 +27,8 @@ export function configureCanvas(
 ): GPUCanvasContext {
   const ctx = canvas.getContext("webgpu");
   if (ctx === null) throw new Error("Cannot get WebGPU context");
-  // WebGPU context type not in OffscreenCanvas overloads yet
-  const gpuCtx = ctx as unknown as GPUCanvasContext;
 
-  gpuCtx.configure({ device, format, alphaMode: "premultiplied" });
+  ctx.configure({ device, format, alphaMode: "premultiplied" });
 
-  return gpuCtx;
+  return ctx;
 }

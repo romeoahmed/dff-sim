@@ -60,10 +60,13 @@ describe("CircuitGraph", () => {
 
   it("propagates driver voltage to loads", () => {
     const graph = new CircuitGraph(dffDef, testRegistry, DefaultPhysicsConfig, createSeededRng(1));
-    const clkOut = graph.getComponent("clk").outputs.get("out")!;
+    const clkOut = graph.getComponent("clk").outputs.get("out");
+    const dffClk = graph.getComponent("dff0").inputs.get("clk");
+    expect(clkOut).toBeDefined();
+    expect(dffClk).toBeDefined();
+    if (!clkOut || !dffClk) return;
     clkOut.voltage = 2.0;
     graph.propagate();
-    const dffClk = graph.getComponent("dff0").inputs.get("clk")!;
     expect(dffClk.voltage).toBe(2.0);
   });
 
@@ -79,8 +82,13 @@ describe("CircuitGraph", () => {
 
   it("collects probed net voltages", () => {
     const graph = new CircuitGraph(dffDef, testRegistry, DefaultPhysicsConfig, createSeededRng(1));
-    graph.getComponent("clk").outputs.get("out")!.voltage = 1.5;
-    graph.getComponent("d").outputs.get("out")!.voltage = 0.3;
+    const clkOut = graph.getComponent("clk").outputs.get("out");
+    const dOut = graph.getComponent("d").outputs.get("out");
+    expect(clkOut).toBeDefined();
+    expect(dOut).toBeDefined();
+    if (!clkOut || !dOut) return;
+    clkOut.voltage = 1.5;
+    dOut.voltage = 0.3;
     graph.propagate();
     const voltages = graph.collectProbeVoltages(dffDef.probes);
     expect(voltages[0]).toBe(1.5);

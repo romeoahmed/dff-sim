@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { DefaultPhysicsConfig } from "@/lib/constants";
 import { createSeededRng } from "@/lib/rng";
+import type { Port } from "@/lib/types";
 import { DFlipFlop } from "./flip-flop";
 
 function createDFF(seed: number = 42) {
   return new DFlipFlop("dff0", {}, { config: DefaultPhysicsConfig, rng: createSeededRng(seed) });
+}
+
+function getPorts(dff: DFlipFlop): { d: Port; clk: Port; q: Port } {
+  const d = dff.inputs.get("d");
+  const clk = dff.inputs.get("clk");
+  const q = dff.outputs.get("q");
+  if (!d || !clk || !q) throw new Error("DFlipFlop port missing in test fixture");
+  return { d, clk, q };
 }
 
 describe("DFlipFlop", () => {
@@ -18,51 +27,55 @@ describe("DFlipFlop", () => {
 
   it("captures D=HIGH on CLK rising edge", () => {
     const dff = createDFF();
-    dff.inputs.get("d")!.voltage = 2.0;
-    dff.inputs.get("clk")!.voltage = 0.0;
+    const { d, clk, q } = getPorts(dff);
+    d.voltage = 2.0;
+    clk.voltage = 0.0;
     dff.clock(0.0001);
-    dff.inputs.get("clk")!.voltage = 2.0;
+    clk.voltage = 2.0;
     dff.clock(0.0001);
     for (let i = 0; i < 3000; i++) dff.update(0.0001);
-    expect(dff.outputs.get("q")!.voltage).toBeGreaterThan(1.0);
+    expect(q.voltage).toBeGreaterThan(1.0);
   });
 
   it("captures D=LOW on CLK rising edge", () => {
     const dff = createDFF();
-    dff.inputs.get("d")!.voltage = 0.0;
-    dff.inputs.get("clk")!.voltage = 0.0;
+    const { d, clk, q } = getPorts(dff);
+    d.voltage = 0.0;
+    clk.voltage = 0.0;
     dff.clock(0.0001);
-    dff.inputs.get("clk")!.voltage = 2.0;
+    clk.voltage = 2.0;
     dff.clock(0.0001);
     for (let i = 0; i < 3000; i++) dff.update(0.0001);
-    expect(dff.outputs.get("q")!.voltage).toBeLessThan(0.6);
+    expect(q.voltage).toBeLessThan(0.6);
   });
 
   it("ignores D changes on CLK falling edge", () => {
     const dff = createDFF();
-    dff.inputs.get("d")!.voltage = 0.0;
-    dff.inputs.get("clk")!.voltage = 0.0;
+    const { d, clk, q } = getPorts(dff);
+    d.voltage = 0.0;
+    clk.voltage = 0.0;
     dff.clock(0.0001);
-    dff.inputs.get("clk")!.voltage = 2.0;
+    clk.voltage = 2.0;
     dff.clock(0.0001);
     for (let i = 0; i < 3000; i++) dff.update(0.0001);
 
-    dff.inputs.get("d")!.voltage = 2.0;
-    dff.inputs.get("clk")!.voltage = 0.0;
+    d.voltage = 2.0;
+    clk.voltage = 0.0;
     dff.clock(0.0001);
     for (let i = 0; i < 3000; i++) dff.update(0.0001);
-    expect(dff.outputs.get("q")!.voltage).toBeLessThan(0.6);
+    expect(q.voltage).toBeLessThan(0.6);
   });
 
   it("Schmitt trigger: holds state in hysteresis band", () => {
     const dff = createDFF();
-    dff.inputs.get("d")!.voltage = 2.0;
-    dff.inputs.get("clk")!.voltage = 0.0;
+    const { d, clk, q } = getPorts(dff);
+    d.voltage = 2.0;
+    clk.voltage = 0.0;
     dff.clock(0.0001);
-    dff.inputs.get("clk")!.voltage = 0.8;
+    clk.voltage = 0.8;
     dff.clock(0.0001);
     for (let i = 0; i < 3000; i++) dff.update(0.0001);
-    expect(dff.outputs.get("q")!.voltage).toBeLessThan(1.0);
+    expect(q.voltage).toBeLessThan(1.0);
   });
 
   it("metastability: D in undefined zone produces ~50/50 output over many trials", () => {
@@ -71,13 +84,14 @@ describe("DFlipFlop", () => {
 
     for (let seed = 0; seed < trials; seed++) {
       const dff = createDFF(seed);
-      dff.inputs.get("d")!.voltage = 0.8;
-      dff.inputs.get("clk")!.voltage = 0.0;
+      const { d, clk, q } = getPorts(dff);
+      d.voltage = 0.8;
+      clk.voltage = 0.0;
       dff.clock(0.0001);
-      dff.inputs.get("clk")!.voltage = 2.0;
+      clk.voltage = 2.0;
       dff.clock(0.0001);
       for (let i = 0; i < 10000; i++) dff.update(0.0001);
-      if (dff.outputs.get("q")!.voltage > 1.0) highCount++;
+      if (q.voltage > 1.0) highCount++;
     }
 
     const ratio = highCount / trials;
@@ -87,19 +101,20 @@ describe("DFlipFlop", () => {
 
   it("async reset drives Q low", () => {
     const dff = createDFF();
-    dff.inputs.get("d")!.voltage = 2.0;
-    dff.inputs.get("clk")!.voltage = 0.0;
+    const { d, clk, q } = getPorts(dff);
+    d.voltage = 2.0;
+    clk.voltage = 0.0;
     dff.clock(0.0001);
-    dff.inputs.get("clk")!.voltage = 2.0;
+    clk.voltage = 2.0;
     dff.clock(0.0001);
     for (let i = 0; i < 3000; i++) dff.update(0.0001);
-    expect(dff.outputs.get("q")!.voltage).toBeGreaterThan(1.0);
+    expect(q.voltage).toBeGreaterThan(1.0);
 
     dff.setReset(true);
     for (let i = 0; i < 3000; i++) {
       dff.clock(0.0001);
       dff.update(0.0001);
     }
-    expect(dff.outputs.get("q")!.voltage).toBeLessThan(0.6);
+    expect(q.voltage).toBeLessThan(0.6);
   });
 });

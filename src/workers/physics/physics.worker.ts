@@ -1,4 +1,3 @@
-// Physics Worker: 通过 Comlink 暴露物理仿真 API
 import * as Comlink from "comlink";
 import { DefaultPhysicsConfig } from "@/lib/constants";
 import type { CircuitDefinition, PhysicsConfig, VoltageSpecConfig } from "@/lib/types";
@@ -6,6 +5,13 @@ import { createDefaultRegistry } from "./components/default-registry";
 import { SimulationEngine } from "./engine";
 
 const TICK_INTERVAL_MS = 8;
+
+/** Looks up a setter method by name on an arbitrary object without unsafe double-casts. */
+function resolveMethod(target: unknown, name: string): ((v: number | boolean) => void) | undefined {
+  if (target === null || typeof target !== "object") return undefined;
+  const method = (target as Record<string, unknown>)[name];
+  return typeof method === "function" ? (method as (v: number | boolean) => void) : undefined;
+}
 
 export interface PhysicsAPI {
   loadCircuit(definition: CircuitDefinition): void;
@@ -34,23 +40,17 @@ class PhysicsWorker implements PhysicsAPI {
   setParam(componentId: string, key: string, value: number | boolean): void {
     if (!this.engine) return;
 
+    const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+
     if (componentId === "global") {
-      const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
       for (const comp of this.engine.getAllComponents()) {
-        const setter = (comp as unknown as Record<string, unknown>)[setterName];
-        if (typeof setter === "function") {
-          (setter as (v: number | boolean) => void).call(comp, value);
-        }
+        resolveMethod(comp, setterName)?.call(comp, value);
       }
       return;
     }
 
     const comp = this.engine.getComponent(componentId);
-    const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-    const setter = (comp as unknown as Record<string, unknown>)[setterName];
-    if (typeof setter === "function") {
-      (setter as (v: number | boolean) => void).call(comp, value);
-    }
+    resolveMethod(comp, setterName)?.call(comp, value);
   }
 
   setSettings(specs: Partial<VoltageSpecConfig>): void {

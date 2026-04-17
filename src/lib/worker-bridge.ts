@@ -22,7 +22,7 @@ export async function createWorkerBridge(): Promise<WorkerBridge> {
   const physics = Comlink.wrap<PhysicsAPI>(physicsWorker);
   const render = Comlink.wrap<RenderAPI>(renderWorker);
 
-  // 物理线程→渲染线程直连通道，帧数据无需经过主线程
+  // Direct physics→render channel so frame data never passes through the main thread
   const channel = new MessageChannel();
   await physics.registerRenderPort(Comlink.transfer(channel.port1, [channel.port1]));
   await render.registerFrameChannel(Comlink.transfer(channel.port2, [channel.port2]));

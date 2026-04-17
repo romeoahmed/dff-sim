@@ -10,8 +10,7 @@ export function ParamToggle({ control }: { control: ControlDef }) {
 
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-2 py-2">
-      {/* biome-ignore lint/a11y/noLabelWithoutControl: aria-label on Switch.Root handles a11y */}
-      <label className="text-xs uppercase tracking-wider text-subtext0">{control.label}</label>
+      <span className="text-xs uppercase tracking-wider text-subtext0">{control.label}</span>
       <Switch.Root
         checked={isOn}
         onCheckedChange={setValue}

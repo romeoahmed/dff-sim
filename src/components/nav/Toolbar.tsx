@@ -8,6 +8,10 @@ import { CircuitSelector } from "./CircuitSelector";
 
 const SHADER_STYLES: ShaderStyle[] = ["clean", "glow", "phosphor"];
 
+function isShaderStyle(v: string): v is ShaderStyle {
+  return SHADER_STYLES.includes(v as ShaderStyle);
+}
+
 const toolbarContainer = {
   hidden: {},
   show: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
@@ -46,7 +50,9 @@ export function Toolbar() {
         <ToggleGroup.Root
           type="single"
           value={shaderStyle}
-          onValueChange={(v) => v && setShaderStyle(v as ShaderStyle)}
+          onValueChange={(v) => {
+            if (isShaderStyle(v)) setShaderStyle(v);
+          }}
           className="flex rounded overflow-hidden border border-surface1"
           aria-label="Shader style"
         >

@@ -81,20 +81,16 @@ export function CircuitSchematic() {
               points={w.points}
             />
           ))}
-          {circuitDef.components.map((c) => {
-            // biome-ignore lint/style/noNonNullAssertion: positions populated from components
-            const pos = positions.get(c.id)!;
-            return (
-              <SchematicNode
-                key={c.id}
-                component={c}
-                x={pos.x}
-                y={pos.y}
-                width={nodeW}
-                height={nodeH}
-              />
-            );
-          })}
+          {circuitDef.components.map((c, idx) => (
+            <SchematicNode
+              key={c.id}
+              component={c}
+              x={startX + idx * (nodeW + gap)}
+              y={rowY}
+              width={nodeW}
+              height={nodeH}
+            />
+          ))}
         </motion.svg>
       </AnimatePresence>
     </section>

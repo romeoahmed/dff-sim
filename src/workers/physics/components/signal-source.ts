@@ -9,6 +9,7 @@ export class SignalSource implements SequentialComponent {
   readonly outputs: Map<string, Port>;
 
   private readonly signal: Signal;
+  private readonly outPort: Port;
   private readonly noise: NoiseGenerator;
   private readonly maxNoiseLevel: number;
 
@@ -23,6 +24,7 @@ export class SignalSource implements SequentialComponent {
     const baseLow = (params.baseLow as number) ?? config.voltage.logicLowMax / 2;
 
     const outPort = createPort("out");
+    this.outPort = outPort;
     this.outputs = new Map([["out", outPort]]);
 
     this.maxNoiseLevel = config.simulation.maxNoiseLevel;
@@ -44,7 +46,7 @@ export class SignalSource implements SequentialComponent {
 
   update(dt: number): void {
     this.signal.update(dt);
-    this.outputs.get("out")!.voltage = this.signal.voltage;
+    this.outPort.voltage = this.signal.voltage;
   }
 
   clock(_dt: number): void {}

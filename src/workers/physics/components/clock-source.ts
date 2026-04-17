@@ -9,6 +9,7 @@ export class ClockSource implements SequentialComponent {
   readonly outputs: Map<string, Port>;
 
   private readonly signal: Signal;
+  private readonly outPort: Port;
   private phase: number = 0;
   private speed: number;
   private readonly jitterRms: number;
@@ -27,6 +28,7 @@ export class ClockSource implements SequentialComponent {
     this.speedFactor = config.simulation.clockSpeedFactor;
 
     const outPort = createPort("out");
+    this.outPort = outPort;
     this.outputs = new Map([["out", outPort]]);
 
     const noise = new NoiseGenerator(rng, 0);
@@ -45,12 +47,12 @@ export class ClockSource implements SequentialComponent {
 
   update(dt: number): void {
     this.signal.update(dt);
-    this.outputs.get("out")!.voltage = this.signal.voltage;
+    this.outPort.voltage = this.signal.voltage;
   }
 
   clock(dt: number): void {
     const oldPhase = this.phase;
-    // 在相位上加高斯抖动，影响时序但不影响逻辑方向
+    // Add Gaussian jitter to phase — affects timing but not logic direction
     const jitter = this.gaussianJitter() * this.jitterRms;
     this.phase += this.speed * this.speedFactor * dt * 60 + jitter;
     if (this.phase < 0) this.phase += Math.PI * 2;
@@ -60,7 +62,7 @@ export class ClockSource implements SequentialComponent {
     const newHalf = Math.floor(this.phase / Math.PI) % 2;
 
     if (oldHalf !== newHalf) {
-      // newHalf=0 → 上升沿（HIGH），newHalf=1 → 下降沿（LOW）
+      // newHalf=0 → rising edge (HIGH), newHalf=1 → falling edge (LOW)
       this.signal.targetLogic = newHalf === 0 ? 1 : 0;
     }
   }

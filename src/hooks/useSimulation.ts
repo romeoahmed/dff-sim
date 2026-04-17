@@ -1,5 +1,3 @@
-// useSimulation: 连接 Worker 线程与 Jotai 原子状态的核心 Hook
-
 import * as Comlink from "comlink";
 import { useAtomValue, useStore } from "jotai";
 import { type RefObject, useEffect, useRef } from "react";
@@ -27,13 +25,14 @@ export function useSimulation(
 
   const bridgeRef = useRef<WorkerBridge | null>(null);
 
-  // 电路切换时初始化 Worker 桥接
-  // activeProbes/store 在回调中通过 store.get 动态读取，不需要出现在依赖数组中
+  // Re-initialize the Worker bridge only when the circuit changes.
+  // activeProbes and store are read inside callbacks via store.get() to avoid stale closures
+  // and must NOT appear in the dependency array.
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — only re-init on circuit change
   useEffect(() => {
     if (!circuitDef || !waveformRef.current || !digitalRef.current) return;
     let cancelled = false;
-    // 在 guard 之后捕获非空引用，供异步函数使用
+    // Capture non-null refs after the guard for use inside the async function
     const def = circuitDef;
 
     async function setup() {
@@ -63,12 +62,12 @@ export function useSimulation(
             probes: activeProbes,
           },
           [waveOffscreen, digitalOffscreen],
-        ) as Parameters<typeof bridge.render.init>[0],
+        ) as Parameters<typeof bridge.render.init>[0], // Comlink.transfer strips the call-site type
       );
 
       await bridge.physics.loadCircuit(def);
 
-      // 每次回调时从 store 读取最新 probe 列表，避免闭包陈旧引用
+      // Read the latest probe list from the store on each callback to avoid stale closures
       await bridge.physics.registerStatusCallback(
         Comlink.proxy((voltages: number[]) => {
           const currentProbes = store.get(activeProbesAtom);
@@ -92,24 +91,21 @@ export function useSimulation(
       bridgeRef.current = null;
       if (circuitDef) clearCircuitAtoms(circuitDef);
     };
-  }, [circuitDef]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [circuitDef]);
 
-  // 着色器风格同步
   useEffect(() => {
     bridgeRef.current?.render.setShaderStyle(shaderStyle);
   }, [shaderStyle]);
 
-  // 电压规格同步
   useEffect(() => {
     bridgeRef.current?.physics.setSettings(voltageSpecs);
   }, [voltageSpecs]);
 
-  // 探针列表同步
   useEffect(() => {
     bridgeRef.current?.render.updateProbes(activeProbes);
   }, [activeProbes]);
 
-  // 每个滑块独立节流发送（16ms ≈ 60fps 上限，防止 Comlink 队列积压）
+  // Each slider gets its own throttled sender (16 ms ≈ 60 fps cap) to prevent Comlink queue buildup
   const throttledSendersRef = useRef<Map<string, (v: number | boolean) => void>>(new Map());
 
   useEffect(() => {

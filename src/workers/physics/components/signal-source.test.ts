@@ -10,11 +10,13 @@ describe("SignalSource", () => {
       { baseHigh: 1.5, baseLow: 0.1 },
       { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
+    const outPort = src.outputs.get("out");
+    expect(outPort).toBeDefined();
+    if (!outPort) return;
+
     src.setTargetLogic(1);
-    for (let i = 0; i < 5000; i++) {
-      src.update(0.0001);
-    }
-    expect(src.outputs.get("out")!.voltage).toBeCloseTo(1.5, 0);
+    for (let i = 0; i < 5000; i++) src.update(0.0001);
+    expect(outPort.voltage).toBeCloseTo(1.5, 0);
   });
 
   it("converges to baseLow when targetLogic is 0", () => {
@@ -23,11 +25,13 @@ describe("SignalSource", () => {
       { baseHigh: 1.5, baseLow: 0.1 },
       { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
+    const outPort = src.outputs.get("out");
+    expect(outPort).toBeDefined();
+    if (!outPort) return;
+
     src.setTargetLogic(0);
-    for (let i = 0; i < 5000; i++) {
-      src.update(0.0001);
-    }
-    expect(src.outputs.get("out")!.voltage).toBeCloseTo(0.1, 0);
+    for (let i = 0; i < 5000; i++) src.update(0.0001);
+    expect(outPort.voltage).toBeCloseTo(0.1, 0);
   });
 
   it("has output port named 'out'", () => {
@@ -46,12 +50,16 @@ describe("SignalSource", () => {
       { baseHigh: 1.5, baseLow: 0.1 },
       { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
+    const outPort = src.outputs.get("out");
+    expect(outPort).toBeDefined();
+    if (!outPort) return;
+
     src.setTargetLogic(true);
     for (let i = 0; i < 5000; i++) src.update(0.0001);
-    expect(src.outputs.get("out")!.voltage).toBeCloseTo(1.5, 0);
+    expect(outPort.voltage).toBeCloseTo(1.5, 0);
     src.setTargetLogic(false);
     for (let i = 0; i < 5000; i++) src.update(0.0001);
-    expect(src.outputs.get("out")!.voltage).toBeCloseTo(0.1, 0);
+    expect(outPort.voltage).toBeCloseTo(0.1, 0);
   });
 
   it("setNoise adjusts noise amplitude", () => {
@@ -60,11 +68,15 @@ describe("SignalSource", () => {
       {},
       { config: DefaultPhysicsConfig, rng: createSeededRng(1) },
     );
+    const outPort = src.outputs.get("out");
+    expect(outPort).toBeDefined();
+    if (!outPort) return;
+
     src.setNoise(0);
     const samples: number[] = [];
     for (let i = 0; i < 1000; i++) {
       src.update(0.0001);
-      samples.push(src.outputs.get("out")!.voltage);
+      samples.push(outPort.voltage);
     }
     const late = samples.slice(-100);
     const mean = late.reduce((a, b) => a + b, 0) / late.length;
