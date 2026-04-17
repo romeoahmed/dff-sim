@@ -1,8 +1,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAtom, useAtomValue } from "jotai";
 import { X } from "lucide-react";
-import { aboutOpenAtom } from "@/atoms/ui-atoms";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
+import { aboutOpenAtom } from "@/atoms/ui-atoms";
 
 export function AboutSheet() {
   const [open, setOpen] = useAtom(aboutOpenAtom);

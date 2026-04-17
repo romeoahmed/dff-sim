@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { useSetAtom, useStore } from "jotai";
+import { useEffect } from "react";
 import { circuitDefAtom, paramAtomFamily } from "@/atoms/simulation-atoms";
 import { shaderStyleAtom } from "@/atoms/ui-atoms";
 
@@ -43,16 +43,38 @@ export function useKeyboardShortcuts(options: { onOpenHelp: () => void }) {
       if (e.repeat) return;
 
       switch (e.key) {
-        case " ": e.preventDefault(); toggle("targetLogic"); break;
-        case "r": case "R": momentary("reset", true); break;
-        case "[": bump("noise", -5); break;
-        case "]": bump("noise", 5); break;
-        case "-": bump("speed", -5); break;
-        case "=": bump("speed", 5); break;
-        case "1": setShaderStyle("clean"); break;
-        case "2": setShaderStyle("glow"); break;
-        case "3": setShaderStyle("phosphor"); break;
-        case "?": options.onOpenHelp(); break;
+        case " ":
+          e.preventDefault();
+          toggle("targetLogic");
+          break;
+        case "r":
+        case "R":
+          momentary("reset", true);
+          break;
+        case "[":
+          bump("noise", -5);
+          break;
+        case "]":
+          bump("noise", 5);
+          break;
+        case "-":
+          bump("speed", -5);
+          break;
+        case "=":
+          bump("speed", 5);
+          break;
+        case "1":
+          setShaderStyle("clean");
+          break;
+        case "2":
+          setShaderStyle("glow");
+          break;
+        case "3":
+          setShaderStyle("phosphor");
+          break;
+        case "?":
+          options.onOpenHelp();
+          break;
       }
     }
 

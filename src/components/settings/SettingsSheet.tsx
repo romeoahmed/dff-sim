@@ -2,8 +2,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useAtom } from "jotai";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { settingsOpenAtom } from "@/atoms/ui-atoms";
 import { voltageSpecsAtom } from "@/atoms/settings-atoms";
+import { settingsOpenAtom } from "@/atoms/ui-atoms";
 import { DefaultVoltageSpecs } from "@/lib/constants";
 import { voltageSpecSchema } from "@/lib/validation";
 
@@ -15,7 +15,7 @@ export function SettingsSheet() {
 
   const validate = (candidate: typeof specs) => {
     const result = voltageSpecSchema.safeParse(candidate);
-    return result.success ? null : result.error.errors[0]?.message ?? "Invalid";
+    return result.success ? null : (result.error.issues[0]?.message ?? "Invalid");
   };
 
   const onChange = (key: keyof typeof specs, value: number) => {
@@ -53,29 +53,38 @@ export function SettingsSheet() {
           </div>
 
           <div className="space-y-3">
-            {(Object.keys(DefaultVoltageSpecs) as (keyof typeof DefaultVoltageSpecs)[]).map((key) => (
-              <label key={key} className="grid grid-cols-[1fr_auto] items-center gap-2">
-                <span className="text-xs text-subtext0">{key}</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={draft[key]}
-                  onChange={(e) => onChange(key, Number(e.target.value))}
-                  className="w-24 bg-surface0 border border-surface1 rounded px-2 py-1 text-sm"
-                />
-              </label>
-            ))}
+            {(Object.keys(DefaultVoltageSpecs) as (keyof typeof DefaultVoltageSpecs)[]).map(
+              (key) => (
+                <label key={key} className="grid grid-cols-[1fr_auto] items-center gap-2">
+                  <span className="text-xs text-subtext0">{key}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={draft[key]}
+                    onChange={(e) => onChange(key, Number(e.target.value))}
+                    className="w-24 bg-surface0 border border-surface1 rounded px-2 py-1 text-sm"
+                  />
+                </label>
+              ),
+            )}
           </div>
 
           {error && <p className="mt-3 text-xs text-red">{error}</p>}
 
           <div className="mt-4 flex gap-2">
-            <button type="button" onClick={onSave} disabled={!!error}
-              className="px-4 py-2 bg-green text-base font-bold rounded disabled:opacity-50">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={!!error}
+              className="px-4 py-2 bg-green text-base font-bold rounded disabled:opacity-50"
+            >
               Save
             </button>
-            <button type="button" onClick={onReset}
-              className="px-4 py-2 bg-surface1 text-text rounded">
+            <button
+              type="button"
+              onClick={onReset}
+              className="px-4 py-2 bg-surface1 text-text rounded"
+            >
               Reset
             </button>
           </div>
