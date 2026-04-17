@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
+import { buildSchematicDescription } from "./describe";
 import { SchematicGrid } from "./SchematicGrid";
 import { SchematicNode } from "./SchematicNode";
 import { SchematicWire } from "./SchematicWire";
@@ -16,6 +17,10 @@ export function CircuitSchematic() {
   const gap = 180;
   const startX = 80;
   const rowY = VIEWBOX_H / 2 - nodeH / 2;
+
+  const titleId = `schematic-title-${circuitDef.id}`;
+  const descId = `schematic-desc-${circuitDef.id}`;
+  const description = buildSchematicDescription(circuitDef);
 
   const positions = new Map<string, { x: number; y: number }>();
   circuitDef.components.forEach((c, i) => {
@@ -66,11 +71,16 @@ export function CircuitSchematic() {
           viewBox={`0 0 ${VIEWBOX_W} ${VIEWBOX_H}`}
           preserveAspectRatio="xMidYMid meet"
           className="w-full h-full"
+          role="img"
+          aria-labelledby={titleId}
+          aria-describedby={descId}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
         >
+          <title id={titleId}>Circuit schematic: {circuitDef.name}</title>
+          <desc id={descId}>{description}</desc>
           <SchematicGrid />
           {wires.map((w) => (
             <SchematicWire
