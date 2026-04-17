@@ -1,7 +1,6 @@
 struct FSIn {
   @location(0) color: vec4<f32>,
   @location(1) edgeDist: f32,
-  @location(2) age: f32,
 };
 
 @fragment

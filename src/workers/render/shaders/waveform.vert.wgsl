@@ -9,8 +9,9 @@ struct Uniforms {
 };
 
 struct ChannelConfig {
-  yOffset: f32,
   color: vec4<f32>,
+  yOffset: f32,
+  _pad: vec3<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -45,18 +46,21 @@ fn vs_main(
 
   // Read current and neighbor sample for direction
   let curV = readSample(iid, sampleIdx);
-  let nextIdx = min(sampleIdx + 1u, u.bufferLength - 1u);
-  let nextV = readSample(iid, nextIdx);
 
   let stepX = u.canvasSize.x / f32(u.bufferLength - 1u);
   let x = f32(sampleIdx) * stepX;
   let y = voltageToY(curV, ch.yOffset);
 
-  let nextX = f32(nextIdx) * stepX;
-  let nextY = voltageToY(nextV, ch.yOffset);
+  // At last sample use previous direction to avoid zero-length segment
+  let isLast = sampleIdx >= u.bufferLength - 1u;
+  let refIdx = select(sampleIdx + 1u, sampleIdx - 1u, isLast);
+  let refSign = select(1.0, -1.0, isLast);
+  let refV = readSample(iid, refIdx);
+  let refX = f32(refIdx) * stepX;
+  let refY = voltageToY(refV, ch.yOffset);
 
-  let dx = nextX - x;
-  let dy = nextY - y;
+  let dx = (refX - x) * refSign;
+  let dy = (refY - y) * refSign;
   let len = max(sqrt(dx * dx + dy * dy), 0.001);
   // Normal (perpendicular): (-dy, dx) normalized
   let nx = -dy / len;

@@ -10,8 +10,9 @@ struct Uniforms {
 };
 
 struct ChannelConfig {
-  yOffset: f32,
   color: vec4<f32>,
+  yOffset: f32,
+  _pad: vec3<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;

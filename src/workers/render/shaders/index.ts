@@ -13,3 +13,9 @@ export const shaders = {
   waveformPhosphor,
   waveformVert,
 } as const;
+
+export const waveformFragShaders = {
+  clean: waveformClean,
+  glow: waveformGlow,
+  phosphor: waveformPhosphor,
+} as const satisfies Record<ShaderStyle, string>;
