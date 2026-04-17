@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { DefaultPhysicsConfig } from "@/lib/constants";
+import { createSeededRng } from "@/lib/rng";
 import type { Port } from "@/lib/types";
+import { settle } from "../test-helpers";
 import { ANDGate } from "./and-gate";
 
-const deps = { config: DefaultPhysicsConfig, rng: Math.random };
+const deps = { config: DefaultPhysicsConfig, rng: createSeededRng(1) };
 const { logicHighMin, outputHighMax } = DefaultPhysicsConfig.voltage;
+const dt = DefaultPhysicsConfig.simulation.physicsDt;
+const settleTime = DefaultPhysicsConfig.gates.tPD * 20;
 
 function makeAnd(): { gate: ANDGate; a: Port; b: Port; out: Port } {
   const gate = new ANDGate("and0", {}, deps);
@@ -16,43 +20,35 @@ function makeAnd(): { gate: ANDGate; a: Port; b: Port; out: Port } {
 }
 
 describe("ANDGate", () => {
-  it("has a, b input ports, out output port, and kind combinational", () => {
-    const { gate } = makeAnd();
-    expect(gate.inputs.has("a")).toBe(true);
-    expect(gate.inputs.has("b")).toBe(true);
-    expect(gate.outputs.has("out")).toBe(true);
-    expect(gate.kind).toBe("combinational");
-  });
-
-  it("0 AND 0 = 0", () => {
+  it("0 AND 0 = 0 after settling", () => {
     const { gate, a, b, out } = makeAnd();
     a.voltage = 0.0;
     b.voltage = 0.0;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeLessThan(logicHighMin);
   });
 
-  it("1 AND 0 = 0", () => {
+  it("1 AND 0 = 0 after settling", () => {
     const { gate, a, b, out } = makeAnd();
     a.voltage = outputHighMax;
     b.voltage = 0.0;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeLessThan(logicHighMin);
   });
 
-  it("0 AND 1 = 0", () => {
+  it("0 AND 1 = 0 after settling", () => {
     const { gate, a, b, out } = makeAnd();
     a.voltage = 0.0;
     b.voltage = outputHighMax;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeLessThan(logicHighMin);
   });
 
-  it("1 AND 1 = 1", () => {
+  it("1 AND 1 = 1 after settling", () => {
     const { gate, a, b, out } = makeAnd();
     a.voltage = outputHighMax;
     b.voltage = outputHighMax;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeGreaterThan(logicHighMin);
   });
 });

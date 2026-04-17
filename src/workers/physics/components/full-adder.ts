@@ -1,4 +1,5 @@
 import type { CombinationalComponent, ComponentDeps, Port } from "@/lib/types";
+import { AnalogOutput, mergeGateParams } from "../analog-output";
 import { createPort } from "./base";
 
 export class FullAdder implements CombinationalComponent {
@@ -11,15 +12,15 @@ export class FullAdder implements CombinationalComponent {
   private readonly cinPort: Port;
   private readonly sumPort: Port;
   private readonly coutPort: Port;
-  private readonly vHigh: number;
+  private readonly sumOut: AnalogOutput;
+  private readonly coutOut: AnalogOutput;
   private readonly threshold: number;
 
   constructor(
     readonly id: string,
-    _params: Record<string, unknown>,
+    params: Record<string, unknown>,
     deps: ComponentDeps,
   ) {
-    this.vHigh = deps.config.voltage.outputHighMax;
     this.threshold = deps.config.voltage.logicHighMin;
 
     const a = createPort("a");
@@ -41,6 +42,10 @@ export class FullAdder implements CombinationalComponent {
       ["sum", sum],
       ["cout", cout],
     ]);
+
+    const cfg = mergeGateParams(deps.config, params);
+    this.sumOut = new AnalogOutput(cfg, deps.rng);
+    this.coutOut = new AnalogOutput(cfg, deps.rng);
   }
 
   evaluate(): void {
@@ -49,11 +54,14 @@ export class FullAdder implements CombinationalComponent {
     const cinHigh = this.cinPort.voltage > this.threshold;
     const sumHigh = (aHigh !== bHigh) !== cinHigh;
     const coutHigh = (aHigh && bHigh) || (cinHigh && aHigh !== bHigh);
-    this.sumPort.voltage = sumHigh ? this.vHigh : 0.0;
-    this.coutPort.voltage = coutHigh ? this.vHigh : 0.0;
+    this.sumOut.set(sumHigh ? 1 : 0);
+    this.coutOut.set(coutHigh ? 1 : 0);
   }
 
-  update(_dt: number): void {
-    // No-op until Task 5 wires AnalogOutput.
+  update(dt: number): void {
+    this.sumOut.update(dt);
+    this.coutOut.update(dt);
+    this.sumPort.voltage = this.sumOut.voltage;
+    this.coutPort.voltage = this.coutOut.voltage;
   }
 }

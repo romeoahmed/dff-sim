@@ -1,4 +1,5 @@
 import type { CombinationalComponent, ComponentDeps, Port } from "@/lib/types";
+import { AnalogOutput, mergeGateParams } from "../analog-output";
 import { createPort } from "./base";
 
 export class XORGate implements CombinationalComponent {
@@ -9,37 +10,39 @@ export class XORGate implements CombinationalComponent {
   private readonly aPort: Port;
   private readonly bPort: Port;
   private readonly outPort: Port;
-  private readonly vHigh: number;
+  private readonly out: AnalogOutput;
   private readonly threshold: number;
 
   constructor(
     readonly id: string,
-    _params: Record<string, unknown>,
+    params: Record<string, unknown>,
     deps: ComponentDeps,
   ) {
-    this.vHigh = deps.config.voltage.outputHighMax;
     this.threshold = deps.config.voltage.logicHighMin;
 
     const a = createPort("a");
     const b = createPort("b");
-    const out = createPort("out");
+    const outP = createPort("out");
     this.aPort = a;
     this.bPort = b;
-    this.outPort = out;
+    this.outPort = outP;
     this.inputs = new Map([
       ["a", a],
       ["b", b],
     ]);
-    this.outputs = new Map([["out", out]]);
+    this.outputs = new Map([["out", outP]]);
+
+    this.out = new AnalogOutput(mergeGateParams(deps.config, params), deps.rng);
   }
 
   evaluate(): void {
     const aHigh = this.aPort.voltage > this.threshold;
     const bHigh = this.bPort.voltage > this.threshold;
-    this.outPort.voltage = aHigh !== bHigh ? this.vHigh : 0.0;
+    this.out.set(aHigh !== bHigh ? 1 : 0);
   }
 
-  update(_dt: number): void {
-    // No-op until Task 5 wires AnalogOutput.
+  update(dt: number): void {
+    this.out.update(dt);
+    this.outPort.voltage = this.out.voltage;
   }
 }

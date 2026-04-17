@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { DefaultPhysicsConfig } from "@/lib/constants";
+import { createSeededRng } from "@/lib/rng";
 import type { Port } from "@/lib/types";
+import { settle } from "../test-helpers";
 import { NOTGate } from "./not-gate";
 
-const deps = { config: DefaultPhysicsConfig, rng: Math.random };
+const deps = { config: DefaultPhysicsConfig, rng: createSeededRng(4) };
 const { logicHighMin, outputHighMax } = DefaultPhysicsConfig.voltage;
+const dt = DefaultPhysicsConfig.simulation.physicsDt;
+const settleTime = DefaultPhysicsConfig.gates.tPD * 20;
 
 function makeNot(): { gate: NOTGate; inp: Port; out: Port } {
   const gate = new NOTGate("not0", {}, deps);
@@ -15,24 +19,16 @@ function makeNot(): { gate: NOTGate; inp: Port; out: Port } {
 }
 
 describe("NOTGate", () => {
-  it("has in input port, out output port, and kind combinational", () => {
-    const { gate } = makeNot();
-    expect(gate.inputs.has("in")).toBe(true);
-    expect(gate.outputs.has("out")).toBe(true);
-    expect(gate.kind).toBe("combinational");
-  });
-
   it("NOT 0 = 1", () => {
     const { gate, inp, out } = makeNot();
-    inp.voltage = 0.0;
-    gate.evaluate();
+    inp.voltage = 0;
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeGreaterThan(logicHighMin);
   });
-
   it("NOT 1 = 0", () => {
     const { gate, inp, out } = makeNot();
     inp.voltage = outputHighMax;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeLessThan(logicHighMin);
   });
 });

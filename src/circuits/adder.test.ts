@@ -38,6 +38,9 @@ describe("adderCircuit definition", () => {
   it("fa0 computes 1+0+0 correctly (cin is undriven, defaults to 0V)", () => {
     const g = new CircuitGraph(adderCircuit, registry, DefaultPhysicsConfig, createSeededRng(1));
     const { logicHighMin, outputHighMax } = DefaultPhysicsConfig.voltage;
+    const dt = DefaultPhysicsConfig.simulation.physicsDt;
+    const settleTime = DefaultPhysicsConfig.gates.tPD * 20;
+    const steps = Math.ceil(settleTime / dt);
     const fa0 = g.getComponent("fa0");
     const fa0a = fa0.inputs.get("a");
     const fa0b = fa0.inputs.get("b");
@@ -50,7 +53,10 @@ describe("adderCircuit definition", () => {
     if (!fa0a || !fa0b || !fa0sum || !fa0cout) return;
     fa0a.voltage = outputHighMax;
     fa0b.voltage = 0.0;
-    g.evaluateCombinational();
+    for (let i = 0; i < steps; i++) {
+      g.evaluateCombinational();
+      g.updateCombinational(dt);
+    }
     expect(fa0sum.voltage).toBeGreaterThan(logicHighMin);
     expect(fa0cout.voltage).toBeLessThan(logicHighMin);
   });

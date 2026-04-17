@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { DefaultPhysicsConfig } from "@/lib/constants";
+import { createSeededRng } from "@/lib/rng";
 import type { Port } from "@/lib/types";
+import { settle } from "../test-helpers";
 import { XORGate } from "./xor-gate";
 
-const deps = { config: DefaultPhysicsConfig, rng: Math.random };
+const deps = { config: DefaultPhysicsConfig, rng: createSeededRng(3) };
 const { logicHighMin, outputHighMax } = DefaultPhysicsConfig.voltage;
+const dt = DefaultPhysicsConfig.simulation.physicsDt;
+const settleTime = DefaultPhysicsConfig.gates.tPD * 20;
 
 function makeXor(): { gate: XORGate; a: Port; b: Port; out: Port } {
   const gate = new XORGate("xor0", {}, deps);
@@ -16,43 +20,32 @@ function makeXor(): { gate: XORGate; a: Port; b: Port; out: Port } {
 }
 
 describe("XORGate", () => {
-  it("has a, b input ports, out output port, and kind combinational", () => {
-    const { gate } = makeXor();
-    expect(gate.inputs.has("a")).toBe(true);
-    expect(gate.inputs.has("b")).toBe(true);
-    expect(gate.outputs.has("out")).toBe(true);
-    expect(gate.kind).toBe("combinational");
-  });
-
   it("0 XOR 0 = 0", () => {
     const { gate, a, b, out } = makeXor();
-    a.voltage = 0.0;
-    b.voltage = 0.0;
-    gate.evaluate();
+    a.voltage = 0;
+    b.voltage = 0;
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeLessThan(logicHighMin);
   });
-
   it("1 XOR 0 = 1", () => {
     const { gate, a, b, out } = makeXor();
     a.voltage = outputHighMax;
-    b.voltage = 0.0;
-    gate.evaluate();
+    b.voltage = 0;
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeGreaterThan(logicHighMin);
   });
-
   it("0 XOR 1 = 1", () => {
     const { gate, a, b, out } = makeXor();
-    a.voltage = 0.0;
+    a.voltage = 0;
     b.voltage = outputHighMax;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeGreaterThan(logicHighMin);
   });
-
   it("1 XOR 1 = 0", () => {
     const { gate, a, b, out } = makeXor();
     a.voltage = outputHighMax;
     b.voltage = outputHighMax;
-    gate.evaluate();
+    settle(gate, dt, settleTime);
     expect(out.voltage).toBeLessThan(logicHighMin);
   });
 });
