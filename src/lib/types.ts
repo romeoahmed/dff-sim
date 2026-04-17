@@ -33,6 +33,12 @@ export interface TimingConfig {
   readonly tauMeta: number;
 }
 
+export interface GatesConfig {
+  readonly tPD: number;
+  readonly zeta: number;
+  readonly ringFreq: number;
+}
+
 export interface SignalConfig {
   readonly baseHigh: number;
   readonly baseLow: number;
@@ -46,6 +52,7 @@ export interface PhysicsConfig {
   readonly voltage: Readonly<VoltageSpecConfig>;
   readonly simulation: Readonly<SimulationConfig>;
   readonly timing: Readonly<TimingConfig>;
+  readonly gates: Readonly<GatesConfig>;
 }
 
 // ─── Circuit Graph Model ───────────────────────────────

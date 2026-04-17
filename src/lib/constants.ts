@@ -1,4 +1,5 @@
 import type {
+  GatesConfig,
   LayoutConfig,
   PhysicsConfig,
   SimulationConfig,
@@ -37,10 +38,17 @@ export const DefaultTiming = {
   tauMeta: 0.005,
 } as const satisfies TimingConfig;
 
+export const DefaultGates = {
+  tPD: 0.001,
+  zeta: 0.4,
+  ringFreq: 120,
+} as const satisfies GatesConfig;
+
 export const DefaultPhysicsConfig = {
   voltage: DefaultVoltageSpecs,
   simulation: DefaultSimulation,
   timing: DefaultTiming,
+  gates: DefaultGates,
 } as const satisfies PhysicsConfig;
 
 export const Layout = {
