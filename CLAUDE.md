@@ -46,10 +46,12 @@ Physics Worker          ──MessagePort──▶  Render Worker
 
 - **`signal.ts`** — `Signal` class: damped second-order oscillator (ζ, ω) for voltage transitions with analog overshoot/ringing. Frame-rate-independent via explicit `dt`.
 - **`noise.ts`** — `NoiseGenerator`: Marsaglia Polar Method for Gaussian white noise plus a Voss-McCartney octave accumulator for 1/f flicker noise.
-- **`graph.ts`** — `CircuitGraph`: instantiates components from a `CircuitDefinition`, wires nets, and levelizes combinational components via a Kahn topological sort so carry chains evaluate in the correct order.
-- **`engine.ts`** — `SimulationEngine`: orchestrates one physics step: `seq.update → propagate → seq.clock → propagate → evaluateCombinational → propagate → buffer.push`.
+- **`graph.ts`** — `CircuitGraph`: instantiates components from a `CircuitDefinition` and wires nets. Combinational components are evaluated in insertion order each tick; intra-tick ordering is no longer required because each gate has its own `tPD` and Signal dynamics. Feedback loops (SR latches, ring oscillators) are valid circuits.
+- **`engine.ts`** — `SimulationEngine`: orchestrates one physics step: `seq.update → propagate → seq.clock → evaluateCombinational → updateCombinational(dt) → propagate → buffer.push`. `evaluate` queues pending output targets on each gate's `AnalogOutput`; `update(dt)` ticks the tPD timer and advances the Signal.
+- **`analog-output.ts`** — `AnalogOutput`: shared helper composing a `Signal` + `NoiseGenerator` + pending-`tPD` timer. Each combinational gate owns one per output port (`FullAdder` owns two).
+- **`gaussian.ts`** — `createGaussianSampler(rng)`: free-function Marsaglia polar sampler, reused by `NoiseGenerator` and `DFlipFlop`'s metastability resolution.
 - **`waveform-buffer.ts`** — `WaveformBuffer`: multi-channel ring buffer (`Float32Array`). Length is a power of 2; wraparound uses bitwise `&`.
-- **`components/`** — all components implement either `SequentialComponent` (`update`, `clock`) or `CombinationalComponent` (`evaluate`):
+- **`components/`** — all components implement either `SequentialComponent` (`update`, `clock`) or `CombinationalComponent` (`evaluate`, `update`):
   - Sequential: `DFlipFlop`, `ClockSource`, `SignalSource`
   - Combinational: `ANDGate`, `ORGate`, `XORGate`, `NOTGate`, `FullAdder`
 

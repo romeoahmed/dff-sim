@@ -124,7 +124,7 @@ bun run test:watch   # Watch mode
 └─────────────────────┘                 └─────────────────────┘
 ```
 
-**Physics worker** runs the simulation loop: `seq.update → propagate → seq.clock → propagate → evaluateCombinational → propagate → buffer.push`. It owns the `CircuitGraph`, which levelizes combinational components (Kahn topological sort) so carry chains evaluate in the correct order.
+**Physics worker** runs the simulation loop: `seq.update → propagate → seq.clock → evaluateCombinational → updateCombinational(dt) → propagate → buffer.push`. It owns the `CircuitGraph`. Each combinational gate carries its own `tPD` and Signal dynamics, so intra-tick ordering is not required — feedback circuits (SR latches, ring oscillators) are valid.
 
 **Render worker** receives `Float32Array` frames over a direct `MessagePort` and draws waveforms via custom WGSL shaders. Frame data never passes through the main thread.
 
@@ -278,7 +278,7 @@ bun run test:watch   # 监视模式
 └─────────────────────┘                 └─────────────────────┘
 ```
 
-**物理 Worker** 运行仿真循环：`seq.update → propagate → seq.clock → propagate → evaluateCombinational → propagate → buffer.push`。它持有 `CircuitGraph`，后者通过 Kahn 拓扑排序对组合逻辑组件分层，确保进位链按正确顺序求值。
+**物理 Worker** 运行仿真循环：`seq.update → propagate → seq.clock → evaluateCombinational → updateCombinational(dt) → propagate → buffer.push`。它持有 `CircuitGraph`。每个组合逻辑门都有独立的 `tPD` 和 Signal 动力学，因此无需在单个 tick 内排序——反馈电路（SR 锁存器、环形振荡器）是合法的电路。
 
 **渲染 Worker** 通过直通 `MessagePort` 接收 `Float32Array` 帧数据，并使用自定义 WGSL 着色器绘制波形。帧数据完全不经过主线程。
 

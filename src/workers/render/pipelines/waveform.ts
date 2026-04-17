@@ -74,7 +74,7 @@ export function createWaveformPipeline(
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  // ChannelConfig: color(vec4=16 B) + yOffset(f32=4 B) + _pad(vec3=12 B) = 32 B per channel
+  // ChannelConfig: color(vec4=16 B) + yOffset(f32=4 B) + dashPattern(u32=4 B) + _pad(vec2=8 B) = 32 B per channel
   const channelBuffer = device.createBuffer({
     size: Math.max(32 * channelCount, 32),
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
