@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { NoiseGenerator } from "./noise";
 import { createSeededRng } from "@/lib/rng";
+import { NoiseGenerator } from "./noise";
 
 describe("NoiseGenerator", () => {
   it("produces deterministic output with seeded RNG", () => {

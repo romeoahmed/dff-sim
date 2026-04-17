@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ComponentRegistry } from "./registry";
-import { createPort } from "./base";
-import type { Component, ComponentDeps } from "@/lib/types";
 import { DefaultPhysicsConfig } from "@/lib/constants";
+import type { Component, ComponentDeps } from "@/lib/types";
+import { createPort } from "./base";
+import { ComponentRegistry } from "./registry";
 
 class MockComponent implements Component {
   readonly kind = "combinational" as const;

@@ -1,6 +1,6 @@
-import type { Component, CombinationalComponent, SequentialComponent, Port } from "@/lib/types";
+import type { CombinationalComponent, Component, Port, SequentialComponent } from "@/lib/types";
 
-export type { Component, CombinationalComponent, SequentialComponent };
+export type { CombinationalComponent, Component, SequentialComponent };
 
 export function createPort(name: string, initialVoltage: number = 0): Port {
   return { name, voltage: initialVoltage };

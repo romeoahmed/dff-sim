@@ -1,7 +1,7 @@
-import type { SequentialComponent, Port, PhysicsConfig, RngFn } from "@/lib/types";
-import { createPort } from "./base";
-import { Signal } from "../signal";
+import type { PhysicsConfig, Port, RngFn, SequentialComponent } from "@/lib/types";
 import { NoiseGenerator } from "../noise";
+import { Signal } from "../signal";
+import { createPort } from "./base";
 
 export class SignalSource implements SequentialComponent {
   readonly kind = "sequential" as const;

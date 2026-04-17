@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Signal } from "./signal";
-import { NoiseGenerator } from "./noise";
 import { createSeededRng } from "@/lib/rng";
 import type { SignalConfig } from "@/lib/types";
+import { NoiseGenerator } from "./noise";
+import { Signal } from "./signal";
 
 const BASE_CONFIG: SignalConfig = {
   baseHigh: 2.0,
@@ -47,7 +47,7 @@ describe("Signal", () => {
       if (sig.voltage > maxVoltage) maxVoltage = sig.voltage;
     }
     expect(maxVoltage).toBeGreaterThan(BASE_CONFIG.baseHigh);
-    expect(maxVoltage).toBeLessThan(BASE_CONFIG.baseHigh * 1.20);
+    expect(maxVoltage).toBeLessThan(BASE_CONFIG.baseHigh * 1.2);
   });
 
   it("clamps voltage within bounds", () => {

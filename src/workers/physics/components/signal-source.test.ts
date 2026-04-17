@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { SignalSource } from "./signal-source";
 import { DefaultPhysicsConfig } from "@/lib/constants";
 import { createSeededRng } from "@/lib/rng";
+import { SignalSource } from "./signal-source";
 
 describe("SignalSource", () => {
   it("converges to baseHigh when targetLogic is 1", () => {

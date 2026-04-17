@@ -19,7 +19,22 @@
       "Bash(bun install *)",
       "Bash(bun run *)",
       "Bash(git -C /e/dff-sim add -A)",
-      "Bash(git -C /e/dff-sim status)"
+      "Bash(git -C /e/dff-sim status)",
+      "Bash(git log *)",
+      "Bash(git checkout *)",
+      "Bash(node -e \"const { flavors } = require\\('@catppuccin/palette'\\); console.log\\('teal:', flavors.macchiato.colors.teal.hex\\); console.log\\('sapphire:', flavors.macchiato.colors.sapphire.hex\\);\")",
+      "Bash(bun -e \"import { flavors } from '@catppuccin/palette'; console.log\\('teal:', flavors.macchiato.colors.teal.hex\\); console.log\\('sapphire:', flavors.macchiato.colors.sapphire.hex\\);\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const z = require\\('./node_modules/zod/dist/cjs/index.cjs'\\); console.log\\(z.record.length\\); const r = z.record\\(z.string\\(\\), z.unknown\\(\\)\\); console.log\\('ok'\\);\")",
+      "Bash(bun -e \"import { z } from 'zod'; const r = z.record\\(z.string\\(\\), z.unknown\\(\\)\\); console.log\\('2-arg ok'\\);\")",
+      "Bash(node --input-type=module)",
+      "Bash(node --input-type=module -e \"import { z } from 'zod'; console.log\\(z.ZodVersion ?? 'unknown'\\);\")",
+      "Bash(bun -e \"import { z } from 'zod'; console.log\\(z.ZodVersion ?? 'unknown'\\);\")",
+      "Bash(bun -e ' *)",
+      "Bash(bun *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

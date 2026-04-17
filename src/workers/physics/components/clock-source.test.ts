@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ClockSource } from "./clock-source";
-import { createSeededRng } from "@/lib/rng";
 import { DefaultPhysicsConfig } from "@/lib/constants";
+import { createSeededRng } from "@/lib/rng";
+import { ClockSource } from "./clock-source";
 
 describe("ClockSource", () => {
   it("produces a periodic signal", () => {

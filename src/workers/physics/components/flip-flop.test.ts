@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DFlipFlop } from "./flip-flop";
 import { DefaultPhysicsConfig } from "@/lib/constants";
 import { createSeededRng } from "@/lib/rng";
+import { DFlipFlop } from "./flip-flop";
 
 function createDFF(seed: number = 42) {
   return new DFlipFlop("dff0", {}, DefaultPhysicsConfig, createSeededRng(seed));
