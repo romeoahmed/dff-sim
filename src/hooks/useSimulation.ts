@@ -109,6 +109,12 @@ export function useSimulation(
       if (cancelled) return;
       bridge.physics.setSettings(voltageSpecs);
 
+      for (const ctrl of def.controls) {
+        const key = `${ctrl.targetComponent}.${ctrl.param}`;
+        const defaultValue: number | boolean = ctrl.defaultValue ?? 0;
+        store.set(paramAtomFamily(key), defaultValue);
+      }
+
       if (!statusCallbackProxyRef.current) {
         const callback: StatusCallback = (voltages) => {
           const currentProbes = store.get(activeProbesAtom);
