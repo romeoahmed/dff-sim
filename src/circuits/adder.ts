@@ -1,0 +1,175 @@
+import type { CircuitDefinition } from "@/lib/types";
+import { theme } from "@/styles/theme";
+
+export const adderCircuit = {
+  id: "adder",
+  name: "4-Bit Accumulator",
+  description:
+    "4-bit ripple-carry accumulator. Each clock edge adds the 4-bit input A[0..3] to the stored register value Q[0..3]. Overflow is shown on the OVF probe.",
+  components: [
+    { type: "ClockSource", id: "clk", params: { speed: 20, jitterRms: 0.02 } },
+    { type: "SignalSource", id: "a0", params: {} },
+    { type: "SignalSource", id: "a1", params: {} },
+    { type: "SignalSource", id: "a2", params: {} },
+    { type: "SignalSource", id: "a3", params: {} },
+    { type: "FullAdder", id: "fa0", params: {} },
+    { type: "FullAdder", id: "fa1", params: {} },
+    { type: "FullAdder", id: "fa2", params: {} },
+    { type: "FullAdder", id: "fa3", params: {} },
+    { type: "DFlipFlop", id: "dff0", params: {} },
+    { type: "DFlipFlop", id: "dff1", params: {} },
+    { type: "DFlipFlop", id: "dff2", params: {} },
+    { type: "DFlipFlop", id: "dff3", params: {} },
+  ],
+  nets: [
+    {
+      id: "clk_net",
+      driver: { componentId: "clk", port: "out" },
+      loads: [
+        { componentId: "dff0", port: "clk" },
+        { componentId: "dff1", port: "clk" },
+        { componentId: "dff2", port: "clk" },
+        { componentId: "dff3", port: "clk" },
+      ],
+    },
+    {
+      id: "a0_net",
+      driver: { componentId: "a0", port: "out" },
+      loads: [{ componentId: "fa0", port: "a" }],
+    },
+    {
+      id: "a1_net",
+      driver: { componentId: "a1", port: "out" },
+      loads: [{ componentId: "fa1", port: "a" }],
+    },
+    {
+      id: "a2_net",
+      driver: { componentId: "a2", port: "out" },
+      loads: [{ componentId: "fa2", port: "a" }],
+    },
+    {
+      id: "a3_net",
+      driver: { componentId: "a3", port: "out" },
+      loads: [{ componentId: "fa3", port: "a" }],
+    },
+    {
+      id: "q0_net",
+      driver: { componentId: "dff0", port: "q" },
+      loads: [{ componentId: "fa0", port: "b" }],
+    },
+    {
+      id: "q1_net",
+      driver: { componentId: "dff1", port: "q" },
+      loads: [{ componentId: "fa1", port: "b" }],
+    },
+    {
+      id: "q2_net",
+      driver: { componentId: "dff2", port: "q" },
+      loads: [{ componentId: "fa2", port: "b" }],
+    },
+    {
+      id: "q3_net",
+      driver: { componentId: "dff3", port: "q" },
+      loads: [{ componentId: "fa3", port: "b" }],
+    },
+    {
+      id: "sum0_net",
+      driver: { componentId: "fa0", port: "sum" },
+      loads: [{ componentId: "dff0", port: "d" }],
+    },
+    {
+      id: "sum1_net",
+      driver: { componentId: "fa1", port: "sum" },
+      loads: [{ componentId: "dff1", port: "d" }],
+    },
+    {
+      id: "sum2_net",
+      driver: { componentId: "fa2", port: "sum" },
+      loads: [{ componentId: "dff2", port: "d" }],
+    },
+    {
+      id: "sum3_net",
+      driver: { componentId: "fa3", port: "sum" },
+      loads: [{ componentId: "dff3", port: "d" }],
+    },
+    {
+      id: "c0_net",
+      driver: { componentId: "fa0", port: "cout" },
+      loads: [{ componentId: "fa1", port: "cin" }],
+    },
+    {
+      id: "c1_net",
+      driver: { componentId: "fa1", port: "cout" },
+      loads: [{ componentId: "fa2", port: "cin" }],
+    },
+    {
+      id: "c2_net",
+      driver: { componentId: "fa2", port: "cout" },
+      loads: [{ componentId: "fa3", port: "cin" }],
+    },
+    { id: "c3_net", driver: { componentId: "fa3", port: "cout" }, loads: [] },
+  ],
+  probes: [
+    { netId: "clk_net", label: "CLK", color: theme.green, channelIndex: 0 },
+    { netId: "q0_net", label: "Q0", color: theme.blue, channelIndex: 1 },
+    { netId: "q1_net", label: "Q1", color: theme.mauve, channelIndex: 2 },
+    { netId: "q2_net", label: "Q2", color: theme.peach, channelIndex: 3 },
+    { netId: "q3_net", label: "Q3", color: theme.yellow, channelIndex: 4 },
+    { netId: "c3_net", label: "OVF", color: theme.red, channelIndex: 5 },
+  ],
+  controls: [
+    {
+      type: "toggle",
+      targetComponent: "a0",
+      param: "targetLogic",
+      label: "A0",
+      defaultValue: false,
+    },
+    {
+      type: "toggle",
+      targetComponent: "a1",
+      param: "targetLogic",
+      label: "A1",
+      defaultValue: false,
+    },
+    {
+      type: "toggle",
+      targetComponent: "a2",
+      param: "targetLogic",
+      label: "A2",
+      defaultValue: false,
+    },
+    {
+      type: "toggle",
+      targetComponent: "a3",
+      param: "targetLogic",
+      label: "A3",
+      defaultValue: false,
+    },
+    {
+      type: "slider",
+      targetComponent: "clk",
+      param: "speed",
+      label: "Clock Speed",
+      min: 1,
+      max: 100,
+      defaultValue: 20,
+    },
+    {
+      type: "slider",
+      targetComponent: "global",
+      param: "noise",
+      label: "Noise Level",
+      min: 0,
+      max: 100,
+      defaultValue: 10,
+    },
+    {
+      type: "momentary",
+      targetComponent: "global",
+      param: "reset",
+      label: "Reset All",
+      defaultValue: false,
+    },
+  ],
+} satisfies CircuitDefinition;

@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+/* Semantic palette. :root gets dark defaults so the app boots dark before the
+   themeAtom hydrates on first paint. [data-theme="light"] overrides live in a
+   separate block so Tailwind's @theme inline block reads identical var names. */
+:root,
+[data-theme="dark"] {
+  --color-canvas: #000000;
+  --color-panel: #1d1d1f;
+  --color-panel-raised: #272729;
+  --color-panel-muted: #2a2a2d;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-fg: #ffffff;
+  --color-fg-muted: rgba(255, 255, 255, 0.72);
+  --color-fg-subtle: rgba(255, 255, 255, 0.48);
+  --color-accent: #2997ff;
+  --color-accent-pressed: #409cff;
+  --color-success: #30d158;
+  --color-danger: #ff453a;
+  --color-focus: #0071e3;
+
+  /* shadcn/ui token aliases — dark */
+  --background: var(--color-canvas);
+  --foreground: var(--color-fg);
+  --card: var(--color-panel);
+  --card-foreground: var(--color-fg);
+  --popover: var(--color-panel-raised);
+  --popover-foreground: var(--color-fg);
+  --primary: var(--color-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-panel-muted);
+  --secondary-foreground: var(--color-fg);
+  --muted: var(--color-panel-muted);
+  --muted-foreground: var(--color-fg-muted);
+  --shadcn-accent: var(--color-panel-muted);
+  --shadcn-accent-foreground: var(--color-fg);
+  --destructive: var(--color-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-focus);
+  --radius: 0.5rem;
+}
+
+[data-theme="light"] {
+  --color-canvas: #f5f5f7;
+  --color-panel: #ffffff;
+  --color-panel-raised: #fafafc;
+  --color-panel-muted: #ededf2;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+  --color-fg: #1d1d1f;
+  --color-fg-muted: rgba(0, 0, 0, 0.72);
+  --color-fg-subtle: rgba(0, 0, 0, 0.48);
+  --color-accent: #0066cc;
+  --color-accent-pressed: #0071e3;
+  --color-success: #34c759;
+  --color-danger: #ff3b30;
+  --color-focus: #0071e3;
+
+  /* shadcn/ui token aliases — light */
+  --background: var(--color-canvas);
+  --foreground: var(--color-fg);
+  --card: var(--color-panel);
+  --card-foreground: var(--color-fg);
+  --popover: var(--color-panel-raised);
+  --popover-foreground: var(--color-fg);
+  --primary: var(--color-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-panel-muted);
+  --secondary-foreground: var(--color-fg);
+  --muted: var(--color-panel-muted);
+  --muted-foreground: var(--color-fg-muted);
+  --shadcn-accent: var(--color-panel-muted);
+  --shadcn-accent-foreground: var(--color-fg);
+  --destructive: var(--color-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-focus);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-canvas: var(--color-canvas);
+  --color-panel: var(--color-panel);
+  --color-panel-raised: var(--color-panel-raised);
+  --color-panel-muted: var(--color-panel-muted);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-fg-subtle: var(--color-fg-subtle);
+  --color-accent: var(--color-accent);
+  --color-accent-pressed: var(--color-accent-pressed);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-focus: var(--color-focus);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-shadcn-accent: var(--shadcn-accent);
+  --color-shadcn-accent-foreground: var(--shadcn-accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI Variable",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, "Cascadia Mono", monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  overscroll-behavior: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background-color: var(--color-accent);
+  color: #ffffff;
+}
+
+/* SF Pro-echoing typographic utilities: negative tracking at every size, tight
+   leading on display sizes, comfortable leading on body sizes. Used by chrome
+   and modal text — canvas numerics stay on .readout (mono). */
+.text-display {
+  font-weight: 600;
+  letter-spacing: -0.28px;
+  line-height: 1.07;
+}
+
+.text-body {
+  letter-spacing: -0.374px;
+  line-height: 1.47;
+}
+
+.text-caption {
+  letter-spacing: -0.224px;
+  line-height: 1.29;
+}
+
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings:
+    "zero" 1,
+    "ss03" 1;
+}
+
+@keyframes wire-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -12;
+  }
+}

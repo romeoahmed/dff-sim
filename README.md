@@ -1,112 +1,194 @@
-# D-FlipFlop Simulation (D触发器物理仿真)
+# DFF·SIM
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![Vite](https://img.shields.io/badge/Vite-8.0.0--beta.13-646cff)
-![PixiJS](<https://img.shields.io/badge/PixiJS_(WebGPU)-e72264>)
+**Physics-accurate digital logic simulation in the browser.**
 
-这是一个基于 Web 的 D 触发器 (D Flip-Flop) 物理行为仿真项目。
+English · [中文](./README.zh-CN.md)
 
-与传统的逻辑门模拟器不同，本项目**模拟了数字电路背后的模拟特性**，包括电压波动、高斯白噪声、RC 延迟（压摆率）以及亚稳态（Metastability）现象。
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
+![WebGPU](https://img.shields.io/badge/WebGPU-enabled-ff6b35)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-在渲染层，项目已全面升级至 **PixiJS**，优先使用 **WebGPU** 后端，并配合 **Web Workers + OffscreenCanvas** 多线程架构，实现了逻辑计算与图形渲染的完全隔离。
+---
 
-## ✨ 核心特性
+## Overview
 
-### 1. 下一代图形渲染架构 (PixiJS)
+DFF·SIM is a browser simulator of digital logic circuits at the **analog voltage level**, not as ideal binary transitions. Every wire carries a continuous voltage that rises and falls with real physics — Gaussian noise, RC slew, second-order ringing, Schmitt-trigger hysteresis, per-gate propagation delay, and metastability that visibly hovers at the midpoint before snapping to a rail.
 
-- **WebGPU 优先**：渲染核心采用 PixiJS，优先调用 WebGPU API，在不支持的环境下自动回退至 WebGL。
-- **Web Worker 渲染**：利用 `OffscreenCanvas` 将 PixiJS 实例完全运行在 Worker 线程中。**主线程的 DOM 操作（如侧边栏动画、复杂的 CSS 重排）完全不会阻塞示波器的 60FPS/144FPS 渲染循环**。
-- **批处理优化**：采用 PixiJS 的 `Graphics` 与 `MeshRope` 配合 WebGPU 的批处理能力，在同时绘制上千个数据点时，依旧维持极低的 CPU/GPU 开销。
-- **动静分离**：将网格、标签等静态元素与波形动态元素分层管理，大幅减少每帧的 Draw Call。
+It is an instrument panel, not an HDL simulator. The goal is to see the physics of digital logic on an oscilloscope the way a lab bench would show it — with all the imperfections that textbook diagrams hide.
 
-### 2. 硬核物理模拟引擎 (`src/physics.ts`)
+The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a React instrument panel with an Apple-inspired dual theme (light + dark, runtime toggle), built on shadcn/ui primitives over Tailwind v4 with CSS Subgrid for cross-row alignment in the controls and settings panels.
 
-不仅仅是 0 和 1 的逻辑变换，而是基于电压的连续模拟：
+---
 
-- **真实噪声模拟**：使用 **Marsaglia Polar Method** 生成符合正态分布的高斯白噪声。
-- **帧率无关的 RC 滤波**：实现了**基于时间步进 (Delta Time) 的指数衰减模型**。无论浏览器帧率波动还是卡顿，电压充放电的物理速度始终恒定，不会出现“波形变短”或“动画变慢”的现象。
-- **亚稳态 (Metastability)**：精确模拟时钟沿触发时，输入信号处于未定义电压区间（0.6V~1.0V）时的随机坍缩行为。
+## Physics model
 
-### 3. 高鲁棒性的工程实践
+| Effect | Implementation |
+|--------|----------------|
+| Gaussian white noise | Marsaglia polar method |
+| 1/f flicker noise | Voss-McCartney octave accumulator |
+| Voltage slew & ringing | Damped second-order oscillator (ζ, ωₙ) |
+| Schmitt-trigger hysteresis | Two-level threshold band; sub-band voltages latch the previous state |
+| Propagation delay | Per-gate `tPD` via a pending-target timer on each analog output |
+| Metastability | Exponential-distributed resolution time; Q visibly hovers at mid-voltage; resolution is biased by the D voltage at the clock edge plus Gaussian jitter, not a fair coin |
+| Frame-rate independence | All physics stepped by an explicit `dt` |
 
-- **Actor 模型架构**：主线程与 Worker 线程通过严格定义的消息协议（Message Passing）通信，解耦了 UI 逻辑与仿真核心。
-- **手动渲染循环**：在 Worker 中接管了渲染主循环，**关闭 PixiJS 默认 Ticker**，确保物理计算与图形绘制的严格同步，消除画面撕裂。
-- **Ring Buffer 优化**：使用位运算 (`&`) 代替取模运算，配合 `Float32Array` 实现 O(1) 复杂度的实时数据写入与回绕。
+Every combinational gate (`ANDGate`, `ORGate`, `XORGate`, `NOTGate`, `FullAdder`) owns its own `AnalogOutput` — a `Signal` plus a `NoiseGenerator` plus a `tPD` timer — so the same dynamics DFFs have are present end-to-end. Feedback circuits (SR latches, ring oscillators, astables) are valid; there is no topological-sort rejection.
 
-### 4. 交互式控制与配置
+---
 
-- **Input D 控制**：手动切换输入信号的高低电平。
-- **参数动态调节**：实时调节输入噪声强度、时钟频率。
-- **设置侧边栏**：支持动态修改物理电压规范（如逻辑高/低阈值），修改后 Worker 会自动重置缓冲区并重新校准基准线，实现无缝切换。
+## Circuits
 
-## 🛠️ 技术栈
+| Circuit | What you see |
+|---------|--------------|
+| **D Flip-Flop** | A single DFF demonstrating edge-triggered capture, clock jitter, output noise, and metastability. Park the D input inside the Schmitt band just before a rising edge and Q hovers at mid for a visible random interval before snapping to HIGH or LOW, biased by where D actually sat. |
+| **4-bit Accumulator** | Ripple-carry adder feeding four DFFs. Each full adder has its own `tPD`, so on every clock edge you can watch the carry cascade through the chain — Q0 settles, then Q1, then Q2, then Q3 — instead of all four bits flipping simultaneously. |
 
-- **语言**：[TypeScript](https://www.typescriptlang.org/) (全类型覆盖，严格模式)
-- **渲染引擎**：[PixiJS](https://pixijs.com/) (WebGPU / WebGL)
-- **多线程**：Web Workers + OffscreenCanvas
-- **构建工具**：[Vite](https://vitejs.dev/)
-- **样式**：[Sass](https://sass-lang.com/) (Dart Sass) + Catppuccin 主题
-- **图标**：FontAwesome
+---
 
-## 🚀 快速开始
+## Rendering
 
-### 环境要求
+- **WebGPU** oscilloscope rendered entirely on a dedicated worker thread via `OffscreenCanvas`. The main thread never blocks waveform drawing.
+- Three fragment-shader styles: **Clean**, **Glow** (bloom halo), and **Phosphor** (CRT scanline with age fade).
+- **Per-channel dash patterns** (solid, long-dash, dot, dash-dot) so traces are distinguishable without colour — the patterns apply to both the analog waveform and the digital-logic views under every shader style.
+- Direct physics → render `MessagePort` channel: frame data bypasses the main thread entirely.
 
-- [Bun](https://bun.sh/) v1.0+ (推荐，用于快速部署)
-- [Node.js](https://nodejs.org/) v18+ (可选，替代 Bun)
-- 支持 WebGPU 或 WebGL 的现代浏览器 (Chrome 113+ 体验最佳)
+---
 
-### 安装依赖
+## UI and accessibility
+
+- Per-circuit parameter controls (sliders, toggles, momentary buttons) built on shadcn/ui primitives (Radix + Tailwind), composed inside a CSS Subgrid so labels and values line up across every control row regardless of string length.
+- Probe selector — choose which signals appear on the oscilloscope.
+- Circuit selector — switch between loaded circuit definitions at runtime.
+- Settings sheet (overridable voltage bands, also subgrid-aligned), about sheet, and a centered keyboard-shortcuts dialog (`?` to open).
+- **Dual theme**: Apple-inspired light + dark, runtime toggle in the toolbar (Sun/Moon), persisted to `localStorage`. Tokens live in two layers — project semantic (`--color-canvas`, `--color-fg`, `--color-accent` …) plus shadcn aliases (`--background`, `--primary`, `--ring` …) — so generated `components/ui/*.tsx` stay pristine.
+- **Localisation**: English / 中文 toggle in the toolbar (Globe). Chrome strings (Toolbar, StatusStrip, sheets, overlays, controls headings, schematic header) are wrapped with Lingui macros and switch instantly. Circuit-definition labels (probe names, control labels) are deliberately left English — that's a future scope.
+- **Accessibility**: canvases and SVG schematic carry proper `aria-label` / `role="img"` / `<title>` / `<desc>`; the schematic description is derived from the `CircuitDefinition` (component-type counts + net count + definition text). A visually-hidden live region announces probe logic transitions (HIGH ↔ LOW) only on Schmitt-band crossings — no 60 Hz voltage flood. Dash patterns give a second, non-colour channel for distinguishing traces. Apple Blue focus ring on every interactive element.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| UI framework | React 19 |
+| Language | TypeScript 6 (strict — `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`) |
+| Build | Vite 8 (rolldown) + `@vitejs/plugin-react-swc` + Bun |
+| State | Jotai 2 (atomic + `atomWithStorage` for theme persistence) |
+| Worker RPC | Comlink 4 |
+| GPU | WebGPU (`@webgpu/types`) |
+| Styling | Tailwind CSS v4 (CSS-first config) + Apple-inspired dual theme + CSS Subgrid |
+| Components | shadcn/ui (button, slider, switch, toggle-group, dialog, sheet) over `radix-ui` |
+| Animation | Motion (`motion/react`) |
+| i18n | Lingui 5 + `@lingui/swc-plugin` (en / zh-CN, runtime locale switch via `useLocaleSync`) |
+| Lint + format | Biome 2 |
+| Tests | Vitest 4 + Testing Library + happy-dom (macros shimmed in `test/setup.ts`) |
+
+---
+
+## Quick start
+
+### Requirements
+
+- [Bun](https://bun.sh/) v1.0+
+- Chrome 113+ or another WebGPU-capable browser
+
+### Install and run
 
 ```bash
+git clone https://github.com/romeoahmed/dff-sim.git
+cd dff-sim
 bun install
-```
-
-### 启动开发服务器
-
-```bash
 bun run dev
 ```
 
-打开浏览器访问 `http://localhost:5173` 即可看到仿真界面。
+Open `http://localhost:5173`.
 
-### 构建生产版本
+### Other commands
 
 ```bash
-bun run build
+bun run build            # Production build → dist/
+bun run preview          # Serve production build
+bun run typecheck        # Type-check without emitting
+bun run check            # Biome lint + format check
+bun run check:fix        # Biome auto-fix
+bun run test             # Run all tests (Vitest)
+bun run test:watch       # Watch mode
+bun run test:ui          # Browser test UI
+bun run lingui:extract   # Scan src for translatable strings → .po
+bun run lingui:compile   # Compile .po → .mjs catalogs
 ```
 
-## 📂 项目结构
+---
 
-```bash
+## Architecture
+
+Three threads, two hops:
+
+```
+┌─────────────────────────────────────┐
+│         Main thread (React)         │
+│   Jotai atoms · hooks · components  │
+│            Comlink RPC ↕            │
+└──────────┬──────────────────────────┘
+           │
+┌──────────▼──────────┐   MessagePort   ┌─────────────────────┐
+│   Physics worker    │ ─────────────▶  │   Render worker     │
+│  SimulationEngine   │  Float32 frames │  WebGPU pipelines   │
+│  CircuitGraph       │                 │  WGSL shaders       │
+│  Component tick     │                 │  OffscreenCanvas    │
+└─────────────────────┘                 └─────────────────────┘
+```
+
+Each physics tick runs the following phases in order:
+
+```
+seq.update(dt)           // DFF Signal step, pending Q timer
+propagate                // DFF outputs fan out to nets
+seq.clock(dt)            // DFF edge detect, sample D, queue pending
+evaluateCombinational()  // gates read inputs, queue pending output
+updateCombinational(dt)  // gates tick tPD, advance Signal, write output port
+propagate                // gate outputs fan out
+buffer.push              // probe voltages written to the ring buffer
+```
+
+Frame data flows physics → render through a direct `MessagePort` — never through the main thread. The render worker uploads the frame to a GPU storage buffer and draws each trace as an instanced triangle strip.
+
+---
+
+## Project structure
+
+```
 src/
-├── archive/                        # 归档的旧版本代码
-│   └── renderer-old.ts
-├── common
-│   ├── constants.ts                # 公共常量定义
-│   └── types.ts                    # 公共类型定义
-├── main
-│   ├── app.ts                      # 主线程仿真应用类
-│   ├── main.ts                     # 主入口文件
-│   └── ui
-│       ├── about.ts                # 关于侧边栏逻辑
-│       └── settings.ts             # 设置侧边栏逻辑
-├── styles/                         # 全局样式文件
-└── worker
-    ├── entry.ts                    # Worker 线程入口文件
-    ├── physics
-    │   ├── buffer.ts               # 波形数据缓冲区
-    │   └── engine.ts               # 物理引擎实现
-    └── render
-        ├── backends
-        │   ├── base.ts             # 渲染器基类定义
-        │   ├── experimental.ts     # 实验性 MeshRope 渲染器
-        │   └── standard.ts         # 标准 Graphics 渲染器
-        └── host.ts                 # PixiJS Host 管理类
-
+├── atoms/                   # Jotai atoms (circuit, voltages, params, theme, locale, sheet visibility, voltage spec)
+├── circuits/                # Circuit definitions (DFF, accumulator, ring oscillator)
+├── components/
+│   ├── ui/                  # shadcn/ui primitives (button, slider, switch, toggle-group, dialog, sheet)
+│   ├── controls/            # ControlPanel (subgrid parent), ParamSlider, ParamToggle, ParamMomentary, ProbeSelector
+│   ├── nav/                 # Toolbar (theme/locale/shader/info toggles), CircuitSelector
+│   ├── oscilloscope/        # OscilloscopePanel, WaveformCanvas, DigitalCanvas, InstrumentBezel, LiveVoltageReadouts, Legend, ProbeStateAnnouncer
+│   ├── schematic/           # CircuitSchematic (landscape <1440 / portrait ≥1440), SchematicGrid/Node/Wire, describe helper
+│   ├── settings/            # SettingsSheet (voltage band overrides, subgrid-aligned)
+│   ├── about/               # AboutSheet
+│   ├── shortcuts/           # ShortcutsOverlay
+│   ├── status/              # StatusStrip
+│   ├── fallback/            # WebGPUUnavailable
+│   └── layout/              # AppLayout (responsive 1/2/3-column grid)
+├── hooks/                   # useSimulation, useThemeSync, useLocaleSync, useKeyboardShortcuts, useMediaQuery
+├── i18n/                    # Lingui i18n: index.ts (loader) + locales/{en,zh-CN}/messages.{po,mjs}
+├── lib/                     # Types, constants, worker bridge, RNG utilities, Zod validation, cn() helper
+├── styles/                  # globals.css — dual-theme tokens + shadcn aliases + Tailwind v4 @theme
+├── test/                    # Test setup (Lingui macro shim) + component / hook / i18n tests
+└── workers/
+    ├── physics/             # SimulationEngine, CircuitGraph, Signal, NoiseGenerator, AnalogOutput, gaussian, components/
+    └── render/              # WebGPU pipelines, gpu-device, WGSL shaders (vert + clean/glow/phosphor/digital)
 ```
 
-## 📝 许可证
+The `docs/superpowers/` directory holds the specs and implementation plans that produced the current behaviour — useful if you want to see the reasoning behind a design decision rather than the code that resulted from it.
 
-本项目采用 [MIT License](LICENSE) 许可证。
+---
+
+## License
+
+[MIT](LICENSE)

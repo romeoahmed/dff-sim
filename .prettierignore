@@ -1,6 +1,0 @@
-# Ignore artifacts:
-build
-coverage
-fontawesome
-pnpm-lock.yaml
-pnpm-workspace.yaml
