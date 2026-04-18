@@ -21,6 +21,10 @@ msgstr "{style} shader · press {0}"
 msgid "About"
 msgstr "About"
 
+#: src/components/fallback/WebGPUUnavailable.tsx:31
+msgid "Check browser support →"
+msgstr "Check browser support →"
+
 #: src/components/nav/CircuitSelector.tsx:14
 msgid "Circuit"
 msgstr "Circuit"
@@ -75,6 +79,10 @@ msgstr "Override the simulator's logic-level voltage bands. Changes apply live t
 msgid "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
 msgstr "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
 
+#: src/components/fallback/WebGPUUnavailable.tsx:22
+msgid "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
+msgstr "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
+
 #: src/components/about/AboutSheet.tsx:11
 msgid "React 19 + Tailwind v4"
 msgstr "React 19 + Tailwind v4"
@@ -127,6 +135,10 @@ msgstr "Switch to light theme"
 msgid "Tech stack"
 msgstr "Tech stack"
 
+#: src/components/fallback/WebGPUUnavailable.tsx:16
+msgid "This simulation renders analog waveforms through WebGPU, which is not available in your browser."
+msgstr "This simulation renders analog waveforms through WebGPU, which is not available in your browser."
+
 #: src/components/shortcuts/ShortcutsOverlay.tsx:11
 msgid "Toggle D input"
 msgstr "Toggle D input"
@@ -138,3 +150,7 @@ msgstr "Voltage Settings"
 #: src/components/about/AboutSheet.tsx:12
 msgid "WebGPU + WGSL rendering"
 msgstr "WebGPU + WGSL rendering"
+
+#: src/components/fallback/WebGPUUnavailable.tsx:13
+msgid "WebGPU Required"
+msgstr "WebGPU Required"

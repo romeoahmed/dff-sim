@@ -21,6 +21,10 @@ msgstr ""
 msgid "About"
 msgstr ""
 
+#: src/components/fallback/WebGPUUnavailable.tsx:31
+msgid "Check browser support →"
+msgstr ""
+
 #: src/components/nav/CircuitSelector.tsx:14
 msgid "Circuit"
 msgstr ""
@@ -75,6 +79,10 @@ msgstr ""
 msgid "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
 msgstr ""
 
+#: src/components/fallback/WebGPUUnavailable.tsx:22
+msgid "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
+msgstr ""
+
 #: src/components/about/AboutSheet.tsx:11
 msgid "React 19 + Tailwind v4"
 msgstr ""
@@ -127,6 +135,10 @@ msgstr ""
 msgid "Tech stack"
 msgstr ""
 
+#: src/components/fallback/WebGPUUnavailable.tsx:16
+msgid "This simulation renders analog waveforms through WebGPU, which is not available in your browser."
+msgstr ""
+
 #: src/components/shortcuts/ShortcutsOverlay.tsx:11
 msgid "Toggle D input"
 msgstr ""
@@ -137,4 +149,8 @@ msgstr ""
 
 #: src/components/about/AboutSheet.tsx:12
 msgid "WebGPU + WGSL rendering"
+msgstr ""
+
+#: src/components/fallback/WebGPUUnavailable.tsx:13
+msgid "WebGPU Required"
 msgstr ""

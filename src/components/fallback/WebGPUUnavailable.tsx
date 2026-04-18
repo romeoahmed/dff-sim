@@ -1,3 +1,4 @@
+import { Trans } from "@lingui/react/macro";
 import { AlertTriangle } from "lucide-react";
 
 export function WebGPUUnavailable() {
@@ -9,14 +10,16 @@ export function WebGPUUnavailable() {
           className="text-display text-fg"
           style={{ fontSize: 40, lineHeight: 1.1, letterSpacing: -0.2 }}
         >
-          WebGPU Required
+          <Trans>WebGPU Required</Trans>
         </h1>
         <p className="text-[17px] text-body text-fg-muted max-w-prose mx-auto">
-          This simulation renders analog waveforms through WebGPU, which is not available in your
-          browser.
+          <Trans>
+            This simulation renders analog waveforms through WebGPU, which is not available in your
+            browser.
+          </Trans>
         </p>
         <p className="text-[14px] text-caption text-fg-subtle">
-          Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+.
+          <Trans>Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+.</Trans>
         </p>
         <div className="pt-2">
           <a
@@ -25,7 +28,7 @@ export function WebGPUUnavailable() {
             rel="noreferrer"
             className="inline-flex items-center h-9 px-5 rounded-full border border-border-strong text-accent text-[14px] hover:bg-panel-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
-            Check browser support →
+            <Trans>Check browser support →</Trans>
           </a>
         </div>
       </div>
