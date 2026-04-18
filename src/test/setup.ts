@@ -1,12 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 
-// Lingui's macro imports require a build-time Babel transform to become runtime
-// calls. @vitejs/plugin-react@6 does not run its Babel transform on test files
-// the same way it does on build/dev, so the macro guards in @lingui/vite-plugin
-// fire and tests that render Trans/Plural/useLingui crash. We shim the macro
-// surface here with the closest semantic runtime behaviour so tests render the
-// final English text (matching what extraction would have produced).
+// Lingui's macro imports require a build-time transform to become runtime
+// calls. Vitest's transform pipeline does not include the SWC plugin we use
+// at build time, so the macro guards in @lingui/vite-plugin fire and tests
+// that render Trans/Plural/useLingui crash. We shim the macro surface here
+// with the closest semantic runtime behaviour so tests render the final
+// English text (matching what extraction would have produced).
 vi.mock("@lingui/react/macro", async () => {
   const React = await import("react");
   const Trans = ({ children }: { children: React.ReactNode }) =>
