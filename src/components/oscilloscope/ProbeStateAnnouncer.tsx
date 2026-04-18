@@ -1,5 +1,5 @@
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { voltageAtomFamily } from "@/atoms/simulation-atoms";
 import { activeProbesAtom } from "@/atoms/ui-atoms";
 import { DefaultPhysicsConfig } from "@/lib/constants";
@@ -33,6 +33,14 @@ export function ProbeStateAnnouncer() {
   const probes = useAtomValue(activeProbesAtom);
   const messagesRef = useRef<Map<string, string>>(new Map());
   const [message, setMessage] = useState<string>("");
+
+  const activeNetIds = useMemo(() => new Set(probes.map((p) => p.netId)), [probes]);
+
+  useEffect(() => {
+    for (const key of messagesRef.current.keys()) {
+      if (!activeNetIds.has(key)) messagesRef.current.delete(key);
+    }
+  }, [activeNetIds]);
 
   const handleTransition = useCallback<TransitionHandler>((netId, label, state) => {
     messagesRef.current.set(netId, `${label} ${state === 1 ? "HIGH" : "LOW"}`);

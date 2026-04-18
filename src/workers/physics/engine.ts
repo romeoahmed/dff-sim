@@ -43,6 +43,7 @@ export class SimulationEngine {
   }
 
   tick(realDt: number): void {
+    if (realDt < 0) return;
     this.accumulator += Math.min(realDt, 0.1);
     while (this.accumulator >= this.dt) {
       this.stepPhysics(this.dt);

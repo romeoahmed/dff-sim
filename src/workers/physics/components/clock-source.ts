@@ -61,8 +61,7 @@ export class ClockSource implements SequentialComponent {
     const jitter = this.gaussianSample() * this.jitterRms;
     const frameRate = this.config.simulation.baseFrameRate;
     this.phase += this.speed * this.config.simulation.clockSpeedFactor * dt * frameRate + jitter;
-    if (this.phase < 0) this.phase += Math.PI * 2;
-    if (this.phase >= Math.PI * 2) this.phase -= Math.PI * 2;
+    this.phase = ((this.phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
     const oldHalf = Math.floor(oldPhase / Math.PI) % 2;
     const newHalf = Math.floor(this.phase / Math.PI) % 2;

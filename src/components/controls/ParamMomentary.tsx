@@ -1,21 +1,14 @@
-import { useSetAtom } from "jotai";
-import { useState } from "react";
+import { useAtom } from "jotai";
 import { paramAtomFamily } from "@/atoms/simulation-atoms";
 import type { ControlDef } from "@/lib/types";
 
 export function ParamMomentary({ control }: { control: ControlDef }) {
   const key = `${control.targetComponent}.${control.param}`;
-  const setValue = useSetAtom(paramAtomFamily(key));
-  const [active, setActive] = useState(false);
+  const [value, setValue] = useAtom(paramAtomFamily(key));
+  const active = value === true;
 
-  const on = () => {
-    setActive(true);
-    setValue(true);
-  };
-  const off = () => {
-    setActive(false);
-    setValue(false);
-  };
+  const on = () => setValue(true);
+  const off = () => setValue(false);
 
   return (
     <div className="col-span-2 grid grid-cols-subgrid items-center py-1">
@@ -25,6 +18,7 @@ export function ParamMomentary({ control }: { control: ControlDef }) {
         onPointerDown={on}
         onPointerUp={off}
         onPointerLeave={off}
+        onPointerCancel={off}
         onKeyDown={(e) => e.key === " " && on()}
         onKeyUp={(e) => e.key === " " && off()}
         data-active={active}

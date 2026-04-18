@@ -22,7 +22,7 @@ describe("CircuitSchematic", () => {
     renderWith(dffCircuit);
     const svg = screen.getByRole("img");
     const titleId = svg.getAttribute("aria-labelledby");
-    expect(titleId).toBeTruthy();
+    expect(titleId).not.toBeNull();
     const title = titleId ? document.getElementById(titleId) : null;
     expect(title?.textContent).toContain(dffCircuit.name);
   });
@@ -31,7 +31,7 @@ describe("CircuitSchematic", () => {
     renderWith(adderCircuit);
     const svg = screen.getByRole("img");
     const descId = svg.getAttribute("aria-describedby");
-    expect(descId).toBeTruthy();
+    expect(descId).not.toBeNull();
     const desc = descId ? document.getElementById(descId) : null;
     expect(desc?.textContent).toContain("13 components");
     expect(desc?.textContent).toContain(`${adderCircuit.nets.length} nets`);

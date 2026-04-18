@@ -16,7 +16,7 @@ import { CircuitSelector } from "./CircuitSelector";
 const SHADER_STYLES: ShaderStyle[] = ["clean", "glow", "phosphor"];
 
 function isShaderStyle(v: string): v is ShaderStyle {
-  return SHADER_STYLES.includes(v as ShaderStyle);
+  return (SHADER_STYLES as readonly string[]).includes(v);
 }
 
 const toolbarContainer = {

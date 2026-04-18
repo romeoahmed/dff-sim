@@ -8,9 +8,13 @@ const catalogs: Record<Locale, () => Promise<{ messages: Record<string, string> 
   "zh-CN": () => import("./locales/zh-CN/messages.mjs"),
 };
 
+let pendingLocale: Locale | null = null;
+
 export async function activateLocale(locale: Locale): Promise<void> {
+  pendingLocale = locale;
   const loader = catalogs[locale];
   const { messages } = await loader();
+  if (pendingLocale !== locale) return;
   i18n.loadAndActivate({ locale, messages });
 }
 

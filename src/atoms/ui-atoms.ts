@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import { atomWithStorage } from "jotai/utils";
+import { atomWithStorage, createJSONStorage } from "jotai/utils";
 import type { Probe } from "@/lib/types";
 import type { ShaderStyle } from "@/workers/render/shaders";
 import { circuitDefAtom } from "./simulation-atoms";
@@ -8,11 +8,23 @@ export type { ShaderStyle };
 export type Locale = "en" | "zh-CN";
 export type Theme = "light" | "dark";
 
-export const shaderStyleAtom = atom<ShaderStyle>("clean");
+// Guard against test environments where localStorage is a non-functional stub.
+const mkSafeStorage = <T>() =>
+  createJSONStorage<T>(() => {
+    if (typeof window === "undefined") return null as unknown as Storage;
+    const ls = window.localStorage;
+    return ls && typeof ls.getItem === "function" ? ls : (null as unknown as Storage);
+  });
+
+export const shaderStyleAtom = atomWithStorage<ShaderStyle>(
+  "dff-sim-shader",
+  "clean",
+  mkSafeStorage<ShaderStyle>(),
+);
 export const settingsOpenAtom = atom(false);
 export const aboutOpenAtom = atom(false);
-export const localeAtom = atom<Locale>("en");
-export const themeAtom = atomWithStorage<Theme>("dff-sim-theme", "dark");
+export const localeAtom = atomWithStorage<Locale>("dff-sim-locale", "en", mkSafeStorage<Locale>());
+export const themeAtom = atomWithStorage<Theme>("dff-sim-theme", "dark", mkSafeStorage<Theme>());
 
 export const activeProbeIdsAtom = atom<Set<string>>(new Set<string>());
 
