@@ -36,6 +36,10 @@ msgstr "Language"
 msgid "Light theme"
 msgstr "Light theme"
 
+#: src/components/status/StatusStrip.tsx:17
+msgid "Running"
+msgstr "Running"
+
 #: src/components/nav/CircuitSelector.tsx:24
 msgid "Select circuit"
 msgstr "Select circuit"
