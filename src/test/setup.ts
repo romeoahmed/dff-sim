@@ -11,9 +11,20 @@ vi.mock("@lingui/react/macro", async () => {
   const React = await import("react");
   const Trans = ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);
-  const Plural = ({ value, one, other }: { value: number; one: string; other: string }) => {
-    const template = value === 1 ? one : other;
-    return template.replace(/#/g, String(value));
+  const Plural = ({
+    value,
+    one,
+    other,
+  }: {
+    value: number;
+    one: React.ReactNode;
+    other: React.ReactNode;
+  }): React.ReactElement => {
+    const branch = value === 1 ? one : other;
+    if (typeof branch === "string") {
+      return React.createElement(React.Fragment, null, branch.replace(/#/g, String(value)));
+    }
+    return React.createElement(React.Fragment, null, branch);
   };
   const useLingui = () => ({
     i18n: {
