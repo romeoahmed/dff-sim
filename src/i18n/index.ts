@@ -1,11 +1,11 @@
 import { i18n } from "@lingui/core";
 import type { Locale } from "@/atoms/ui-atoms";
 
-// Compiled catalogs are produced by `bun run lingui:compile` into messages.js
+// Compiled catalogs are produced by `bun run lingui:compile` into messages.mjs
 // siblings of the .po files. We dynamic-import so non-active catalogs are code-split.
 const catalogs: Record<Locale, () => Promise<{ messages: Record<string, string> }>> = {
-  en: () => import("./locales/en/messages.js"),
-  "zh-CN": () => import("./locales/zh-CN/messages.js"),
+  en: () => import("./locales/en/messages.mjs"),
+  "zh-CN": () => import("./locales/zh-CN/messages.mjs"),
 };
 
 export async function activateLocale(locale: Locale): Promise<void> {

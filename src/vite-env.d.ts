@@ -8,5 +8,9 @@ declare module "*.wgsl?raw" {
 declare module "*.po" {
   import type { Messages } from "@lingui/core";
   const messages: Messages;
-  export { messages };
+  export default messages;
+}
+
+declare module "*.mjs" {
+  export const messages: Record<string, string>;
 }
