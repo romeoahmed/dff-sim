@@ -1,6 +1,6 @@
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { useAtomValue } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
-import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildSchematicDescription } from "./describe";
@@ -100,17 +100,9 @@ export function CircuitSchematic({ className = "" }: { className?: string }) {
         </span>
         <span className="text-fg text-caption">{circuitDef.name}</span>
         <span className="ml-auto readout text-[10px] text-fg-subtle">
-          <Plural
-            value={circuitDef.components.length}
-            one="# component"
-            other="# components"
-          />
+          <Plural value={circuitDef.components.length} one="# component" other="# components" />
           {" · "}
-          <Plural
-            value={circuitDef.nets.length}
-            one="# net"
-            other="# nets"
-          />
+          <Plural value={circuitDef.nets.length} one="# net" other="# nets" />
         </span>
       </header>
       <div className="relative flex-1 min-h-0">

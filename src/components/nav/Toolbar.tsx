@@ -1,8 +1,8 @@
+import { useLingui } from "@lingui/react/macro";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { useAtom, useSetAtom } from "jotai";
 import { CircuitBoard, Globe, Info, Moon, Settings, Sun } from "lucide-react";
 import { motion } from "motion/react";
-import { useLingui } from "@lingui/react/macro";
 import {
   aboutOpenAtom,
   localeAtom,

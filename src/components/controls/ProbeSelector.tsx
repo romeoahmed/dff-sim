@@ -1,5 +1,5 @@
-import { useAtom, useAtomValue } from "jotai";
 import { Trans } from "@lingui/react/macro";
+import { useAtom, useAtomValue } from "jotai";
 import { circuitDefAtom, voltageAtomFamily } from "@/atoms/simulation-atoms";
 import { activeProbeIdsAtom } from "@/atoms/ui-atoms";
 import type { Probe } from "@/lib/types";

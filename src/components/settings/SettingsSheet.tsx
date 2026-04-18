@@ -1,5 +1,5 @@
-import * as Dialog from "@radix-ui/react-dialog";
 import { Trans, useLingui } from "@lingui/react/macro";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useAtom } from "jotai";
 import { X } from "lucide-react";
 import { useState } from "react";
@@ -62,7 +62,10 @@ export function SettingsSheet() {
 
           <div className="px-6 py-5">
             <p className="text-[13px] text-fg-muted text-caption mb-5">
-              <Trans>Override the simulator's logic-level voltage bands. Changes apply live to the running circuit.</Trans>
+              <Trans>
+                Override the simulator's logic-level voltage bands. Changes apply live to the
+                running circuit.
+              </Trans>
             </p>
 
             <div className="space-y-3">

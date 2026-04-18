@@ -1,5 +1,5 @@
-import { useAtomValue } from "jotai";
 import { Trans } from "@lingui/react/macro";
+import { useAtomValue } from "jotai";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { ParamMomentary } from "./ParamMomentary";
 import { ParamSlider } from "./ParamSlider";
