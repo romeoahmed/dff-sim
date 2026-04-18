@@ -25,7 +25,6 @@ export interface PhysicsAPI {
   setSettings(specs: Partial<VoltageSpecConfig>): void;
   registerRenderPort(port: MessagePort): void;
   registerStatusCallback(cb: (voltages: number[]) => void): void;
-  releaseStatusCallback(): void;
   start(): void;
   stop(): void;
 }
@@ -82,13 +81,6 @@ class PhysicsWorker implements PhysicsAPI {
     this.statusCallback = cb as Comlink.Remote<(v: number[]) => void>;
   }
 
-  releaseStatusCallback(): void {
-    if (this.statusCallback) {
-      this.statusCallback[Comlink.releaseProxy]();
-      this.statusCallback = null;
-    }
-  }
-
   start(): void {
     if (this.tickHandle !== null) return;
     this.lastTickTime = performance.now();
@@ -106,6 +98,10 @@ class PhysicsWorker implements PhysicsAPI {
     if (this.tickHandle !== null) {
       clearTimeout(this.tickHandle);
       this.tickHandle = null;
+    }
+    if (this.statusCallback) {
+      this.statusCallback[Comlink.releaseProxy]();
+      this.statusCallback = null;
     }
   }
 

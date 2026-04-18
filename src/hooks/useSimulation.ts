@@ -124,7 +124,6 @@ export function useSimulation(
     return () => {
       cancelled = true;
       pendingTerminationRef.current = setTimeout(() => {
-        bridgeRef.current?.physics.releaseStatusCallback();
         statusCallbackProxyRef.current = null;
         bridgeRef.current?.terminate();
         bridgeRef.current = null;
