@@ -18,6 +18,28 @@ function createZeroNoise(): NoiseGenerator {
 }
 
 describe("Signal", () => {
+  describe("constructor validation", () => {
+    const noise = {
+      sample: () => 0,
+    } as unknown as NoiseGenerator;
+    const baseConfig = {
+      baseHigh: 3.3,
+      baseLow: 0,
+      zeta: 0.7,
+      ringFreq: 100,
+      clampMin: -0.5,
+      clampMax: 3.8,
+    };
+
+    it("throws RangeError when ringFreq is zero", () => {
+      expect(() => new Signal({ ...baseConfig, ringFreq: 0 }, noise)).toThrow(RangeError);
+    });
+
+    it("throws RangeError when zeta is negative", () => {
+      expect(() => new Signal({ ...baseConfig, zeta: -0.1 }, noise)).toThrow(RangeError);
+    });
+  });
+
   it("converges to baseHigh when targetLogic is 1 (no noise)", () => {
     const sig = new Signal(BASE_CONFIG, createZeroNoise());
     sig.targetLogic = 1;

@@ -14,8 +14,20 @@ export class Signal {
     config: SignalConfig,
     private readonly noise: NoiseGenerator,
   ) {
+    Signal.validateConfig(config);
     this.config = config;
     this.wn = 2 * Math.PI * config.ringFreq;
+  }
+
+  private static validateConfig(config: SignalConfig): void {
+    if (!Number.isFinite(config.ringFreq) || config.ringFreq <= 0) {
+      throw new RangeError(
+        `Signal.applyConfig: ringFreq must be positive finite, got ${config.ringFreq}`,
+      );
+    }
+    if (!Number.isFinite(config.zeta) || config.zeta <= 0) {
+      throw new RangeError(`Signal.applyConfig: zeta must be positive finite, got ${config.zeta}`);
+    }
   }
 
   update(dt: number): void {
@@ -39,14 +51,7 @@ export class Signal {
   }
 
   applyConfig(config: SignalConfig): void {
-    if (!Number.isFinite(config.ringFreq) || config.ringFreq <= 0) {
-      throw new RangeError(
-        `Signal.applyConfig: ringFreq must be positive finite, got ${config.ringFreq}`,
-      );
-    }
-    if (!Number.isFinite(config.zeta) || config.zeta <= 0) {
-      throw new RangeError(`Signal.applyConfig: zeta must be positive finite, got ${config.zeta}`);
-    }
+    Signal.validateConfig(config);
     this.config = config;
     this.wn = 2 * Math.PI * config.ringFreq;
   }
