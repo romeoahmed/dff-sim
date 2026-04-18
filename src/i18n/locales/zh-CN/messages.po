@@ -20,6 +20,10 @@ msgstr ""
 msgid "About"
 msgstr ""
 
+#: src/components/nav/CircuitSelector.tsx:14
+msgid "Circuit"
+msgstr ""
+
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
 msgstr ""
@@ -30,6 +34,10 @@ msgstr ""
 
 #: src/components/nav/Toolbar.tsx:93
 msgid "Light theme"
+msgstr ""
+
+#: src/components/nav/CircuitSelector.tsx:24
+msgid "Select circuit"
 msgstr ""
 
 #: src/components/nav/Toolbar.tsx:101
