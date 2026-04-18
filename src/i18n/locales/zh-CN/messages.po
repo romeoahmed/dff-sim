@@ -14,170 +14,170 @@ msgstr ""
 #. placeholder {0}: circuitDef.components.length
 #: src/components/schematic/CircuitSchematic.tsx:103
 msgid "{0, plural, one {# component} other {# components}}"
-msgstr ""
+msgstr "{0, plural, other {# 个元件}}"
 
 #. placeholder {0}: circuitDef.nets.length
 #: src/components/schematic/CircuitSchematic.tsx:109
 msgid "{0, plural, one {# net} other {# nets}}"
-msgstr ""
+msgstr "{0, plural, other {# 条线网}}"
 
 #. placeholder {0}: i + 1
 #: src/components/nav/Toolbar.tsx:79
 msgid "{style} shader · press {0}"
-msgstr ""
+msgstr "{style} 着色器 · 按 {0}"
 
 #: src/components/about/AboutSheet.tsx:33
 #: src/components/nav/Toolbar.tsx:109
 msgid "About"
-msgstr ""
+msgstr "关于"
 
 #: src/components/fallback/WebGPUUnavailable.tsx:31
 msgid "Check browser support →"
-msgstr ""
+msgstr "查看浏览器支持 →"
 
 #: src/components/nav/CircuitSelector.tsx:14
 msgid "Circuit"
-msgstr ""
+msgstr "电路"
 
 #. placeholder {0}: circuitDef.name
 #: src/components/schematic/CircuitSchematic.tsx:131
 msgid "Circuit schematic: {0}"
-msgstr ""
+msgstr "电路原理图：{0}"
 
 #: src/components/about/AboutSheet.tsx:39
 #: src/components/settings/SettingsSheet.tsx:56
 #: src/components/shortcuts/ShortcutsOverlay.tsx:48
 msgid "Close"
-msgstr ""
+msgstr "关闭"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:17
 msgid "Close this help"
-msgstr ""
+msgstr "关闭此帮助"
 
 #: src/components/controls/ControlPanel.tsx:15
 msgid "Controls"
-msgstr ""
+msgstr "控制"
 
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
-msgstr ""
+msgstr "深色主题"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:14
 msgid "Decrease / increase clock speed"
-msgstr ""
+msgstr "减慢 / 加快时钟"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:13
 msgid "Decrease / increase noise"
-msgstr ""
+msgstr "减小 / 增大噪声"
 
 #: src/components/about/AboutSheet.tsx:13
 msgid "Jotai atomic state"
-msgstr ""
+msgstr "Jotai 原子化状态"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:42
 msgid "Keyboard Shortcuts"
-msgstr ""
+msgstr "键盘快捷键"
 
 #: src/components/nav/Toolbar.tsx:117
 msgid "Language"
-msgstr ""
+msgstr "语言"
 
 #: src/components/nav/Toolbar.tsx:93
 msgid "Light theme"
-msgstr ""
+msgstr "浅色主题"
 
 #: src/components/about/AboutSheet.tsx:14
 msgid "Multi-worker actor model"
-msgstr ""
+msgstr "多 Worker 角色模型"
 
 #: src/components/settings/SettingsSheet.tsx:65
 msgid "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
-msgstr ""
+msgstr "覆盖模拟器的逻辑电平电压区间。更改将实时应用于运行中的电路。"
 
 #: src/components/about/AboutSheet.tsx:15
 msgid "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
-msgstr ""
+msgstr "物理：10 kHz 子步进、1/f 噪声、亚稳态"
 
 #: src/components/fallback/WebGPUUnavailable.tsx:22
 msgid "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
-msgstr ""
+msgstr "请使用 Chrome / Edge 113+、Firefox 141+ 或 Safari 26+。"
 
 #: src/components/controls/ProbeSelector.tsx:64
 msgid "Probes"
-msgstr ""
+msgstr "探针"
 
 #: src/components/about/AboutSheet.tsx:11
 msgid "React 19 + Tailwind v4"
-msgstr ""
+msgstr "React 19 + Tailwind v4"
 
 #: src/components/settings/SettingsSheet.tsx:108
 msgid "Reset"
-msgstr ""
+msgstr "重置"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:12
 msgid "Reset (hold)"
-msgstr ""
+msgstr "重置（按住）"
 
 #: src/components/status/StatusStrip.tsx:17
 msgid "Running"
-msgstr ""
+msgstr "运行中"
 
 #: src/components/settings/SettingsSheet.tsx:101
 msgid "Save"
-msgstr ""
+msgstr "保存"
 
 #: src/components/schematic/CircuitSchematic.tsx:99
 msgid "Schematic"
-msgstr ""
+msgstr "原理图"
 
 #: src/components/nav/CircuitSelector.tsx:24
 msgid "Select circuit"
-msgstr ""
+msgstr "选择电路"
 
 #: src/components/nav/Toolbar.tsx:101
 msgid "Settings"
-msgstr ""
+msgstr "设置"
 
 #: src/components/nav/Toolbar.tsx:72
 msgid "Shader style"
-msgstr ""
+msgstr "着色器样式"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:15
 msgid "Shader style: Clean / Glow / Phosphor"
-msgstr ""
+msgstr "着色器样式：简洁 / 辉光 / 余晖"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:16
 msgid "Show this help"
-msgstr ""
+msgstr "显示此帮助"
 
 #: src/components/nav/Toolbar.tsx:92
 msgid "Switch to dark theme"
-msgstr ""
+msgstr "切换到深色主题"
 
 #: src/components/nav/Toolbar.tsx:92
 msgid "Switch to light theme"
-msgstr ""
+msgstr "切换到浅色主题"
 
 #: src/components/about/AboutSheet.tsx:56
 msgid "Tech stack"
-msgstr ""
+msgstr "技术栈"
 
 #: src/components/fallback/WebGPUUnavailable.tsx:16
 msgid "This simulation renders analog waveforms through WebGPU, which is not available in your browser."
-msgstr ""
+msgstr "本模拟使用 WebGPU 渲染模拟波形，而您的浏览器不支持 WebGPU。"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:11
 msgid "Toggle D input"
-msgstr ""
+msgstr "切换 D 输入"
 
 #: src/components/settings/SettingsSheet.tsx:50
 msgid "Voltage Settings"
-msgstr ""
+msgstr "电压设置"
 
 #: src/components/about/AboutSheet.tsx:12
 msgid "WebGPU + WGSL rendering"
-msgstr ""
+msgstr "WebGPU + WGSL 渲染"
 
 #: src/components/fallback/WebGPUUnavailable.tsx:13
 msgid "WebGPU Required"
-msgstr ""
+msgstr "需要 WebGPU"
