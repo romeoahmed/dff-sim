@@ -27,16 +27,33 @@ msgstr "Circuit"
 
 #: src/components/about/AboutSheet.tsx:39
 #: src/components/settings/SettingsSheet.tsx:56
+#: src/components/shortcuts/ShortcutsOverlay.tsx:48
 msgid "Close"
 msgstr "Close"
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:17
+msgid "Close this help"
+msgstr "Close this help"
 
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
 msgstr "Dark theme"
 
+#: src/components/shortcuts/ShortcutsOverlay.tsx:14
+msgid "Decrease / increase clock speed"
+msgstr "Decrease / increase clock speed"
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:13
+msgid "Decrease / increase noise"
+msgstr "Decrease / increase noise"
+
 #: src/components/about/AboutSheet.tsx:13
 msgid "Jotai atomic state"
 msgstr "Jotai atomic state"
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:42
+msgid "Keyboard Shortcuts"
+msgstr "Keyboard Shortcuts"
 
 #: src/components/nav/Toolbar.tsx:117
 msgid "Language"
@@ -66,6 +83,10 @@ msgstr "React 19 + Tailwind v4"
 msgid "Reset"
 msgstr "Reset"
 
+#: src/components/shortcuts/ShortcutsOverlay.tsx:12
+msgid "Reset (hold)"
+msgstr "Reset (hold)"
+
 #: src/components/status/StatusStrip.tsx:17
 msgid "Running"
 msgstr "Running"
@@ -86,6 +107,14 @@ msgstr "Settings"
 msgid "Shader style"
 msgstr "Shader style"
 
+#: src/components/shortcuts/ShortcutsOverlay.tsx:15
+msgid "Shader style: Clean / Glow / Phosphor"
+msgstr "Shader style: Clean / Glow / Phosphor"
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:16
+msgid "Show this help"
+msgstr "Show this help"
+
 #: src/components/nav/Toolbar.tsx:92
 msgid "Switch to dark theme"
 msgstr "Switch to dark theme"
@@ -97,6 +126,10 @@ msgstr "Switch to light theme"
 #: src/components/about/AboutSheet.tsx:56
 msgid "Tech stack"
 msgstr "Tech stack"
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:11
+msgid "Toggle D input"
+msgstr "Toggle D input"
 
 #: src/components/settings/SettingsSheet.tsx:50
 msgid "Voltage Settings"

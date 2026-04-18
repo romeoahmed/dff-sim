@@ -27,15 +27,32 @@ msgstr ""
 
 #: src/components/about/AboutSheet.tsx:39
 #: src/components/settings/SettingsSheet.tsx:56
+#: src/components/shortcuts/ShortcutsOverlay.tsx:48
 msgid "Close"
+msgstr ""
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:17
+msgid "Close this help"
 msgstr ""
 
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
 msgstr ""
 
+#: src/components/shortcuts/ShortcutsOverlay.tsx:14
+msgid "Decrease / increase clock speed"
+msgstr ""
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:13
+msgid "Decrease / increase noise"
+msgstr ""
+
 #: src/components/about/AboutSheet.tsx:13
 msgid "Jotai atomic state"
+msgstr ""
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:42
+msgid "Keyboard Shortcuts"
 msgstr ""
 
 #: src/components/nav/Toolbar.tsx:117
@@ -66,6 +83,10 @@ msgstr ""
 msgid "Reset"
 msgstr ""
 
+#: src/components/shortcuts/ShortcutsOverlay.tsx:12
+msgid "Reset (hold)"
+msgstr ""
+
 #: src/components/status/StatusStrip.tsx:17
 msgid "Running"
 msgstr ""
@@ -86,6 +107,14 @@ msgstr ""
 msgid "Shader style"
 msgstr ""
 
+#: src/components/shortcuts/ShortcutsOverlay.tsx:15
+msgid "Shader style: Clean / Glow / Phosphor"
+msgstr ""
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:16
+msgid "Show this help"
+msgstr ""
+
 #: src/components/nav/Toolbar.tsx:92
 msgid "Switch to dark theme"
 msgstr ""
@@ -96,6 +125,10 @@ msgstr ""
 
 #: src/components/about/AboutSheet.tsx:56
 msgid "Tech stack"
+msgstr ""
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:11
+msgid "Toggle D input"
 msgstr ""
 
 #: src/components/settings/SettingsSheet.tsx:50

@@ -1,17 +1,20 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import * as Dialog from "@radix-ui/react-dialog";
 import { atom, useAtom } from "jotai";
 import { X } from "lucide-react";
 
 export const shortcutsOpenAtom = atom(false);
 
-const SHORTCUTS: Array<[string, string]> = [
-  ["Space", "Toggle D input"],
-  ["R", "Reset (hold)"],
-  ["[  /  ]", "Decrease / increase noise"],
-  ["−  /  =", "Decrease / increase clock speed"],
-  ["1 / 2 / 3", "Shader style: Clean / Glow / Phosphor"],
-  ["?", "Show this help"],
-  ["Esc", "Close this help"],
+const SHORTCUTS: Array<[string, MessageDescriptor]> = [
+  ["Space", msg`Toggle D input`],
+  ["R", msg`Reset (hold)`],
+  ["[  /  ]", msg`Decrease / increase noise`],
+  ["−  /  =", msg`Decrease / increase clock speed`],
+  ["1 / 2 / 3", msg`Shader style: Clean / Glow / Phosphor`],
+  ["?", msg`Show this help`],
+  ["Esc", msg`Close this help`],
 ];
 
 function Kbd({ children }: { children: React.ReactNode }) {
@@ -24,6 +27,8 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 export function ShortcutsOverlay() {
   const [open, setOpen] = useAtom(shortcutsOpenAtom);
+  const { i18n, t } = useLingui();
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
@@ -34,13 +39,13 @@ export function ShortcutsOverlay() {
         >
           <div className="flex items-center justify-between px-6 h-14 border-b border-border">
             <Dialog.Title className="text-[17px] font-semibold text-fg text-body">
-              Keyboard Shortcuts
+              <Trans>Keyboard Shortcuts</Trans>
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
                 type="button"
                 className="inline-flex items-center justify-center w-8 h-8 rounded-full text-fg-muted hover:bg-panel-muted hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                aria-label="Close"
+                aria-label={t`Close`}
               >
                 <X size={16} />
               </button>
@@ -62,7 +67,9 @@ export function ShortcutsOverlay() {
                     </span>
                   ))}
                 </dt>
-                <dd className="text-[14px] text-caption text-fg-muted self-center">{desc}</dd>
+                <dd className="text-[14px] text-caption text-fg-muted self-center">
+                  {i18n._(desc)}
+                </dd>
               </div>
             ))}
           </dl>
