@@ -25,6 +25,7 @@ export interface PhysicsAPI {
   setSettings(specs: Partial<VoltageSpecConfig>): void;
   registerRenderPort(port: MessagePort): void;
   registerStatusCallback(cb: (voltages: number[]) => void): void;
+  releaseStatusCallback(): void;
   start(): void;
   stop(): void;
 }
@@ -35,7 +36,7 @@ class PhysicsWorker implements PhysicsAPI {
   private readonly registry = createDefaultRegistry();
   private tickHandle: ReturnType<typeof setTimeout> | null = null;
   private renderPort: MessagePort | null = null;
-  private statusCallback: ((v: number[]) => void) | null = null;
+  private statusCallback: Comlink.Remote<(v: number[]) => void> | null = null;
   private lastStatusTime: number = 0;
   private lastTickTime: number = 0;
   private lastSentWritePointer: number = 0;
@@ -77,7 +78,15 @@ class PhysicsWorker implements PhysicsAPI {
   }
 
   registerStatusCallback(cb: (voltages: number[]) => void): void {
-    this.statusCallback = cb;
+    // Comlink delivers the callback as Remote<fn> on the worker side, which carries [releaseProxy]
+    this.statusCallback = cb as Comlink.Remote<(v: number[]) => void>;
+  }
+
+  releaseStatusCallback(): void {
+    if (this.statusCallback) {
+      this.statusCallback[Comlink.releaseProxy]();
+      this.statusCallback = null;
+    }
   }
 
   start(): void {

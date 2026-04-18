@@ -33,8 +33,8 @@ export async function createWorkerBridge(): Promise<WorkerBridge> {
     physicsWorker,
     renderWorker,
     terminate: () => {
-      physics[Comlink.releaseProxy]();
-      render[Comlink.releaseProxy]();
+      // releaseProxy() sends a RELEASE message; terminate() drops the port before delivery,
+      // so call terminate() directly to avoid the lost message.
       physicsWorker.terminate();
       renderWorker.terminate();
     },

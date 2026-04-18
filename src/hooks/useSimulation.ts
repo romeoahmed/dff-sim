@@ -55,10 +55,16 @@ export function useSimulation(
       if (!waveCanvas || !digitalCanvas) return;
 
       if (!bridgeInFlightRef.current && !bridgeRef.current) {
-        bridgeInFlightRef.current = createWorkerBridge().then((b) => {
+        const promise = createWorkerBridge().then((b) => {
           bridgeRef.current = b;
           return b;
         });
+        promise.catch(() => {
+          if (bridgeInFlightRef.current === promise) {
+            bridgeInFlightRef.current = null;
+          }
+        });
+        bridgeInFlightRef.current = promise;
       }
       const bridge = bridgeRef.current ?? (await bridgeInFlightRef.current);
       if (!bridge || cancelled) return;
@@ -83,6 +89,7 @@ export function useSimulation(
           ) as RenderInitArgs,
         );
         if (cancelled) return;
+        bridge.render.setShaderStyle(shaderStyle);
       } else {
         // Canvases were already transferred on an earlier mount; reuse the bridge but
         // rebuild the GPU pipelines for the new circuit's probe count.
@@ -91,6 +98,8 @@ export function useSimulation(
       }
 
       await bridge.physics.loadCircuit(def);
+      if (cancelled) return;
+      bridge.physics.setSettings(voltageSpecs);
 
       if (!statusCallbackProxyRef.current) {
         const callback: StatusCallback = (voltages) => {
@@ -104,6 +113,7 @@ export function useSimulation(
         };
         statusCallbackProxyRef.current = callback;
         await bridge.physics.registerStatusCallback(Comlink.proxy(callback));
+        if (cancelled) return;
       }
 
       await bridge.physics.start();
@@ -114,6 +124,7 @@ export function useSimulation(
     return () => {
       cancelled = true;
       pendingTerminationRef.current = setTimeout(() => {
+        bridgeRef.current?.physics.releaseStatusCallback();
         statusCallbackProxyRef.current = null;
         bridgeRef.current?.terminate();
         bridgeRef.current = null;
