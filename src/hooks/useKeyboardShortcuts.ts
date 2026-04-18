@@ -1,11 +1,16 @@
 import { useSetAtom, useStore } from "jotai";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { circuitDefAtom, paramAtomFamily } from "@/atoms/simulation-atoms";
 import { shaderStyleAtom } from "@/atoms/ui-atoms";
 
 export function useKeyboardShortcuts(options: { onOpenHelp: () => void }) {
   const setShaderStyle = useSetAtom(shaderStyleAtom);
   const store = useStore();
+
+  const onOpenHelpRef = useRef(options.onOpenHelp);
+  useEffect(() => {
+    onOpenHelpRef.current = options.onOpenHelp;
+  }, [options.onOpenHelp]);
 
   useEffect(() => {
     function bump(key: string, delta: number) {
@@ -73,7 +78,7 @@ export function useKeyboardShortcuts(options: { onOpenHelp: () => void }) {
           setShaderStyle("phosphor");
           break;
         case "?":
-          options.onOpenHelp();
+          onOpenHelpRef.current();
           break;
       }
     }
@@ -88,5 +93,5 @@ export function useKeyboardShortcuts(options: { onOpenHelp: () => void }) {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [store, setShaderStyle, options]);
+  }, [store, setShaderStyle]);
 }
