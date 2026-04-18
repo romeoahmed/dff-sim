@@ -1,5 +1,4 @@
 import { useLingui } from "@lingui/react/macro";
-import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { useAtom, useSetAtom } from "jotai";
 import { CircuitBoard, Globe, Info, Moon, Settings, Sun } from "lucide-react";
 import { motion } from "motion/react";
@@ -10,6 +9,7 @@ import {
   shaderStyleAtom,
   themeAtom,
 } from "@/atoms/ui-atoms";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ShaderStyle } from "@/workers/render/shaders";
 import { CircuitSelector } from "./CircuitSelector";
 
@@ -62,7 +62,7 @@ export function Toolbar({ className = "" }: { className?: string }) {
       </motion.div>
 
       <motion.div variants={toolbarItem} className="ml-auto flex items-center gap-2">
-        <ToggleGroup.Root
+        <ToggleGroup
           type="single"
           value={shaderStyle}
           onValueChange={(v) => {
@@ -72,16 +72,16 @@ export function Toolbar({ className = "" }: { className?: string }) {
           aria-label={t`Shader style`}
         >
           {SHADER_STYLES.map((style, i) => (
-            <ToggleGroup.Item
+            <ToggleGroupItem
               key={style}
               value={style}
               className="readout px-3 h-7 rounded-full text-[10px] uppercase tracking-widest text-fg-muted data-[state=on]:bg-panel-raised data-[state=on]:text-fg data-[state=on]:shadow-sm hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset"
               aria-label={t`${style} shader · press ${i + 1}`}
             >
               {style}
-            </ToggleGroup.Item>
+            </ToggleGroupItem>
           ))}
-        </ToggleGroup.Root>
+        </ToggleGroup>
 
         <div className="h-6 w-px bg-border" aria-hidden />
 
