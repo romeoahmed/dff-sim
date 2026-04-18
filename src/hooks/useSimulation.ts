@@ -11,6 +11,7 @@ import {
 import { activeProbeIdsAtom, activeProbesAtom, shaderStyleAtom } from "@/atoms/ui-atoms";
 import { Layout } from "@/lib/constants";
 import { throttle } from "@/lib/throttle";
+import type { CircuitDefinition } from "@/lib/types";
 import { createWorkerBridge, type WorkerBridge } from "@/lib/worker-bridge";
 import type { RenderAPI } from "@/workers/render/render.worker";
 
@@ -36,11 +37,18 @@ export function useSimulation(
   // transferControlToOffscreen and Comlink.transfer can each only run ONCE per canvas/port,
   // so we must reuse the same bridge rather than rebuild it.
   const pendingTerminationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousDefRef = useRef<CircuitDefinition | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only re-init on circuit change
   useEffect(() => {
     if (!circuitDef || !waveformRef.current || !digitalRef.current) return;
     const def = circuitDef;
+
+    if (previousDefRef.current && previousDefRef.current !== def) {
+      store.set(activeProbeIdsAtom, new Set<string>());
+      clearCircuitAtoms(previousDefRef.current);
+    }
+    previousDefRef.current = def;
 
     if (pendingTerminationRef.current !== null) {
       clearTimeout(pendingTerminationRef.current);
@@ -130,9 +138,6 @@ export function useSimulation(
         bridgeInFlightRef.current = null;
         offscreensTransferredRef.current = false;
         pendingTerminationRef.current = null;
-        // Clear active probe IDs so a circuit switch starts fresh (probes fixed per circuit).
-        store.set(activeProbeIdsAtom, new Set<string>());
-        clearCircuitAtoms(def);
       }, 0);
     };
   }, [circuitDef]);
