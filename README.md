@@ -18,7 +18,7 @@ DFF·SIM is a browser simulator of digital logic circuits at the **analog voltag
 
 It is an instrument panel, not an HDL simulator. The goal is to see the physics of digital logic on an oscilloscope the way a lab bench would show it — with all the imperfections that textbook diagrams hide.
 
-The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a React instrument panel styled with Catppuccin Macchiato.
+The oscilloscope renders at 60+ FPS on a dedicated WebGPU thread. The UI is a React instrument panel with an Apple-inspired dual theme (light + dark, runtime toggle), built on shadcn/ui primitives over Tailwind v4 with CSS Subgrid for cross-row alignment in the controls and settings panels.
 
 ---
 
@@ -58,11 +58,13 @@ Every combinational gate (`ANDGate`, `ORGate`, `XORGate`, `NOTGate`, `FullAdder`
 
 ## UI and accessibility
 
-- Per-circuit parameter controls (sliders, toggles, momentary buttons) via Radix primitives.
+- Per-circuit parameter controls (sliders, toggles, momentary buttons) built on shadcn/ui primitives (Radix + Tailwind), composed inside a CSS Subgrid so labels and values line up across every control row regardless of string length.
 - Probe selector — choose which signals appear on the oscilloscope.
 - Circuit selector — switch between loaded circuit definitions at runtime.
-- Settings sheet and localisation toggle (English / 中文).
-- **Accessibility**: canvases and SVG schematic carry proper `aria-label` / `role="img"` / `<title>` / `<desc>`; the schematic description is derived from the `CircuitDefinition` (component-type counts + net count + definition text). A visually-hidden live region announces probe logic transitions (HIGH ↔ LOW) only on Schmitt-band crossings — no 60 Hz voltage flood. Dash patterns give a second, non-colour channel for distinguishing traces.
+- Settings sheet (overridable voltage bands, also subgrid-aligned), about sheet, and a centered keyboard-shortcuts dialog (`?` to open).
+- **Dual theme**: Apple-inspired light + dark, runtime toggle in the toolbar (Sun/Moon), persisted to `localStorage`. Tokens live in two layers — project semantic (`--color-canvas`, `--color-fg`, `--color-accent` …) plus shadcn aliases (`--background`, `--primary`, `--ring` …) — so generated `components/ui/*.tsx` stay pristine.
+- **Localisation**: English / 中文 toggle in the toolbar (Globe). Chrome strings (Toolbar, StatusStrip, sheets, overlays, controls headings, schematic header) are wrapped with Lingui macros and switch instantly. Circuit-definition labels (probe names, control labels) are deliberately left English — that's a future scope.
+- **Accessibility**: canvases and SVG schematic carry proper `aria-label` / `role="img"` / `<title>` / `<desc>`; the schematic description is derived from the `CircuitDefinition` (component-type counts + net count + definition text). A visually-hidden live region announces probe logic transitions (HIGH ↔ LOW) only on Schmitt-band crossings — no 60 Hz voltage flood. Dash patterns give a second, non-colour channel for distinguishing traces. Apple Blue focus ring on every interactive element.
 
 ---
 
@@ -71,17 +73,17 @@ Every combinational gate (`ANDGate`, `ORGate`, `XORGate`, `NOTGate`, `FullAdder`
 | Layer | Technology |
 |-------|-----------|
 | UI framework | React 19 |
-| Language | TypeScript 6 (strict) |
-| Build | Vite 8 + Bun |
-| State | Jotai 2 (atomic) |
+| Language | TypeScript 6 (strict — `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`) |
+| Build | Vite 8 (rolldown) + `@vitejs/plugin-react-swc` + Bun |
+| State | Jotai 2 (atomic + `atomWithStorage` for theme persistence) |
 | Worker RPC | Comlink 4 |
 | GPU | WebGPU (`@webgpu/types`) |
-| Styling | Tailwind CSS v4 + Catppuccin Macchiato |
-| Components | Radix UI primitives |
-| Animation | Motion (Framer Motion) |
-| i18n | Lingui 5 (en / zh-CN) |
+| Styling | Tailwind CSS v4 (CSS-first config) + Apple-inspired dual theme + CSS Subgrid |
+| Components | shadcn/ui (button, slider, switch, toggle-group, dialog, sheet) over `radix-ui` |
+| Animation | Motion (`motion/react`) |
+| i18n | Lingui 5 + `@lingui/swc-plugin` (en / zh-CN, runtime locale switch via `useLocaleSync`) |
 | Lint + format | Biome 2 |
-| Tests | Vitest 4 + Testing Library + happy-dom |
+| Tests | Vitest 4 + Testing Library + happy-dom (macros shimmed in `test/setup.ts`) |
 
 ---
 
@@ -106,13 +108,16 @@ Open `http://localhost:5173`.
 ### Other commands
 
 ```bash
-bun run build        # Production build → dist/
-bun run preview      # Serve production build
-bun run typecheck    # Type-check without emitting
-bun run check        # Biome lint + format check
-bun run test         # Run all tests (Vitest)
-bun run test:watch   # Watch mode
-bun run test:ui      # Browser test UI
+bun run build            # Production build → dist/
+bun run preview          # Serve production build
+bun run typecheck        # Type-check without emitting
+bun run check            # Biome lint + format check
+bun run check:fix        # Biome auto-fix
+bun run test             # Run all tests (Vitest)
+bun run test:watch       # Watch mode
+bun run test:ui          # Browser test UI
+bun run lingui:extract   # Scan src for translatable strings → .po
+bun run lingui:compile   # Compile .po → .mjs catalogs
 ```
 
 ---
@@ -156,18 +161,25 @@ Frame data flows physics → render through a direct `MessagePort` — never thr
 
 ```
 src/
-├── atoms/                   # Jotai atoms (simulation state, UI state)
-├── circuits/                # Circuit definitions (DFF, accumulator, …)
+├── atoms/                   # Jotai atoms (circuit, voltages, params, theme, locale, sheet visibility, voltage spec)
+├── circuits/                # Circuit definitions (DFF, accumulator, ring oscillator)
 ├── components/
-│   ├── controls/            # ParamSlider, ParamToggle, ParamMomentary, ControlPanel, ProbeSelector
-│   ├── nav/                 # Toolbar, CircuitSelector, SettingsSheet
-│   ├── oscilloscope/        # OscilloscopePanel, WaveformCanvas, DigitalCanvas, LiveVoltageReadouts, ProbeStateAnnouncer, Legend
-│   └── schematic/           # CircuitSchematic, SchematicGrid/Node/Wire, describe helper
-├── hooks/                   # useSimulation (worker bridge integration)
-├── lib/                     # Types, constants, worker bridge, RNG utilities
-├── locales/                 # Lingui i18n catalogs (en, zh-CN)
-├── styles/                  # Catppuccin theme
-├── test/                    # Test setup and component tests
+│   ├── ui/                  # shadcn/ui primitives (button, slider, switch, toggle-group, dialog, sheet)
+│   ├── controls/            # ControlPanel (subgrid parent), ParamSlider, ParamToggle, ParamMomentary, ProbeSelector
+│   ├── nav/                 # Toolbar (theme/locale/shader/info toggles), CircuitSelector
+│   ├── oscilloscope/        # OscilloscopePanel, WaveformCanvas, DigitalCanvas, InstrumentBezel, LiveVoltageReadouts, Legend, ProbeStateAnnouncer
+│   ├── schematic/           # CircuitSchematic (landscape <1440 / portrait ≥1440), SchematicGrid/Node/Wire, describe helper
+│   ├── settings/            # SettingsSheet (voltage band overrides, subgrid-aligned)
+│   ├── about/               # AboutSheet
+│   ├── shortcuts/           # ShortcutsOverlay
+│   ├── status/              # StatusStrip
+│   ├── fallback/            # WebGPUUnavailable
+│   └── layout/              # AppLayout (responsive 1/2/3-column grid)
+├── hooks/                   # useSimulation, useThemeSync, useLocaleSync, useKeyboardShortcuts, useMediaQuery
+├── i18n/                    # Lingui i18n: index.ts (loader) + locales/{en,zh-CN}/messages.{po,mjs}
+├── lib/                     # Types, constants, worker bridge, RNG utilities, Zod validation, cn() helper
+├── styles/                  # globals.css — dual-theme tokens + shadcn aliases + Tailwind v4 @theme
+├── test/                    # Test setup (Lingui macro shim) + component / hook / i18n tests
 └── workers/
     ├── physics/             # SimulationEngine, CircuitGraph, Signal, NoiseGenerator, AnalogOutput, gaussian, components/
     └── render/              # WebGPU pipelines, gpu-device, WGSL shaders (vert + clean/glow/phosphor/digital)

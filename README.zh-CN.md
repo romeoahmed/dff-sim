@@ -18,7 +18,7 @@ DFF·SIM 是一个在浏览器中运行的数字逻辑电路仿真器，它在**
 
 它是一块仪器面板，而非 HDL 仿真器。目标是让你在示波器上看到数字逻辑真正的物理形态——教科书里被"高低电平"掩盖的那些不完美。
 
-示波器在独立的 WebGPU 线程上以 60+ FPS 渲染，UI 是一个采用 Catppuccin Macchiato 配色的 React 仪器面板。
+示波器在独立的 WebGPU 线程上以 60+ FPS 渲染。UI 是一个 React 仪器面板，采用受 Apple 启发的双主题（明亮 + 深色，可在运行时切换），基于 shadcn/ui 原语之上的 Tailwind v4 构建，控制面板与设置面板使用 CSS Subgrid 实现行间对齐。
 
 ---
 
@@ -58,11 +58,13 @@ DFF·SIM 是一个在浏览器中运行的数字逻辑电路仿真器，它在**
 
 ## UI 与可访问性
 
-- 每个电路各自的参数控件（滑块、开关、瞬时按钮），基于 Radix UI 原语。
+- 每个电路各自的参数控件（滑块、开关、瞬时按钮），基于 shadcn/ui 原语（Radix + Tailwind），统一组合在 CSS Subgrid 中——无论标签字符串长短，每一行的标签列与值列都精确对齐。
 - 探针选择器——选择示波器上显示哪些信号。
 - 电路选择器——运行时在已加载的电路定义之间切换。
-- 设置面板和语言切换（English / 中文）。
-- **可访问性**：画布与 SVG 原理图都带有规范的 `aria-label` / `role="img"` / `<title>` / `<desc>`；原理图描述由 `CircuitDefinition` 自动派生（组件类型计数 + 网表数量 + 定义文本）。一个视觉上隐藏的 live region 只在探针跨越施密特阈值时（HIGH ↔ LOW）宣告逻辑跳变——不会产生 60 Hz 的电压洪流。虚线样式为波形区分提供了与颜色相独立的第二通道。
+- 设置面板（电压区间可覆盖，同样使用 subgrid 对齐）、关于面板，以及一个居中的键盘快捷键对话框（按 `?` 打开）。
+- **双主题**：受 Apple 启发的明亮 / 深色主题，工具栏中的 Sun/Moon 按钮可运行时切换，选择持久化至 `localStorage`。token 分两层——项目语义层（`--color-canvas`、`--color-fg`、`--color-accent` …）加 shadcn 别名层（`--background`、`--primary`、`--ring` …）——使生成的 `components/ui/*.tsx` 文件保持原样不被改动。
+- **本地化**：工具栏中的 Globe 按钮可在 English / 中文 之间切换。Chrome 字符串（工具栏、状态栏、各类面板、覆盖层、控件标题、原理图标题）均使用 Lingui 宏包裹，切换即时生效。电路定义中的标签（探针名、控件标签）有意保留英文——属未来工作。
+- **可访问性**：画布与 SVG 原理图都带有规范的 `aria-label` / `role="img"` / `<title>` / `<desc>`；原理图描述由 `CircuitDefinition` 自动派生（组件类型计数 + 网表数量 + 定义文本）。一个视觉上隐藏的 live region 只在探针跨越施密特阈值时（HIGH ↔ LOW）宣告逻辑跳变——不会产生 60 Hz 的电压洪流。虚线样式为波形区分提供了与颜色相独立的第二通道。每一个交互元素都有 Apple 蓝色的 focus ring。
 
 ---
 
@@ -71,17 +73,17 @@ DFF·SIM 是一个在浏览器中运行的数字逻辑电路仿真器，它在**
 | 层次 | 技术 |
 |------|------|
 | UI 框架 | React 19 |
-| 语言 | TypeScript 6（严格模式） |
-| 构建 | Vite 8 + Bun |
-| 状态管理 | Jotai 2（原子化） |
+| 语言 | TypeScript 6（严格模式 — `noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、`verbatimModuleSyntax`） |
+| 构建 | Vite 8（rolldown） + `@vitejs/plugin-react-swc` + Bun |
+| 状态管理 | Jotai 2（原子化 + `atomWithStorage` 用于主题持久化） |
 | Worker RPC | Comlink 4 |
 | GPU | WebGPU（`@webgpu/types`） |
-| 样式 | Tailwind CSS v4 + Catppuccin Macchiato |
-| 组件库 | Radix UI 原语 |
-| 动画 | Motion（Framer Motion） |
-| 国际化 | Lingui 5（en / zh-CN） |
+| 样式 | Tailwind CSS v4（CSS-first 配置）+ Apple 风格双主题 + CSS Subgrid |
+| 组件库 | shadcn/ui（button、slider、switch、toggle-group、dialog、sheet）基于 `radix-ui` |
+| 动画 | Motion（`motion/react`） |
+| 国际化 | Lingui 5 + `@lingui/swc-plugin`（en / zh-CN，运行时通过 `useLocaleSync` 切换语言） |
 | 代码检查与格式化 | Biome 2 |
-| 测试 | Vitest 4 + Testing Library + happy-dom |
+| 测试 | Vitest 4 + Testing Library + happy-dom（宏在 `test/setup.ts` 中以运行时 shim 替代） |
 
 ---
 
@@ -106,13 +108,16 @@ bun run dev
 ### 其他命令
 
 ```bash
-bun run build        # 生产构建 → dist/
-bun run preview      # 本地预览生产构建
-bun run typecheck    # 仅类型检查，不生成文件
-bun run check        # Biome 代码检查 + 格式验证
-bun run test         # 运行全部测试（Vitest）
-bun run test:watch   # 监视模式
-bun run test:ui      # 浏览器测试界面
+bun run build            # 生产构建 → dist/
+bun run preview          # 本地预览生产构建
+bun run typecheck        # 仅类型检查，不生成文件
+bun run check            # Biome 代码检查 + 格式验证
+bun run check:fix        # Biome 自动修复
+bun run test             # 运行全部测试（Vitest）
+bun run test:watch       # 监视模式
+bun run test:ui          # 浏览器测试界面
+bun run lingui:extract   # 扫描源码中的可翻译字符串 → .po
+bun run lingui:compile   # 编译 .po → .mjs 目录
 ```
 
 ---
@@ -156,18 +161,25 @@ buffer.push              // 探针电压写入环形缓冲
 
 ```
 src/
-├── atoms/                   # Jotai 原子（仿真状态、UI 状态）
-├── circuits/                # 电路定义（DFF、累加器等）
+├── atoms/                   # Jotai 原子（电路、电压、参数、主题、语言、面板可见性、电压区间配置）
+├── circuits/                # 电路定义（DFF、累加器、环形振荡器）
 ├── components/
-│   ├── controls/            # ParamSlider、ParamToggle、ParamMomentary、ControlPanel、ProbeSelector
-│   ├── nav/                 # Toolbar、CircuitSelector、SettingsSheet
-│   ├── oscilloscope/        # OscilloscopePanel、WaveformCanvas、DigitalCanvas、LiveVoltageReadouts、ProbeStateAnnouncer、Legend
-│   └── schematic/           # CircuitSchematic、SchematicGrid/Node/Wire、describe 辅助函数
-├── hooks/                   # useSimulation（Worker 桥接集成）
-├── lib/                     # 类型定义、常量、Worker 桥接、RNG 工具
-├── locales/                 # Lingui 国际化目录（en、zh-CN）
-├── styles/                  # Catppuccin 主题
-├── test/                    # 测试配置与组件测试
+│   ├── ui/                  # shadcn/ui 原语（button、slider、switch、toggle-group、dialog、sheet）
+│   ├── controls/            # ControlPanel（subgrid 父容器）、ParamSlider、ParamToggle、ParamMomentary、ProbeSelector
+│   ├── nav/                 # Toolbar（主题/语言/着色器/信息切换）、CircuitSelector
+│   ├── oscilloscope/        # OscilloscopePanel、WaveformCanvas、DigitalCanvas、InstrumentBezel、LiveVoltageReadouts、Legend、ProbeStateAnnouncer
+│   ├── schematic/           # CircuitSchematic（横向 <1440 / 纵向 ≥1440）、SchematicGrid/Node/Wire、describe 辅助函数
+│   ├── settings/            # SettingsSheet（电压区间覆盖，subgrid 对齐）
+│   ├── about/               # AboutSheet
+│   ├── shortcuts/           # ShortcutsOverlay
+│   ├── status/              # StatusStrip
+│   ├── fallback/            # WebGPUUnavailable
+│   └── layout/              # AppLayout（响应式 1/2/3 列网格）
+├── hooks/                   # useSimulation、useThemeSync、useLocaleSync、useKeyboardShortcuts、useMediaQuery
+├── i18n/                    # Lingui 国际化：index.ts（loader）+ locales/{en,zh-CN}/messages.{po,mjs}
+├── lib/                     # 类型定义、常量、Worker 桥接、RNG 工具、Zod 校验、cn() 辅助
+├── styles/                  # globals.css —— 双主题 token + shadcn 别名 + Tailwind v4 @theme
+├── test/                    # 测试配置（Lingui 宏 shim）+ 组件 / hook / i18n 测试
 └── workers/
     ├── physics/             # SimulationEngine、CircuitGraph、Signal、NoiseGenerator、AnalogOutput、gaussian、components/
     └── render/              # WebGPU 管线、gpu-device、WGSL 着色器（vert + clean/glow/phosphor/digital）

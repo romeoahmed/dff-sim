@@ -6,20 +6,23 @@ Guidance for Claude Code when working in this repository.
 
 **DFF·SIM** — a web-based physics simulation of digital logic circuits. Rather than modelling ideal 0/1 transitions, the engine simulates the underlying analog behaviour: Gaussian noise (white + 1/f flicker), RC-slew via a damped second-order signal model, Schmitt-trigger hysteresis, and metastability resolution. The UI is a React instrument panel with a real-time WebGPU oscilloscope.
 
-Built with **React 19**, **TypeScript 6**, **Vite 8**, **Biome 2**, **Jotai 2**, and **Bun**.
+Built with **React 19**, **TypeScript 6**, **Vite 8** (rolldown + SWC), **Biome 2**, **Jotai 2**, **shadcn/ui** (Radix primitives), **Lingui 5** (SWC macro transform), and **Bun**.
 
 ## Commands
 
 ```bash
-bun install          # Install dependencies
-bun run dev          # Vite dev server → http://localhost:5173
-bun run build        # Production build → dist/
-bun run preview      # Serve production build locally
-bun run typecheck    # tsc --noEmit
-bun run check        # Biome lint + format check (no writes)
-bun run test         # Vitest (single run)
-bun run test:watch   # Vitest in watch mode
-bun run test:ui      # Vitest browser UI
+bun install            # Install dependencies
+bun run dev            # Vite dev server → http://localhost:5173
+bun run build          # Production build → dist/
+bun run preview        # Serve production build locally
+bun run typecheck      # tsc --noEmit
+bun run check          # Biome lint + format check (no writes)
+bun run check:fix      # Biome auto-fix
+bun run test           # Vitest (single run)
+bun run test:watch     # Vitest in watch mode
+bun run test:ui        # Vitest browser UI
+bun run lingui:extract # Scan src for Trans/t/msg/Plural macros → .po
+bun run lingui:compile # Compile .po → .mjs catalogs (committed)
 ```
 
 ## Architecture
@@ -66,7 +69,12 @@ Physics Worker          ──MessagePort──▶  Render Worker
 - `circuitDefAtom` — the loaded `CircuitDefinition | null`
 - `paramAtomFamily(key)` — per-control parameter values (`number | boolean`)
 - `voltageAtomFamily(netId)` — live probe voltages from the physics worker
-- `settingsOpenAtom`, `shaderStyleAtom`, `localeAtom`, etc.
+- `activeProbeIdsAtom` / `activeProbesAtom` — probe selection
+- `shaderStyleAtom` — `"clean" | "glow" | "phosphor"`
+- `themeAtom` — `"dark" | "light"` (`atomWithStorage`, persists across reloads)
+- `localeAtom` — `"en" | "zh-CN"`
+- `settingsOpenAtom`, `aboutOpenAtom`, `shortcutsOpenAtom` — sheet/dialog visibility
+- `voltageSpecsAtom` (in `settings-atoms.ts`) — overridable voltage band config
 
 ### UI components
 
@@ -74,18 +82,37 @@ Physics Worker          ──MessagePort──▶  Render Worker
 
 | Directory | Contents |
 |-----------|----------|
-| `controls/` | `ControlPanel`, `ParamSlider` (Radix), `ParamToggle` (Radix Switch), `ParamMomentary` |
-| `nav/` | `Toolbar`, `CircuitSelector`, `SettingsSheet` |
-| `oscilloscope/` | `OscilloscopePanel` (canvas host) |
-| `schematic/` | `CircuitSchematic` (SVG net diagram) |
+| `ui/` | shadcn/ui primitives (`button`, `slider`, `switch`, `toggle`, `toggle-group`, `dialog`, `sheet`) — generated via `npx shadcn add`, owned in-tree, wrap the `radix-ui` umbrella package. Edit only when forced (e.g. `slider.tsx` patched for `exactOptionalPropertyTypes`). |
+| `controls/` | `ControlPanel` (parent grid `[1fr_auto]`), `ParamSlider`, `ParamToggle`, `ParamMomentary`, `ProbeSelector` — every param row uses `col-span-2 grid grid-cols-subgrid` so labels/values align across rows |
+| `nav/` | `Toolbar` (glass nav with theme/locale/shader toggles), `CircuitSelector` |
+| `oscilloscope/` | `OscilloscopePanel`, `WaveformCanvas`, `DigitalCanvas`, `InstrumentBezel`, `LiveVoltageReadouts`, `Legend`, `ProbeStateAnnouncer` (a11y live region) |
+| `schematic/` | `CircuitSchematic` (SVG net diagram, landscape `< 1440px` / portrait `≥ 1440px`), `SchematicGrid`, `SchematicNode`, `SchematicWire`, `describe` helper for a11y `<desc>` |
+| `settings/` | `SettingsSheet` — voltage-band overrides, also uses subgrid for label/input alignment |
+| `about/` | `AboutSheet` |
+| `shortcuts/` | `ShortcutsOverlay` — keyboard help (centered Dialog) |
+| `status/` | `StatusStrip` |
+| `fallback/` | `WebGPUUnavailable` |
+| `layout/` | `AppLayout` — responsive grid: 1 col stack `< md` / 2 cols `md..2xl` / 3 cols `2xl+` |
 
 ### Styling
 
-Tailwind CSS v4. Theme colours come from `src/styles/theme.ts` which pulls Catppuccin Macchiato hex values from `@catppuccin/palette`. All CSS variable names follow the pattern `--color-<name>`.
+Tailwind CSS v4 (CSS-first config in `src/styles/globals.css`). Apple-inspired **dual theme** keyed off `data-theme="dark"` / `[data-theme="light"]` on `<html>`, mirrored from `themeAtom` by `useThemeSync`. The token layer is two-tiered:
+
+1. **Project semantic tokens** under both theme blocks: `--color-canvas`, `--color-panel`, `--color-panel-raised`, `--color-panel-muted`, `--color-border`, `--color-border-strong`, `--color-fg`, `--color-fg-muted`, `--color-fg-subtle`, `--color-accent` (Apple Blue), `--color-accent-pressed`, `--color-success` (iOS green), `--color-danger` (iOS red), `--color-focus`.
+2. **shadcn alias tokens** in the same blocks: `--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--radius` — all forwarded to project tokens. `@theme inline { --color-*: var(--*); … }` exposes both layers as Tailwind utilities. Generated `src/components/ui/*.tsx` files stay pristine because shadcn class names like `bg-primary` resolve to our Apple Blue automatically.
+
+Body font is the SF Pro system stack; `IBM Plex Mono` is loaded for the `.readout` class (instrument numerics with slashed zero + tabular nums). Generated catalog `.mjs` files in `src/i18n/locales/**` are excluded from Biome via `biome.json` `files.includes`.
 
 ### i18n
 
-Lingui 5. Catalogs live in `src/locales/`. Active locale is stored in `localeAtom` (`"en"` | `"zh-CN"`). Only user-visible strings are translated; source code and comments are English-only.
+Lingui 5 with the SWC macro plugin (NOT the babel plugin — `@vitejs/plugin-react@6` dropped Babel support, so the build uses `@vitejs/plugin-react-swc` + `@lingui/swc-plugin`).
+
+- Catalogs: `src/i18n/locales/{en,zh-CN}/messages.po` (source) + `messages.mjs` (compiled, **committed**, ESM via `compileNamespace: "es"`)
+- Loader: `src/i18n/index.ts` exports `activateLocale(locale)` which dynamic-imports the matching `.mjs` and calls `i18n.loadAndActivate`. An empty English catalog is sync-activated at module load so first paint never crashes.
+- Bridge: `src/hooks/useLocaleSync.ts` watches `localeAtom` and calls `activateLocale` on change.
+- Macros: `<Trans>…</Trans>`, `` t`…` `` (in attributes), `` msg`…` `` (for `MessageDescriptor`s in module-scope arrays — render via `i18n._(desc)`), `<Plural value one other />`. Imported from `@lingui/react/macro` and `@lingui/core/macro`.
+- **Test caveat:** Vitest does NOT run the SWC macro transform. `src/test/setup.ts` mocks `@lingui/react/macro` and `@lingui/core/macro` with runtime shims so `<Trans>` renders children verbatim, `<Plural>` picks one/other by value, `t\`…\`` interpolates, and `msg\`…\`` returns a `MessageDescriptor`-shaped object. Real translation behaviour is verified by `src/test/i18n/locale-switch.test.tsx` which calls `activateLocale` directly and asserts `i18n._(hashedId)` returns Chinese strings.
+- Source code and code comments stay English-only; only user-visible strings get wrapped.
 
 ## Code Style
 
@@ -98,11 +125,14 @@ Lingui 5. Catalogs live in `src/locales/`. Active locale is stored in `localeAto
 
 ## Testing
 
-Vitest 4 + `@testing-library/react` 16 + happy-dom.
+Vitest 4 + `@testing-library/react` 16 + happy-dom. Vitest config is intentionally minimal — it does NOT inherit Vite's plugins, so:
 
 - Physics / logic tests are colocated with source files (e.g., `and-gate.test.ts` next to `and-gate.ts`)
 - React component tests live in `src/test/components/`
+- i18n + hook tests live in `src/test/i18n/` and `src/test/hooks/`
+- `src/test/setup.ts` shims Lingui macros (`@lingui/react/macro`, `@lingui/core/macro`) since the SWC transform does not run in test environment — see the i18n section above
 - Wrap components with Jotai `<Provider store={createStore()}>` to isolate atom state per test
+- Atom updates that trigger React effects must be wrapped in `act(() => store.set(...))` — otherwise the subsequent state-setter call lands outside the act boundary and React warns
 - Port extraction in tests: `get("portName")` + `toBeDefined()` guard + early return — never `!`
 
 ## Deployment
