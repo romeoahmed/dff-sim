@@ -2,6 +2,7 @@ import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { useAtom, useSetAtom } from "jotai";
 import { CircuitBoard, Globe, Info, Moon, Settings, Sun } from "lucide-react";
 import { motion } from "motion/react";
+import { useLingui } from "@lingui/react/macro";
 import {
   aboutOpenAtom,
   localeAtom,
@@ -38,6 +39,7 @@ export function Toolbar({ className = "" }: { className?: string }) {
   const setAboutOpen = useSetAtom(aboutOpenAtom);
   const [locale, setLocale] = useAtom(localeAtom);
   const [theme, setTheme] = useAtom(themeAtom);
+  const { t } = useLingui();
 
   return (
     <motion.header
@@ -67,14 +69,14 @@ export function Toolbar({ className = "" }: { className?: string }) {
             if (isShaderStyle(v)) setShaderStyle(v);
           }}
           className="flex p-0.5 rounded-full bg-panel-muted border border-border"
-          aria-label="Shader style"
+          aria-label={t`Shader style`}
         >
           {SHADER_STYLES.map((style, i) => (
             <ToggleGroup.Item
               key={style}
               value={style}
               className="readout px-3 h-7 rounded-full text-[10px] uppercase tracking-widest text-fg-muted data-[state=on]:bg-panel-raised data-[state=on]:text-fg data-[state=on]:shadow-sm hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset"
-              aria-label={`${style} shader · press ${i + 1}`}
+              aria-label={t`${style} shader · press ${i + 1}`}
             >
               {style}
             </ToggleGroup.Item>
@@ -87,8 +89,8 @@ export function Toolbar({ className = "" }: { className?: string }) {
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className={iconButtonClass}
-          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-          title={theme === "dark" ? "Light theme" : "Dark theme"}
+          aria-label={theme === "dark" ? t`Switch to light theme` : t`Switch to dark theme`}
+          title={theme === "dark" ? t`Light theme` : t`Dark theme`}
         >
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
         </button>
@@ -96,7 +98,7 @@ export function Toolbar({ className = "" }: { className?: string }) {
           type="button"
           onClick={() => setSettingsOpen(true)}
           className={iconButtonClass}
-          aria-label="Settings"
+          aria-label={t`Settings`}
         >
           <Settings size={16} />
         </button>
@@ -104,7 +106,7 @@ export function Toolbar({ className = "" }: { className?: string }) {
           type="button"
           onClick={() => setAboutOpen(true)}
           className={iconButtonClass}
-          aria-label="About"
+          aria-label={t`About`}
         >
           <Info size={16} />
         </button>
@@ -112,7 +114,7 @@ export function Toolbar({ className = "" }: { className?: string }) {
           type="button"
           onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")}
           className={iconButtonClass}
-          aria-label="Language"
+          aria-label={t`Language`}
         >
           <Globe size={16} />
         </button>

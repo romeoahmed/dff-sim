@@ -10,3 +10,40 @@ msgstr ""
 "Content-Type: \n"
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
+
+#. placeholder {0}: i + 1
+#: src/components/nav/Toolbar.tsx:79
+msgid "{style} shader · press {0}"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:109
+msgid "About"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:93
+msgid "Dark theme"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:117
+msgid "Language"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:93
+msgid "Light theme"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:101
+msgid "Settings"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:72
+msgid "Shader style"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:92
+msgid "Switch to dark theme"
+msgstr ""
+
+#: src/components/nav/Toolbar.tsx:92
+msgid "Switch to light theme"
+msgstr ""

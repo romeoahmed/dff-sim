@@ -1,1 +1,1 @@
-/*eslint-disable*/export const messages=JSON.parse("{}");
+/*eslint-disable*/export const messages=JSON.parse("{\"GtpQwI\":[\"Dark theme\"],\"Tz0i8g\":[\"Settings\"],\"dPpHZL\":[\"Light theme\"],\"e0IFR+\":[\"Switch to light theme\"],\"e2hTRz\":[[\"style\"],\" shader · press \",[\"0\"]],\"lDK3or\":[\"Shader style\"],\"uyJsf6\":[\"About\"],\"vXIe7J\":[\"Language\"],\"yNR1Vx\":[\"Switch to dark theme\"]}");
