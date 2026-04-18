@@ -1,20 +1,24 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useAtom, useAtomValue } from "jotai";
 import { X } from "lucide-react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { aboutOpenAtom } from "@/atoms/ui-atoms";
 
-const TECH_STACK = [
-  "React 19 + Tailwind v4",
-  "WebGPU + WGSL rendering",
-  "Jotai atomic state",
-  "Multi-worker actor model",
-  "Physics: 10 kHz sub-stepping, 1/f noise, metastability",
+const TECH_STACK: MessageDescriptor[] = [
+  msg`React 19 + Tailwind v4`,
+  msg`WebGPU + WGSL rendering`,
+  msg`Jotai atomic state`,
+  msg`Multi-worker actor model`,
+  msg`Physics: 10 kHz sub-stepping, 1/f noise, metastability`,
 ];
 
 export function AboutSheet() {
   const [open, setOpen] = useAtom(aboutOpenAtom);
   const circuitDef = useAtomValue(circuitDefAtom);
+  const { i18n, t } = useLingui();
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -26,13 +30,13 @@ export function AboutSheet() {
         >
           <div className="sticky top-0 flex items-center justify-between px-6 h-14 border-b border-border bg-panel-raised/80 backdrop-blur-[20px] backdrop-saturate-[180%]">
             <Dialog.Title className="text-[17px] font-semibold text-fg text-body">
-              About
+              <Trans>About</Trans>
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
                 type="button"
                 className="inline-flex items-center justify-center w-8 h-8 rounded-full text-fg-muted hover:bg-panel-muted hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                aria-label="Close"
+                aria-label={t`Close`}
               >
                 <X size={16} />
               </button>
@@ -49,20 +53,23 @@ export function AboutSheet() {
 
             <div className="mt-8">
               <h4 className="readout text-[11px] uppercase tracking-[0.2em] text-fg-subtle mb-3">
-                Tech stack
+                <Trans>Tech stack</Trans>
               </h4>
               <ul className="space-y-2">
-                {TECH_STACK.map((item) => (
-                  <li
-                    key={item}
-                    className="text-[14px] text-caption text-fg flex items-start gap-2"
-                  >
-                    <span className="text-accent mt-0.5" aria-hidden>
-                      —
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
+                {TECH_STACK.map((item) => {
+                  const text = i18n._(item);
+                  return (
+                    <li
+                      key={text}
+                      className="text-[14px] text-caption text-fg flex items-start gap-2"
+                    >
+                      <span className="text-accent mt-0.5" aria-hidden>
+                        —
+                      </span>
+                      <span>{text}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>

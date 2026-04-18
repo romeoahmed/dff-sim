@@ -16,6 +16,7 @@ msgstr ""
 msgid "{style} shader · press {0}"
 msgstr "{style} shader · press {0}"
 
+#: src/components/about/AboutSheet.tsx:33
 #: src/components/nav/Toolbar.tsx:109
 msgid "About"
 msgstr "About"
@@ -24,6 +25,7 @@ msgstr "About"
 msgid "Circuit"
 msgstr "Circuit"
 
+#: src/components/about/AboutSheet.tsx:39
 #: src/components/settings/SettingsSheet.tsx:56
 msgid "Close"
 msgstr "Close"
@@ -31,6 +33,10 @@ msgstr "Close"
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
 msgstr "Dark theme"
+
+#: src/components/about/AboutSheet.tsx:13
+msgid "Jotai atomic state"
+msgstr "Jotai atomic state"
 
 #: src/components/nav/Toolbar.tsx:117
 msgid "Language"
@@ -40,9 +46,21 @@ msgstr "Language"
 msgid "Light theme"
 msgstr "Light theme"
 
+#: src/components/about/AboutSheet.tsx:14
+msgid "Multi-worker actor model"
+msgstr "Multi-worker actor model"
+
 #: src/components/settings/SettingsSheet.tsx:65
 msgid "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
 msgstr "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
+
+#: src/components/about/AboutSheet.tsx:15
+msgid "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
+msgstr "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
+
+#: src/components/about/AboutSheet.tsx:11
+msgid "React 19 + Tailwind v4"
+msgstr "React 19 + Tailwind v4"
 
 #: src/components/settings/SettingsSheet.tsx:108
 msgid "Reset"
@@ -76,6 +94,14 @@ msgstr "Switch to dark theme"
 msgid "Switch to light theme"
 msgstr "Switch to light theme"
 
+#: src/components/about/AboutSheet.tsx:56
+msgid "Tech stack"
+msgstr "Tech stack"
+
 #: src/components/settings/SettingsSheet.tsx:50
 msgid "Voltage Settings"
 msgstr "Voltage Settings"
+
+#: src/components/about/AboutSheet.tsx:12
+msgid "WebGPU + WGSL rendering"
+msgstr "WebGPU + WGSL rendering"
