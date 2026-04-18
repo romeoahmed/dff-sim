@@ -9,11 +9,20 @@ export type Locale = "en" | "zh-CN";
 export type Theme = "light" | "dark";
 
 // Guard against test environments where localStorage is a non-functional stub.
+// noopStorage satisfies the StateStorage interface structurally (getItem/setItem/removeItem).
+const noopStorage = {
+  getItem(_key: string): string | null {
+    return null;
+  },
+  setItem(_key: string, _value: string): void {},
+  removeItem(_key: string): void {},
+};
+
 const mkSafeStorage = <T>() =>
   createJSONStorage<T>(() => {
-    if (typeof window === "undefined") return null as unknown as Storage;
+    if (typeof window === "undefined") return noopStorage;
     const ls = window.localStorage;
-    return ls && typeof ls.getItem === "function" ? ls : (null as unknown as Storage);
+    return ls && typeof ls.getItem === "function" ? ls : noopStorage;
   });
 
 export const shaderStyleAtom = atomWithStorage<ShaderStyle>(

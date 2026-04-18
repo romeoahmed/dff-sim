@@ -15,6 +15,30 @@ import {
 } from "./pipelines/waveform";
 import type { ShaderStyle } from "./shaders";
 
+interface FrameMessage {
+  type: "frame";
+  data: ArrayBuffer | Float32Array;
+  newSamples: number;
+  startPointer: number;
+  channelCount: number;
+  bufferLength: number;
+  writePointer: number;
+}
+
+function isFrameMessage(v: unknown): v is FrameMessage {
+  if (typeof v !== "object" || v === null) return false;
+  const m = v as Record<string, unknown>;
+  return (
+    m.type === "frame" &&
+    (m.data instanceof ArrayBuffer || m.data instanceof Float32Array) &&
+    typeof m.newSamples === "number" &&
+    typeof m.startPointer === "number" &&
+    typeof m.channelCount === "number" &&
+    typeof m.bufferLength === "number" &&
+    typeof m.writePointer === "number"
+  );
+}
+
 export interface RenderAPI {
   init(args: {
     waveformCanvas: OffscreenCanvas;
@@ -184,13 +208,10 @@ class RenderWorker implements RenderAPI {
 
   registerFrameChannel(port: MessagePort): void {
     port.onmessage = (e) => {
-      if (e.data?.type !== "frame") return;
-      const raw = e.data.data as ArrayBuffer | Float32Array;
+      if (!isFrameMessage(e.data)) return;
+      const { newSamples, startPointer, channelCount, bufferLength } = e.data;
+      const raw = e.data.data;
       const data = raw instanceof Float32Array ? raw : new Float32Array(raw);
-      const newSamples = e.data.newSamples as number;
-      const startPointer = e.data.startPointer as number;
-      const channelCount = e.data.channelCount as number;
-      const bufferLength = e.data.bufferLength as number;
 
       // Drop frames whose dims don't match the current pipeline. Covers the brief
       // window around circuit switch where the render pipelines have already been
@@ -224,7 +245,7 @@ class RenderWorker implements RenderAPI {
         }
       }
 
-      this.latestWritePointer = e.data.writePointer as number;
+      this.latestWritePointer = e.data.writePointer;
       this.ringDirty = true;
     };
   }

@@ -10,8 +10,8 @@ export async function createGPUDevice(): Promise<GPUDeviceBundle> {
     throw new Error("WebGPU not supported");
   }
 
-  const device = (await adapter.requestDevice()) as GPUDevice | null;
-  if (device === null) {
+  const device = await adapter.requestDevice();
+  if (!device) {
     throw new Error("WebGPU device unavailable");
   }
 

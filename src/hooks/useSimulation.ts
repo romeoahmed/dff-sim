@@ -12,6 +12,9 @@ import { activeProbeIdsAtom, activeProbesAtom, shaderStyleAtom } from "@/atoms/u
 import { Layout } from "@/lib/constants";
 import { throttle } from "@/lib/throttle";
 import { createWorkerBridge, type WorkerBridge } from "@/lib/worker-bridge";
+import type { RenderAPI } from "@/workers/render/render.worker";
+
+type RenderInitArgs = Parameters<RenderAPI["init"]>[0];
 
 type StatusCallback = (voltages: number[]) => void;
 
@@ -77,7 +80,7 @@ export function useSimulation(
               probes: activeProbes,
             },
             [waveOffscreen, digitalOffscreen],
-          ) as Parameters<typeof bridge.render.init>[0],
+          ) as RenderInitArgs,
         );
         if (cancelled) return;
       } else {
@@ -111,10 +114,6 @@ export function useSimulation(
     return () => {
       cancelled = true;
       pendingTerminationRef.current = setTimeout(() => {
-        const cb = statusCallbackProxyRef.current as unknown as
-          | (StatusCallback & { [Comlink.releaseProxy]?: () => void })
-          | null;
-        cb?.[Comlink.releaseProxy]?.();
         statusCallbackProxyRef.current = null;
         bridgeRef.current?.terminate();
         bridgeRef.current = null;
