@@ -24,6 +24,10 @@ msgstr "About"
 msgid "Circuit"
 msgstr "Circuit"
 
+#: src/components/settings/SettingsSheet.tsx:56
+msgid "Close"
+msgstr "Close"
+
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
 msgstr "Dark theme"
@@ -36,9 +40,21 @@ msgstr "Language"
 msgid "Light theme"
 msgstr "Light theme"
 
+#: src/components/settings/SettingsSheet.tsx:65
+msgid "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
+msgstr "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
+
+#: src/components/settings/SettingsSheet.tsx:108
+msgid "Reset"
+msgstr "Reset"
+
 #: src/components/status/StatusStrip.tsx:17
 msgid "Running"
 msgstr "Running"
+
+#: src/components/settings/SettingsSheet.tsx:101
+msgid "Save"
+msgstr "Save"
 
 #: src/components/nav/CircuitSelector.tsx:24
 msgid "Select circuit"
@@ -59,3 +75,7 @@ msgstr "Switch to dark theme"
 #: src/components/nav/Toolbar.tsx:92
 msgid "Switch to light theme"
 msgstr "Switch to light theme"
+
+#: src/components/settings/SettingsSheet.tsx:50
+msgid "Voltage Settings"
+msgstr "Voltage Settings"
