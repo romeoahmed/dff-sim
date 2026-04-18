@@ -42,6 +42,7 @@ class PhysicsWorker implements PhysicsAPI {
   private firstFrameSent: boolean = false;
 
   loadCircuit(definition: CircuitDefinition, opts?: LoadCircuitOptions): void {
+    this.stop();
     const rng: RngFn = opts?.seed !== undefined ? createSeededRng(opts.seed) : Math.random;
     this.engine = new SimulationEngine(definition, this.registry, this.config, rng);
     this.lastSentWritePointer = 0;
