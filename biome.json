@@ -50,6 +50,6 @@
     }
   },
   "files": {
-    "includes": ["**", "!dist", "!node_modules", "!**/*.wgsl", "!.claude"]
+    "includes": ["**", "!dist", "!node_modules", "!**/*.wgsl", "!.claude", "!src/i18n/locales"]
   }
 }

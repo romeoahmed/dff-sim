@@ -12,9 +12,9 @@ vi.mock("@/i18n", async () => {
   };
 });
 
-import { act, renderHook } from "@testing-library/react";
 import { i18n } from "@lingui/core";
-import { Provider, createStore } from "jotai";
+import { act, renderHook } from "@testing-library/react";
+import { createStore, Provider } from "jotai";
 import { describe, expect, it } from "vitest";
 import { localeAtom } from "@/atoms/ui-atoms";
 import { useLocaleSync } from "@/hooks/useLocaleSync";
