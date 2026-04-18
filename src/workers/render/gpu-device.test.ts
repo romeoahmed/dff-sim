@@ -1,32 +1,35 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { configureCanvas, createGPUDevice } from "./gpu-device";
 
 const mockDevice = Object.freeze({ label: "mock-device" }) as unknown as GPUDevice;
 
-const mockGPU = {
-  requestAdapter: vi.fn(),
-  getPreferredCanvasFormat: vi.fn(),
+type MockAdapter = {
+  requestDevice: ReturnType<typeof vi.fn<() => Promise<GPUDevice | null>>>;
 };
 
-let mockAdapter: GPUAdapter;
+const mockGPU = {
+  requestAdapter: vi.fn<() => Promise<MockAdapter | null>>(),
+  getPreferredCanvasFormat: vi.fn<() => GPUTextureFormat>(),
+};
+
+let mockAdapter: MockAdapter;
 
 beforeEach(() => {
   mockAdapter = {
-    requestDevice: vi.fn<() => Promise<GPUDevice>>(),
-  } as unknown as GPUAdapter;
+    requestDevice: vi.fn<() => Promise<GPUDevice | null>>(),
+  };
 
   vi.resetAllMocks();
 
   mockGPU.requestAdapter.mockResolvedValue(mockAdapter);
-  (
-    mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }
-  ).requestDevice.mockResolvedValue(mockDevice);
-  mockGPU.getPreferredCanvasFormat.mockReturnValue("bgra8unorm" as GPUTextureFormat);
+  mockAdapter.requestDevice.mockResolvedValue(mockDevice);
+  mockGPU.getPreferredCanvasFormat.mockReturnValue("bgra8unorm");
 
   vi.stubGlobal("navigator", { gpu: mockGPU });
 });
 
 describe("createGPUDevice()", () => {
-  it("解析为包含 device、adapter 和 format 的对象（成功路径）", async () => {
+  it("resolves to a bundle containing device, adapter, and format on the happy path", async () => {
     const bundle = await createGPUDevice();
 
     expect(bundle.adapter).toBe(mockAdapter);
@@ -34,23 +37,21 @@ describe("createGPUDevice()", () => {
     expect(bundle.format).toBe("bgra8unorm");
   });
 
-  it("当 requestAdapter() 返回 null 时，拒绝并抛出 'WebGPU not supported'", async () => {
+  it("rejects with 'WebGPU not supported' when requestAdapter() returns null", async () => {
     mockGPU.requestAdapter.mockResolvedValue(null);
 
     await expect(createGPUDevice()).rejects.toThrow("WebGPU not supported");
   });
 
-  it("当 requestDevice() 返回 null 时，拒绝并抛出 'WebGPU device unavailable'", async () => {
-    (
-      mockAdapter as unknown as { requestDevice: ReturnType<typeof vi.fn> }
-    ).requestDevice.mockResolvedValue(null);
+  it("rejects with 'WebGPU device unavailable' when requestDevice() returns null", async () => {
+    mockAdapter.requestDevice.mockResolvedValue(null);
 
     await expect(createGPUDevice()).rejects.toThrow("WebGPU device unavailable");
   });
 });
 
 describe("configureCanvas()", () => {
-  it("配置上下文并返回 GPUCanvasContext（成功路径）", () => {
+  it("configures the context and returns the GPUCanvasContext", () => {
     const mockConfigure = vi.fn();
     const mockCtx = { configure: mockConfigure } as unknown as GPUCanvasContext;
     const mockCanvas = {
@@ -69,7 +70,7 @@ describe("configureCanvas()", () => {
     expect(result).toBe(mockCtx);
   });
 
-  it("当 getContext() 返回 null 时，抛出 'Cannot get WebGPU context'", () => {
+  it("throws 'Cannot get WebGPU context' when getContext() returns null", () => {
     const mockCanvas = {
       getContext: vi.fn().mockReturnValue(null),
     } as unknown as OffscreenCanvas;
