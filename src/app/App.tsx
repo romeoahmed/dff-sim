@@ -14,6 +14,7 @@ import { SettingsSheet } from "@/components/settings/SettingsSheet";
 import { ShortcutsOverlay, shortcutsOpenAtom } from "@/components/shortcuts/ShortcutsOverlay";
 import { StatusStrip } from "@/components/status/StatusStrip";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useLocaleSync } from "@/hooks/useLocaleSync";
 import { useSimulation } from "@/hooks/useSimulation";
 import { useThemeSync } from "@/hooks/useThemeSync";
 import { Providers } from "./providers";
@@ -29,6 +30,7 @@ function AppInner() {
   }, [setCircuit]);
 
   useThemeSync();
+  useLocaleSync();
   useSimulation(waveformRef, digitalRef);
   useKeyboardShortcuts({ onOpenHelp: () => setShortcutsOpen(true) });
 
