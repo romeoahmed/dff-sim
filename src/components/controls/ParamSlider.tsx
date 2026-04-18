@@ -9,11 +9,11 @@ export function ParamSlider({ control }: { control: ControlDef }) {
   const numValue = typeof value === "number" ? value : ((control.defaultValue as number) ?? 0);
 
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-2 items-center pt-2 pb-1">
+    <div className="col-span-2 grid grid-cols-subgrid grid-rows-[auto_auto] items-center gap-x-3 py-1">
       <span className="text-[11px] uppercase tracking-[0.15em] text-fg-muted">{control.label}</span>
       <span className="readout text-[13px] text-fg tabular-nums">{numValue.toFixed(0)}</span>
       <Slider
-        className="col-span-2"
+        className="col-span-2 row-start-2 mt-1"
         min={control.min ?? 0}
         max={control.max ?? 100}
         step={1}

@@ -14,7 +14,7 @@ export function ControlPanel() {
       <h3 className="readout text-[11px] uppercase tracking-[0.2em] text-fg-subtle mb-4">
         <Trans>Controls</Trans>
       </h3>
-      <div className="space-y-2">
+      <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
         {circuitDef.controls.map((ctrl) => {
           const key = `${ctrl.targetComponent}.${ctrl.param}`;
           if (ctrl.type === "slider") return <ParamSlider key={key} control={ctrl} />;

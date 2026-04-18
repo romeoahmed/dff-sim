@@ -56,10 +56,10 @@ export function SettingsSheet() {
             </Trans>
           </p>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-3">
             {(Object.keys(DefaultVoltageSpecs) as (keyof typeof DefaultVoltageSpecs)[]).map(
               (key) => (
-                <label key={key} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                <label key={key} className="col-span-2 grid grid-cols-subgrid items-center">
                   <span className="readout text-[11px] uppercase tracking-[0.1em] text-fg-muted">
                     {key}
                   </span>

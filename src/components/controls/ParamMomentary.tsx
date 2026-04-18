@@ -18,7 +18,7 @@ export function ParamMomentary({ control }: { control: ControlDef }) {
   };
 
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-2 py-2">
+    <div className="col-span-2 grid grid-cols-subgrid items-center py-1">
       <span className="text-[11px] uppercase tracking-[0.15em] text-fg-muted">{control.label}</span>
       <button
         type="button"
