@@ -1,9 +1,8 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import * as Dialog from "@radix-ui/react-dialog";
 import { atom, useAtom } from "jotai";
-import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const shortcutsOpenAtom = atom(false);
 
@@ -27,54 +26,37 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 export function ShortcutsOverlay() {
   const [open, setOpen] = useAtom(shortcutsOpenAtom);
-  const { i18n, t } = useLingui();
+  const { i18n } = useLingui();
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-canvas/70 backdrop-blur-sm z-40" />
-        <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[32rem] max-w-[90vw] bg-panel-raised border border-border-strong rounded-[14px] shadow-[rgba(0,0,0,0.22)_3px_5px_30px_0px] overflow-hidden focus-visible:outline-none"
-          aria-describedby={undefined}
-        >
-          <div className="flex items-center justify-between px-6 h-14 border-b border-border">
-            <Dialog.Title className="text-[17px] font-semibold text-fg text-body">
-              <Trans>Keyboard Shortcuts</Trans>
-            </Dialog.Title>
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full text-fg-muted hover:bg-panel-muted hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                aria-label={t`Close`}
-              >
-                <X size={16} />
-              </button>
-            </Dialog.Close>
-          </div>
-          <dl className="px-6 py-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
-            {SHORTCUTS.map(([keys, desc]) => (
-              <div key={keys} className="contents">
-                <dt className="flex items-center gap-1 flex-wrap">
-                  {keys.split(/\s*\/\s*|\s{2,}/).map((k, i, arr) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: static shortcut string
-                    <span key={i} className="inline-flex items-center gap-1">
-                      <Kbd>{k}</Kbd>
-                      {i < arr.length - 1 && (
-                        <span className="text-fg-subtle text-[11px]" aria-hidden>
-                          /
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </dt>
-                <dd className="text-[14px] text-caption text-fg-muted self-center">
-                  {i18n._(desc)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="w-[32rem] max-w-[90vw] bg-panel-raised border border-border-strong rounded-[14px] shadow-[rgba(0,0,0,0.22)_3px_5px_30px_0px] p-0 overflow-hidden">
+        <DialogHeader className="px-6 h-14 border-b border-border flex-row items-center justify-between space-y-0">
+          <DialogTitle className="text-[17px] font-semibold text-fg text-body">
+            <Trans>Keyboard Shortcuts</Trans>
+          </DialogTitle>
+        </DialogHeader>
+        <dl className="px-6 py-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+          {SHORTCUTS.map(([keys, desc]) => (
+            <div key={keys} className="contents">
+              <dt className="flex items-center gap-1 flex-wrap">
+                {keys.split(/\s*\/\s*|\s{2,}/).map((k, i, arr) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static shortcut string
+                  <span key={i} className="inline-flex items-center gap-1">
+                    <Kbd>{k}</Kbd>
+                    {i < arr.length - 1 && (
+                      <span className="text-fg-subtle text-[11px]" aria-hidden>
+                        /
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </dt>
+              <dd className="text-[14px] text-caption text-fg-muted self-center">{i18n._(desc)}</dd>
+            </div>
+          ))}
+        </dl>
+      </DialogContent>
+    </Dialog>
   );
 }
