@@ -1,6 +1,7 @@
 import { useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
+import { shortcutsOpenAtom } from "@/atoms/ui-atoms";
 import { dffCircuit } from "@/circuits/dff";
 import { AboutSheet } from "@/components/about/AboutSheet";
 import { ControlPanel } from "@/components/controls/ControlPanel";
@@ -11,7 +12,7 @@ import { Toolbar } from "@/components/nav/Toolbar";
 import { OscilloscopePanel } from "@/components/oscilloscope/OscilloscopePanel";
 import { CircuitSchematic } from "@/components/schematic/CircuitSchematic";
 import { SettingsSheet } from "@/components/settings/SettingsSheet";
-import { ShortcutsOverlay, shortcutsOpenAtom } from "@/components/shortcuts/ShortcutsOverlay";
+import { ShortcutsOverlay } from "@/components/shortcuts/ShortcutsOverlay";
 import { StatusStrip } from "@/components/status/StatusStrip";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useLocaleSync } from "@/hooks/useLocaleSync";

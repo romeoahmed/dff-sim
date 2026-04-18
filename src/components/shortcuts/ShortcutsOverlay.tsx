@@ -1,7 +1,8 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { atom, useAtom } from "jotai";
+import { useAtom } from "jotai";
+import { shortcutsOpenAtom } from "@/atoms/ui-atoms";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-export const shortcutsOpenAtom = atom(false);
 
 const SHORTCUTS: Array<[string, MessageDescriptor]> = [
   ["Space", msg`Toggle D input`],

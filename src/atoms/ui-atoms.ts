@@ -32,6 +32,7 @@ export const shaderStyleAtom = atomWithStorage<ShaderStyle>(
 );
 export const settingsOpenAtom = atom(false);
 export const aboutOpenAtom = atom(false);
+export const shortcutsOpenAtom = atom(false);
 export const localeAtom = atomWithStorage<Locale>("dff-sim-locale", "en", mkSafeStorage<Locale>());
 export const themeAtom = atomWithStorage<Theme>("dff-sim-theme", "dark", mkSafeStorage<Theme>());
 
