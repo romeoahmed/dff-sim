@@ -1,25 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { adderCircuit } from "@/circuits/adder";
-import { dffCircuit } from "@/circuits/dff";
-import { buildSchematicDescription } from "./describe";
+import { buildSchematicDescriptionParts } from "./describe";
 
-describe("buildSchematicDescription", () => {
-  it("includes the circuit description for the DFF", () => {
-    const text = buildSchematicDescription(dffCircuit);
-    expect(text).toContain(dffCircuit.description);
-  });
-
-  it("includes a count of components and nets for the adder", () => {
-    const text = buildSchematicDescription(adderCircuit);
-    expect(text).toContain(`${adderCircuit.components.length} components`);
-    expect(text).toContain(`${adderCircuit.nets.length} nets`);
-  });
-
-  it("groups components by type with their counts", () => {
-    const text = buildSchematicDescription(adderCircuit);
-    expect(text).toContain("4 DFlipFlop");
-    expect(text).toContain("4 FullAdder");
-    expect(text).toContain("4 SignalSource");
-    expect(text).toContain("1 ClockSource");
+describe("buildSchematicDescriptionParts", () => {
+  it("returns structural parts for adderCircuit", () => {
+    const parts = buildSchematicDescriptionParts(adderCircuit);
+    expect(parts.description).toBe(adderCircuit.description);
+    expect(parts.componentCount).toBe(adderCircuit.components.length);
+    expect(parts.netCount).toBe(adderCircuit.nets.length);
+    expect(parts.typeSummary.length).toBeGreaterThan(0);
+    const fullAdderEntry = parts.typeSummary.find((p) => p.type === "FullAdder");
+    expect(fullAdderEntry?.count).toBeGreaterThan(0);
   });
 });

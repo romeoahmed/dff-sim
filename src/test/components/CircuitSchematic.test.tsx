@@ -33,7 +33,7 @@ describe("CircuitSchematic", () => {
     const descId = svg.getAttribute("aria-describedby");
     expect(descId).not.toBeNull();
     const desc = descId ? document.getElementById(descId) : null;
-    expect(desc?.textContent).toContain("13 components");
+    expect(desc?.textContent).toContain(`${adderCircuit.components.length} components`);
     expect(desc?.textContent).toContain(`${adderCircuit.nets.length} nets`);
   });
 });

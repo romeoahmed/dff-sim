@@ -3,7 +3,7 @@ import { useAtomValue } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { buildSchematicDescription } from "./describe";
+import { buildSchematicDescriptionParts } from "./describe";
 import { SchematicGrid } from "./SchematicGrid";
 import { SchematicNode } from "./SchematicNode";
 import { SchematicWire } from "./SchematicWire";
@@ -34,7 +34,13 @@ export function CircuitSchematic({ className = "" }: { className?: string }) {
 
   const titleId = `schematic-title-${circuitDef.id}`;
   const descId = `schematic-desc-${circuitDef.id}`;
-  const description = buildSchematicDescription(circuitDef);
+  const parts = buildSchematicDescriptionParts(circuitDef);
+  const typeSummary = parts.typeSummary.map((p) => `${p.count} ${p.type}`).join(", ");
+  const description = [
+    parts.description,
+    t`${parts.componentCount} components (${typeSummary})`,
+    t`${parts.netCount} nets`,
+  ].join(". ");
 
   // Place nodes: horizontal row in landscape, vertical column in portrait.
   const positions = new Map<string, { x: number; y: number }>();
