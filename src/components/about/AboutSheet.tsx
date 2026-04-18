@@ -4,7 +4,13 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useAtom, useAtomValue } from "jotai";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { aboutOpenAtom } from "@/atoms/ui-atoms";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 const TECH_STACK: MessageDescriptor[] = [
   msg`React 19 + Tailwind v4`,
@@ -30,6 +36,10 @@ export function AboutSheet() {
             <Trans>About</Trans>
           </SheetTitle>
         </SheetHeader>
+
+        <SheetDescription className="sr-only">
+          <Trans>DFF-Sim application information and circuit description.</Trans>
+        </SheetDescription>
 
         <div className="px-6 py-6">
           {circuitDef && (

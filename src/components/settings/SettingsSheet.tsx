@@ -4,7 +4,13 @@ import { useState } from "react";
 import { voltageSpecsAtom } from "@/atoms/settings-atoms";
 import { settingsOpenAtom } from "@/atoms/ui-atoms";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { DefaultVoltageSpecs } from "@/lib/constants";
 import { voltageSpecSchema } from "@/lib/validation";
 
@@ -49,12 +55,12 @@ export function SettingsSheet() {
         </SheetHeader>
 
         <div className="px-6 py-5">
-          <p className="text-[13px] text-fg-muted text-caption mb-5">
+          <SheetDescription className="text-[13px] text-fg-muted text-caption mb-5">
             <Trans>
               Override the simulator's logic-level voltage bands. Changes apply live to the running
               circuit.
             </Trans>
-          </p>
+          </SheetDescription>
 
           <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-3">
             {(Object.keys(DefaultVoltageSpecs) as (keyof typeof DefaultVoltageSpecs)[]).map(

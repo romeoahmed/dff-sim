@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import { describe, expect, it } from "vitest";
 import { circuitDefAtom, voltageAtomFamily } from "@/atoms/simulation-atoms";
@@ -43,12 +43,14 @@ describe("ProbeStateAnnouncer", () => {
         <ProbeStateAnnouncer />
       </Provider>,
     );
-    store.set(voltageAtomFamily("a"), 1.5);
-    rerender(
-      <Provider store={store}>
-        <ProbeStateAnnouncer />
-      </Provider>,
-    );
+    act(() => {
+      store.set(voltageAtomFamily("a"), 1.5);
+      rerender(
+        <Provider store={store}>
+          <ProbeStateAnnouncer />
+        </Provider>,
+      );
+    });
     expect(screen.getByRole("status").textContent).toContain("A HIGH");
   });
 
@@ -61,12 +63,14 @@ describe("ProbeStateAnnouncer", () => {
         <ProbeStateAnnouncer />
       </Provider>,
     );
-    store.set(voltageAtomFamily("a"), 0.7);
-    rerender(
-      <Provider store={store}>
-        <ProbeStateAnnouncer />
-      </Provider>,
-    );
+    act(() => {
+      store.set(voltageAtomFamily("a"), 0.7);
+      rerender(
+        <Provider store={store}>
+          <ProbeStateAnnouncer />
+        </Provider>,
+      );
+    });
     expect(screen.getByRole("status").textContent ?? "").not.toContain("A HIGH");
     expect(screen.getByRole("status").textContent ?? "").not.toContain("A LOW");
   });

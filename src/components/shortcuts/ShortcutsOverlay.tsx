@@ -2,7 +2,13 @@ import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { atom, useAtom } from "jotai";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const shortcutsOpenAtom = atom(false);
 
@@ -35,6 +41,9 @@ export function ShortcutsOverlay() {
           <DialogTitle className="text-[17px] font-semibold text-fg text-body">
             <Trans>Keyboard Shortcuts</Trans>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            <Trans>Keyboard shortcuts for driving the simulation without a mouse.</Trans>
+          </DialogDescription>
         </DialogHeader>
         <dl className="px-6 py-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3">
           {SHORTCUTS.map(([keys, desc]) => (

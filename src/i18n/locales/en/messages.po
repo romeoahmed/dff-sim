@@ -17,7 +17,7 @@ msgid "{0, plural, one {# component} other {# components}}"
 msgstr "{0, plural, one {# component} other {# components}}"
 
 #. placeholder {0}: circuitDef.nets.length
-#: src/components/schematic/CircuitSchematic.tsx:109
+#: src/components/schematic/CircuitSchematic.tsx:105
 msgid "{0, plural, one {# net} other {# nets}}"
 msgstr "{0, plural, one {# net} other {# nets}}"
 
@@ -26,7 +26,7 @@ msgstr "{0, plural, one {# net} other {# nets}}"
 msgid "{style} shader · press {0}"
 msgstr "{style} shader · press {0}"
 
-#: src/components/about/AboutSheet.tsx:33
+#: src/components/about/AboutSheet.tsx:36
 #: src/components/nav/Toolbar.tsx:109
 msgid "About"
 msgstr "About"
@@ -40,17 +40,17 @@ msgid "Circuit"
 msgstr "Circuit"
 
 #. placeholder {0}: circuitDef.name
-#: src/components/schematic/CircuitSchematic.tsx:131
+#: src/components/schematic/CircuitSchematic.tsx:123
 msgid "Circuit schematic: {0}"
 msgstr "Circuit schematic: {0}"
 
 #: src/components/about/AboutSheet.tsx:39
 #: src/components/settings/SettingsSheet.tsx:56
 #: src/components/shortcuts/ShortcutsOverlay.tsx:48
-msgid "Close"
-msgstr "Close"
+#~ msgid "Close"
+#~ msgstr "Close"
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:17
+#: src/components/shortcuts/ShortcutsOverlay.tsx:22
 msgid "Close this help"
 msgstr "Close this help"
 
@@ -62,21 +62,29 @@ msgstr "Controls"
 msgid "Dark theme"
 msgstr "Dark theme"
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:14
+#: src/components/shortcuts/ShortcutsOverlay.tsx:19
 msgid "Decrease / increase clock speed"
 msgstr "Decrease / increase clock speed"
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:13
+#: src/components/shortcuts/ShortcutsOverlay.tsx:18
 msgid "Decrease / increase noise"
 msgstr "Decrease / increase noise"
 
-#: src/components/about/AboutSheet.tsx:13
+#: src/components/about/AboutSheet.tsx:41
+msgid "DFF-Sim application information and circuit description."
+msgstr "DFF-Sim application information and circuit description."
+
+#: src/components/about/AboutSheet.tsx:18
 msgid "Jotai atomic state"
 msgstr "Jotai atomic state"
 
 #: src/components/shortcuts/ShortcutsOverlay.tsx:42
 msgid "Keyboard Shortcuts"
 msgstr "Keyboard Shortcuts"
+
+#: src/components/shortcuts/ShortcutsOverlay.tsx:45
+msgid "Keyboard shortcuts for driving the simulation without a mouse."
+msgstr "Keyboard shortcuts for driving the simulation without a mouse."
 
 #: src/components/nav/Toolbar.tsx:117
 msgid "Language"
@@ -86,15 +94,15 @@ msgstr "Language"
 msgid "Light theme"
 msgstr "Light theme"
 
-#: src/components/about/AboutSheet.tsx:14
+#: src/components/about/AboutSheet.tsx:19
 msgid "Multi-worker actor model"
 msgstr "Multi-worker actor model"
 
-#: src/components/settings/SettingsSheet.tsx:65
+#: src/components/settings/SettingsSheet.tsx:59
 msgid "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
 msgstr "Override the simulator's logic-level voltage bands. Changes apply live to the running circuit."
 
-#: src/components/about/AboutSheet.tsx:15
+#: src/components/about/AboutSheet.tsx:20
 msgid "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
 msgstr "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
 
@@ -106,15 +114,15 @@ msgstr "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
 msgid "Probes"
 msgstr "Probes"
 
-#: src/components/about/AboutSheet.tsx:11
+#: src/components/about/AboutSheet.tsx:16
 msgid "React 19 + Tailwind v4"
 msgstr "React 19 + Tailwind v4"
 
-#: src/components/settings/SettingsSheet.tsx:108
+#: src/components/settings/SettingsSheet.tsx:106
 msgid "Reset"
 msgstr "Reset"
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:12
+#: src/components/shortcuts/ShortcutsOverlay.tsx:17
 msgid "Reset (hold)"
 msgstr "Reset (hold)"
 
@@ -122,7 +130,7 @@ msgstr "Reset (hold)"
 msgid "Running"
 msgstr "Running"
 
-#: src/components/settings/SettingsSheet.tsx:101
+#: src/components/settings/SettingsSheet.tsx:98
 msgid "Save"
 msgstr "Save"
 
@@ -142,11 +150,11 @@ msgstr "Settings"
 msgid "Shader style"
 msgstr "Shader style"
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:15
+#: src/components/shortcuts/ShortcutsOverlay.tsx:20
 msgid "Shader style: Clean / Glow / Phosphor"
 msgstr "Shader style: Clean / Glow / Phosphor"
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:16
+#: src/components/shortcuts/ShortcutsOverlay.tsx:21
 msgid "Show this help"
 msgstr "Show this help"
 
@@ -158,7 +166,7 @@ msgstr "Switch to dark theme"
 msgid "Switch to light theme"
 msgstr "Switch to light theme"
 
-#: src/components/about/AboutSheet.tsx:56
+#: src/components/about/AboutSheet.tsx:54
 msgid "Tech stack"
 msgstr "Tech stack"
 
@@ -166,15 +174,15 @@ msgstr "Tech stack"
 msgid "This simulation renders analog waveforms through WebGPU, which is not available in your browser."
 msgstr "This simulation renders analog waveforms through WebGPU, which is not available in your browser."
 
-#: src/components/shortcuts/ShortcutsOverlay.tsx:11
+#: src/components/shortcuts/ShortcutsOverlay.tsx:16
 msgid "Toggle D input"
 msgstr "Toggle D input"
 
-#: src/components/settings/SettingsSheet.tsx:50
+#: src/components/settings/SettingsSheet.tsx:53
 msgid "Voltage Settings"
 msgstr "Voltage Settings"
 
-#: src/components/about/AboutSheet.tsx:12
+#: src/components/about/AboutSheet.tsx:17
 msgid "WebGPU + WGSL rendering"
 msgstr "WebGPU + WGSL rendering"
 
