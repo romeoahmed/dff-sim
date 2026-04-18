@@ -1,4 +1,5 @@
 import { useAtom, useAtomValue } from "jotai";
+import { Trans } from "@lingui/react/macro";
 import { circuitDefAtom, voltageAtomFamily } from "@/atoms/simulation-atoms";
 import { activeProbeIdsAtom } from "@/atoms/ui-atoms";
 import type { Probe } from "@/lib/types";
@@ -59,7 +60,9 @@ export function ProbeSelector() {
 
   return (
     <div className="px-5 py-5">
-      <h3 className="readout text-[11px] uppercase tracking-[0.2em] text-fg-subtle mb-3">Probes</h3>
+      <h3 className="readout text-[11px] uppercase tracking-[0.2em] text-fg-subtle mb-3">
+        <Trans>Probes</Trans>
+      </h3>
       <div className="space-y-0.5">
         {circuitDef.probes.map((p) => (
           <ProbeRow

@@ -1,4 +1,5 @@
 import { useAtomValue } from "jotai";
+import { Trans } from "@lingui/react/macro";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { ParamMomentary } from "./ParamMomentary";
 import { ParamSlider } from "./ParamSlider";
@@ -11,7 +12,7 @@ export function ControlPanel() {
   return (
     <div className="px-5 py-5 border-b border-border">
       <h3 className="readout text-[11px] uppercase tracking-[0.2em] text-fg-subtle mb-4">
-        Controls
+        <Trans>Controls</Trans>
       </h3>
       <div className="space-y-2">
         {circuitDef.controls.map((ctrl) => {

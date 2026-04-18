@@ -11,6 +11,16 @@ msgstr ""
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
 
+#. placeholder {0}: circuitDef.components.length
+#: src/components/schematic/CircuitSchematic.tsx:103
+msgid "{0, plural, one {# component} other {# components}}"
+msgstr "{0, plural, one {# component} other {# components}}"
+
+#. placeholder {0}: circuitDef.nets.length
+#: src/components/schematic/CircuitSchematic.tsx:109
+msgid "{0, plural, one {# net} other {# nets}}"
+msgstr "{0, plural, one {# net} other {# nets}}"
+
 #. placeholder {0}: i + 1
 #: src/components/nav/Toolbar.tsx:79
 msgid "{style} shader · press {0}"
@@ -29,6 +39,11 @@ msgstr "Check browser support →"
 msgid "Circuit"
 msgstr "Circuit"
 
+#. placeholder {0}: circuitDef.name
+#: src/components/schematic/CircuitSchematic.tsx:131
+msgid "Circuit schematic: {0}"
+msgstr "Circuit schematic: {0}"
+
 #: src/components/about/AboutSheet.tsx:39
 #: src/components/settings/SettingsSheet.tsx:56
 #: src/components/shortcuts/ShortcutsOverlay.tsx:48
@@ -38,6 +53,10 @@ msgstr "Close"
 #: src/components/shortcuts/ShortcutsOverlay.tsx:17
 msgid "Close this help"
 msgstr "Close this help"
+
+#: src/components/controls/ControlPanel.tsx:15
+msgid "Controls"
+msgstr "Controls"
 
 #: src/components/nav/Toolbar.tsx:93
 msgid "Dark theme"
@@ -83,6 +102,10 @@ msgstr "Physics: 10 kHz sub-stepping, 1/f noise, metastability"
 msgid "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
 msgstr "Please use Chrome / Edge 113+, Firefox 141+, or Safari 26+."
 
+#: src/components/controls/ProbeSelector.tsx:64
+msgid "Probes"
+msgstr "Probes"
+
 #: src/components/about/AboutSheet.tsx:11
 msgid "React 19 + Tailwind v4"
 msgstr "React 19 + Tailwind v4"
@@ -102,6 +125,10 @@ msgstr "Running"
 #: src/components/settings/SettingsSheet.tsx:101
 msgid "Save"
 msgstr "Save"
+
+#: src/components/schematic/CircuitSchematic.tsx:99
+msgid "Schematic"
+msgstr "Schematic"
 
 #: src/components/nav/CircuitSelector.tsx:24
 msgid "Select circuit"

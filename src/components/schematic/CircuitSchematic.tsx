@@ -1,5 +1,6 @@
 import { useAtomValue } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { circuitDefAtom } from "@/atoms/simulation-atoms";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildSchematicDescription } from "./describe";
@@ -26,6 +27,7 @@ function portraitWirePoints(x1: number, y1: number, x2: number, y2: number): str
 export function CircuitSchematic({ className = "" }: { className?: string }) {
   const circuitDef = useAtomValue(circuitDefAtom);
   const isPortrait = useMediaQuery("(min-width: 1440px)");
+  const { t } = useLingui();
   if (!circuitDef) return <div className={className} />;
 
   const viewbox = isPortrait ? PORTRAIT_VIEWBOX : LANDSCAPE_VIEWBOX;
@@ -93,10 +95,22 @@ export function CircuitSchematic({ className = "" }: { className?: string }) {
         className="h-8 flex items-center gap-3 px-4 border-b border-border bg-panel-muted
           text-[11px] uppercase tracking-[0.2em]"
       >
-        <span className="readout text-fg-subtle">Schematic</span>
+        <span className="readout text-fg-subtle">
+          <Trans>Schematic</Trans>
+        </span>
         <span className="text-fg text-caption">{circuitDef.name}</span>
         <span className="ml-auto readout text-[10px] text-fg-subtle">
-          {circuitDef.components.length} components · {circuitDef.nets.length} nets
+          <Plural
+            value={circuitDef.components.length}
+            one="# component"
+            other="# components"
+          />
+          {" · "}
+          <Plural
+            value={circuitDef.nets.length}
+            one="# net"
+            other="# nets"
+          />
         </span>
       </header>
       <div className="relative flex-1 min-h-0">
@@ -114,7 +128,7 @@ export function CircuitSchematic({ className = "" }: { className?: string }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            <title id={titleId}>Circuit schematic: {circuitDef.name}</title>
+            <title id={titleId}>{t`Circuit schematic: ${circuitDef.name}`}</title>
             <desc id={descId}>{description}</desc>
             <SchematicGrid />
             {wires.map((w) => (
