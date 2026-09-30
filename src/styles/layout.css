@@ -1,0 +1,198 @@
+.site-header,
+main {
+  max-inline-size: 1320px;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 48px);
+}
+
+.site-header {
+  min-block-size: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-block-end: 1px solid var(--line);
+}
+
+.brand {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 16px;
+  min-block-size: 44px;
+}
+
+.brand svg {
+  inline-size: 27px;
+  block-size: 27px;
+  color: var(--green);
+}
+
+.brand span {
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.quiet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  min-block-size: 44px;
+}
+
+.intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  padding-block: 44px 36px;
+}
+
+.experiment-number {
+  margin-inline-start: 16px;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 550;
+  letter-spacing: -0.04em;
+  margin-block: 13px;
+  line-height: 1.45;
+}
+
+.intro-copy {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.intro-note {
+  flex: none;
+  border-inline-start: 1px solid var(--line);
+  padding-inline-start: 28px;
+}
+
+.intro-note > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.intro-note strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 500;
+  margin-block-start: 8px;
+  font-family: var(--mono);
+}
+
+.intro-note strong span {
+  color: var(--muted);
+}
+
+.intro-note small {
+  display: block;
+  margin-block-start: 8px;
+  color: var(--muted);
+  font: 12px var(--mono);
+}
+
+.workspace {
+  display: grid;
+  grid-template: "lab guide" auto "lab principle" 1fr / minmax(0, 1fr) 300px;
+  gap: 26px;
+  align-items: start;
+  scroll-margin-block-start: 24px;
+}
+
+.lab {
+  grid-area: lab;
+}
+
+.guide {
+  grid-area: guide;
+}
+
+.principle {
+  grid-area: principle;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading h2 {
+  font-size: 20px;
+  font-weight: 550;
+  margin-block-start: 6px;
+}
+
+.site-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  color: var(--muted);
+  font-size: 11px;
+  padding-block: 28px;
+  line-height: 1.8;
+}
+
+.site-footer span span {
+  margin-inline: 10px;
+}
+
+@media (width < 1100px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 20px;
+  }
+
+  .intro-note {
+    display: none;
+  }
+}
+
+@media (width < 900px) {
+  .workspace {
+    grid-template: "guide" auto "lab" auto "principle" auto / minmax(0, 1fr);
+  }
+
+  .site-footer {
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+
+@media (width < 540px) {
+  .site-header {
+    min-block-size: 68px;
+  }
+
+  .brand span {
+    display: none;
+  }
+
+  .intro {
+    padding-block: 28px;
+  }
+
+  h1 {
+    max-inline-size: 12em;
+  }
+
+  .intro-copy {
+    max-inline-size: 28em;
+    font-size: 13px;
+  }
+}

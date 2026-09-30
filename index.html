@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f5ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151d19" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="亲手改变输入、推进时钟，用逻辑分析仪理解 D 触发器的采样、保持与异步复位。"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>一位记忆 · D 触发器实验台</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#experiment">跳到实验台</a>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="一位记忆，返回实验起点"
+        ><i data-lucide="circuit-board" aria-hidden="true"></i> 一位记忆 <span>D FLIP-FLOP</span></a
+      >
+      <a class="quiet-link" href="#principle"
+        >工作原理 <i data-lucide="arrow-down-right" aria-hidden="true"></i
+      ></a>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="title">
+        <div>
+          <p class="eyebrow">数字逻辑实验 <span class="experiment-number">实验 01</span></p>
+          <h1 id="title">记住一个瞬间，保持一位信息。</h1>
+          <p class="intro-copy">亲手改变输入与时钟，观察 D 触发器的采样、保持与复位。</p>
+        </div>
+        <div class="intro-note">
+          <span>只在上升沿采样</span
+          ><strong>Q <span>←</span> D <small>CLK ↑ 且 RST = 0</small></strong>
+        </div>
+      </section>
+      <noscript
+        ><p class="notice">交互实验需要启用 JavaScript。你仍然可以阅读下方的工作原理。</p></noscript
+      >
+      <div class="workspace" id="experiment" tabindex="-1">
+        <section class="guide" aria-labelledby="learn-title">
+          <header>
+            <span class="eyebrow">六步入门</span><span id="lesson-count">尚未开始</span>
+          </header>
+          <h2 id="learn-title">先预测，再验证。</h2>
+          <p id="lesson-hint">每次只做一个操作。先想想 Q 会怎样，再对照波形和解释验证。</p>
+          <progress id="lesson-progress" max="6" value="0" aria-label="引导完成进度"></progress>
+          <button id="lesson-next" class="primary-button" type="button">
+            <span id="lesson-button">开始引导</span
+            ><i data-lucide="arrow-right" aria-hidden="true"></i>
+          </button>
+          <p id="lesson-result" class="lesson-result" hidden></p>
+          <p class="guide-note" id="guide-note">开始引导会清空记录，并将所有信号置为 0。</p>
+        </section>
+        <section class="lab" aria-labelledby="lab-title">
+          <header class="section-heading">
+            <div>
+              <p class="eyebrow">自由探索</p>
+              <h2 id="lab-title">逻辑实验台</h2>
+            </div>
+            <button class="text-button" id="restart" type="button">
+              <i data-lucide="rotate-ccw" aria-hidden="true"></i>重新开始
+            </button>
+          </header>
+          <div class="signal-flow" role="group" aria-label="当前信号状态">
+            <div class="signal-value signal-d">
+              <span>输入 <b>D</b></span
+              ><output id="value-d" aria-label="当前 D" aria-live="off">0</output
+              ><small>待采样</small>
+            </div>
+            <div class="flow-wire" aria-hidden="true"></div>
+            <div class="flip-flop">
+              <span class="chip-caption">D FLIP-FLOP</span><strong>1 bit</strong
+              ><span class="chip-clock"
+                >↑ CLK <output id="value-clk" aria-label="当前 CLK" aria-live="off">0</output></span
+              ><span id="chip-state">等待上升沿</span>
+            </div>
+            <div class="flow-wire" aria-hidden="true"></div>
+            <div class="signal-value signal-q">
+              <span>输出 <b>Q</b></span
+              ><output id="value-q" aria-label="当前 Q" aria-live="off">0</output
+              ><small>已存储</small>
+            </div>
+          </div>
+          <div class="controls">
+            <fieldset>
+              <legend>输入 D</legend>
+              <div class="segmented">
+                <label
+                  ><input id="data-zero" type="radio" name="data" value="0" checked /><span
+                    class="segment-label"
+                    >D = 0</span
+                  ></label
+                ><label
+                  ><input id="data-one" type="radio" name="data" value="1" /><span
+                    class="segment-label"
+                    >D = 1</span
+                  ></label
+                >
+              </div>
+            </fieldset>
+            <fieldset class="clock-control">
+              <legend>时钟 CLK</legend>
+              <button id="step" class="primary-button" type="button">
+                <i data-lucide="step-forward" aria-hidden="true"></i
+                ><span id="step-label">推进至 1 ↑</span>
+              </button>
+            </fieldset>
+            <fieldset class="reset-control">
+              <legend>复位 RST</legend>
+              <label class="reset-label"
+                ><input
+                  id="reset"
+                  type="checkbox"
+                  aria-label="启用异步复位"
+                  aria-describedby="reset-help"
+                />启用 <span id="value-rst">0</span></label
+              ><small id="reset-help">启用后立即清零 Q</small>
+            </fieldset>
+          </div>
+          <div class="playback">
+            <button id="play" class="text-button" type="button">
+              <i data-lucide="play" class="play-icon" aria-hidden="true"></i
+              ><i data-lucide="pause" class="pause-icon" aria-hidden="true"></i
+              ><span id="play-label">自动时钟</span></button
+            ><label for="speed">边沿间隔</label
+            ><select id="speed">
+              <option value="1200">1.2 秒</option>
+              <option value="600">0.6 秒</option>
+              <option value="300">0.3 秒</option></select
+            ><span id="run-status">手动操作</span>
+          </div>
+          <figure class="analyzer" aria-labelledby="scope-title">
+            <figcaption>
+              <span id="scope-title"
+                ><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i> 逻辑分析仪</span
+              ><span class="scope-key">↑ 上升沿</span
+              ><button
+                class="scope-help"
+                type="button"
+                popovertarget="reading-help"
+                aria-label="读图说明"
+              >
+                <i data-lucide="circle-help" aria-hidden="true"></i>
+              </button>
+            </figcaption>
+            <canvas
+              id="scope"
+              role="img"
+              aria-label="D、CLK、Q、RST 四路逻辑波形；对应数值见下方操作记录。"
+              >四路信号的文本数值可在下方“操作记录”中查看。</canvas
+            >
+            <p id="scope-error" class="scope-error" hidden>
+              波形暂不可用。你仍可通过当前数值和操作记录完成实验。
+            </p>
+            <div class="scope-footer">
+              <span>操作序号 · 每格一步，不代表等长时间</span><span>0 低 / 1 高</span>
+            </div>
+            <dialog id="reading-help" class="reading-help" aria-labelledby="reading-title" popover>
+              <header>
+                <h3 id="reading-title">读懂这张波形图</h3>
+                <button
+                  type="button"
+                  popovertarget="reading-help"
+                  popovertargetaction="hide"
+                  aria-label="关闭读图说明"
+                >
+                  <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+              </header>
+              <p>每格表示一次操作完成后的状态。第 0 格是初始状态，空白区域表示尚无记录。</p>
+              <p>竖向虚线标出时钟上升沿。只有 RST = 0 时，该上升沿才会采样 D。</p>
+              <p>亮色竖带与圆点标出正在查看的记录。拖动下方滑块，或用方向键逐步回看。</p>
+            </dialog>
+          </figure>
+          <div class="history-control">
+            <label for="history">回看操作</label
+            ><input
+              id="history"
+              type="range"
+              min="0"
+              max="0"
+              value="0"
+              aria-describedby="history-help"
+            /><output id="position" for="history" aria-live="off">#00</output
+            ><button id="latest" class="text-button" type="button">回到最新</button>
+          </div>
+          <p id="history-help" class="visually-hidden">
+            用方向键逐条回看。回看会暂停自动时钟；上方控制区始终显示当前状态。
+          </p>
+          <div
+            class="explanation"
+            id="history-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span class="event-tag" id="event-name">当前 · 初始状态</span>
+            <p id="explanation"></p>
+            <p class="snapshot" id="snapshot"></p>
+          </div>
+          <details class="event-log" id="event-log">
+            <summary>操作记录 <span>最近 64 条</span></summary>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="操作记录，可滚动">
+              <table>
+                <caption class="visually-hidden">
+                  按操作顺序记录的逻辑状态
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">序号</th>
+                    <th scope="col">操作</th>
+                    <th scope="col">D</th>
+                    <th scope="col">CLK</th>
+                    <th scope="col">Q</th>
+                    <th scope="col">RST</th>
+                  </tr>
+                </thead>
+                <tbody id="records"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+
+        <aside class="principle" id="principle" tabindex="-1" aria-labelledby="principle-title">
+          <p class="eyebrow">工作原理</p>
+          <h2 id="principle-title">采样一次，保持到下一次。</h2>
+          <p class="principle-copy">
+            D 是输入，Q 是存储的值。未启用复位时，只有 CLK 从 <strong>0 变为 1</strong> 的瞬间，Q
+            才采样 D。
+          </p>
+          <ol class="rules">
+            <li>
+              <span>01</span>
+              <div>
+                <strong>上升沿：采样</strong>
+                <p>未复位时，Q 取此刻 D 的值，数值可能不变。</p>
+              </div>
+            </li>
+            <li>
+              <span>02</span>
+              <div>
+                <strong>其他时刻：保持</strong>
+                <p>未复位时，D 改变或 CLK 下降，Q 均保持。</p>
+              </div>
+            </li>
+            <li>
+              <span>03</span>
+              <div>
+                <strong>复位：优先清零</strong>
+                <p>RST = 1 时，Q 立即为 0，与时钟无关。</p>
+              </div>
+            </li>
+          </ol>
+          <details>
+            <summary>状态规则表</summary>
+            <table class="truth-table">
+              <caption>
+                本实验：上升沿触发，RST 高有效
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">RST</th>
+                  <th scope="col">CLK</th>
+                  <th scope="col">D</th>
+                  <th scope="col">更新后的 Q</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>任意</td>
+                  <td>任意</td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td>0</td>
+                  <td>↑</td>
+                  <td>0</td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td>0</td>
+                  <td>↑</td>
+                  <td>1</td>
+                  <td>1</td>
+                </tr>
+                <tr>
+                  <td>0</td>
+                  <td>无上升沿</td>
+                  <td>任意</td>
+                  <td>保持</td>
+                </tr>
+              </tbody>
+            </table>
+          </details>
+          <details>
+            <summary>高电平与上升沿，有什么不同？</summary>
+            <p>
+              高电平是一段持续的状态，上升沿是从 0 变为 1 的瞬间。未复位时，本实验的 D
+              触发器只在上升沿采样；CLK 持续为 1 时，Q 不随 D 改变。这与电平敏感的锁存器不同。
+            </p>
+          </details>
+          <details>
+            <summary>实验模型与真实器件</summary>
+            <p>
+              本实验使用理想二值逻辑，按顺序处理操作，初始 Q = 0
+              是教学约定。真实器件还涉及传播延迟、建立时间、保持时间与亚稳态；具体时序要求和上电状态以规格书为准。
+            </p>
+          </details>
+        </aside>
+      </div>
+      <footer class="site-footer">
+        <span>一位记忆 <span aria-hidden="true">/</span> 从一位信息，理解时序逻辑</span
+        ><span>理想逻辑模型 · 上升沿触发 · 高有效异步复位</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

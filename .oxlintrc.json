@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {
+    // 返回路径由 noImplicitReturns 检查，避免误报穷尽分支。
+    "typescript/consistent-return": "off",
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/consistent-type-imports": "error",
+    "no-nested-ternary": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/scope/worker.ts"],
+      // Worker 消息没有 targetOrigin 参数。
+      "rules": {
+        "unicorn/require-post-message-target-origin": "off"
+      }
+    }
+  ]
+}

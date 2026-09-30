@@ -1,0 +1,151 @@
+@scope (.guide) {
+  :scope {
+    background: var(--guide);
+    border: 1px solid color-mix(in oklab, var(--green) 14%, var(--guide));
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .eyebrow,
+  #lesson-count {
+    color: var(--green);
+    font-size: 11px;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 550;
+    letter-spacing: -0.02em;
+    margin-block: 22px 12px;
+    line-height: 1.6;
+  }
+
+  #lesson-hint {
+    font-size: 13px;
+    line-height: 1.95;
+    min-block-size: 76px;
+    color: var(--muted);
+  }
+
+  progress {
+    display: block;
+    inline-size: 100%;
+    block-size: 6px;
+    margin-block: 22px;
+    accent-color: var(--green);
+  }
+
+  button {
+    inline-size: 100%;
+    justify-content: space-between;
+  }
+
+  .guide-note {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.9;
+    margin-block-start: 12px;
+  }
+
+  .lesson-result {
+    font-size: 12px;
+    line-height: 1.9;
+    border-block-start: 1px solid color-mix(in oklab, var(--green) 20%, transparent);
+    padding-block-start: 14px;
+    margin-block-start: 18px;
+    color: var(--ink);
+  }
+
+  @media (width < 900px) {
+    :scope {
+      padding: 20px;
+    }
+
+    h2 {
+      margin-block: 12px 6px;
+      font-size: 20px;
+    }
+
+    #lesson-hint {
+      min-block-size: 0;
+    }
+
+    progress {
+      margin-block: 16px;
+    }
+  }
+}
+
+@scope (.principle) {
+  :scope {
+    padding-inline: 4px;
+    scroll-margin-block-start: 24px;
+  }
+
+  h2 {
+    font-size: 19px;
+    font-weight: 550;
+    margin-block: 12px;
+    line-height: 1.6;
+  }
+
+  .principle-copy {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.95;
+  }
+
+  strong {
+    color: var(--ink);
+    font-weight: 550;
+  }
+
+  .rules {
+    padding: 0;
+    margin-block: 24px;
+    list-style: none;
+    display: grid;
+    gap: 22px;
+  }
+
+  .rules li {
+    display: flex;
+    align-items: start;
+    gap: 13px;
+  }
+
+  .rules li > span {
+    color: var(--muted);
+    font: 12px var(--mono);
+    padding-block-start: 3px;
+  }
+
+  .rules strong {
+    display: block;
+    font-size: 13px;
+    margin-block-end: 5px;
+  }
+
+  .rules p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .truth-table {
+    margin-block-end: 16px;
+  }
+
+  .truth-table th,
+  .truth-table td {
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+}

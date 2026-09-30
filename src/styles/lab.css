@@ -1,0 +1,514 @@
+@scope (.lab) {
+  :scope {
+    container: workbench / inline-size;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: clamp(16px, 2.4vw, 28px);
+    min-inline-size: 0;
+  }
+
+  .signal-flow {
+    display: grid;
+    grid-template-columns: 1fr 36px 154px 36px 1fr;
+    align-items: center;
+    padding-block: 30px;
+    max-inline-size: 550px;
+    margin-inline: auto;
+  }
+
+  .signal-value {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .signal-value > output {
+    font-size: 48px;
+    font-weight: 450;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    border-radius: 12px;
+    min-inline-size: 64px;
+    text-align: center;
+  }
+
+  output[data-bit="1"] {
+    background: color-mix(in oklab, currentcolor 9%, transparent);
+  }
+
+  .signal-value b {
+    margin-inline-start: 6px;
+  }
+
+  .signal-value small {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .signal-d {
+    color: var(--blue);
+  }
+
+  .signal-q {
+    color: var(--green);
+  }
+
+  .flow-wire {
+    block-size: 1px;
+    background: var(--line);
+    position: relative;
+  }
+
+  .flow-wire::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block-start: -3px;
+    inline-size: 6px;
+    block-size: 6px;
+    border-block-start: 1px solid var(--line);
+    border-inline-end: 1px solid var(--line);
+    rotate: 45deg;
+  }
+
+  .flip-flop {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    display: grid;
+    justify-items: center;
+    gap: 9px;
+    padding: 16px 8px;
+    background: var(--soft);
+    box-shadow: 0 3px 0 var(--line);
+  }
+
+  .chip-caption {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .flip-flop > strong {
+    font-size: 24px;
+    font-weight: 500;
+  }
+
+  .chip-clock {
+    font: 12px var(--mono);
+  }
+
+  .chip-clock output {
+    margin-inline-start: 6px;
+    border-radius: 4px;
+    padding: 2px 6px;
+    background: color-mix(in oklab, var(--green) 12%, transparent);
+  }
+
+  #chip-state {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 1fr;
+    gap: 18px;
+    padding-block: 8px 22px;
+  }
+
+  .segmented {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 3px;
+    min-block-size: 44px;
+  }
+
+  .segmented label {
+    position: relative;
+    flex: 1;
+    text-align: center;
+    display: flex;
+  }
+
+  .segmented input {
+    position: absolute;
+    opacity: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .segment-label {
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .segmented label:has(:checked) .segment-label {
+    background: color-mix(in oklab, var(--blue) 12%, var(--paper));
+    color: var(--blue);
+    font-weight: 600;
+  }
+
+  .segmented label:has(:focus-visible) .segment-label {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  .clock-control button {
+    inline-size: 100%;
+    white-space: nowrap;
+  }
+
+  .reset-control {
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: 18px;
+  }
+
+  .reset-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-block-size: 32px;
+    font-size: 13px;
+  }
+
+  .reset-label span {
+    margin-inline-start: auto;
+    font-family: var(--mono);
+    color: var(--muted);
+    padding: 3px 7px;
+    border-radius: 4px;
+  }
+
+  .reset-label:where(:has(:checked)) span {
+    color: light-dark(#74418b, #d9b5eb);
+    background: light-dark(#f2e8f6, #44314b);
+  }
+
+  .reset-control small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-block-start: 5px;
+  }
+
+  .playback {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-block: 10px 14px;
+    border-block-start: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .playback > button {
+    color: var(--ink);
+    margin-inline-end: auto;
+  }
+
+  #play .pause-icon {
+    display: none;
+  }
+
+  #play[data-running="true"] .play-icon {
+    display: none;
+  }
+
+  #play[data-running="true"] .pause-icon {
+    display: block;
+  }
+
+  #run-status {
+    flex-basis: 100%;
+    font-size: 11px;
+  }
+
+  .analyzer {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #172725;
+    color: #d4e1d8;
+    color-scheme: dark;
+  }
+
+  .analyzer figcaption {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 0;
+    font-size: 13px;
+  }
+
+  #scope-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-end: auto;
+  }
+
+  .scope-key {
+    color: #e8bb70;
+    font-size: 11px;
+  }
+
+  .scope-help {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    border-radius: 8px;
+    color: #d4e1d8;
+    background: transparent;
+  }
+
+  #scope {
+    display: block;
+    inline-size: 100%;
+    block-size: 314px;
+  }
+
+  .scope-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px 14px;
+    padding: 0 18px 16px;
+    color: #acbdb7;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .scope-error {
+    font-size: 13px;
+    padding: 15px;
+    color: #e8bb70;
+  }
+
+  .reading-help {
+    inline-size: min(380px, calc(100% - 32px));
+    max-block-size: calc(100% - 32px);
+    border: 1px solid #50665a;
+    border-radius: 16px;
+    padding: 20px;
+    color: #e5ebe2;
+    background: #1c3028;
+    box-shadow: 0 16px 64px #0006;
+    opacity: 0;
+    translate: 0 8px;
+    transition:
+      opacity 160ms,
+      translate 160ms;
+  }
+
+  .reading-help:popover-open {
+    opacity: 1;
+    translate: 0;
+  }
+
+  .reading-help::backdrop {
+    background: #0003;
+  }
+
+  .reading-help header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-block-end: 8px;
+  }
+
+  .reading-help h3 {
+    font-size: 17px;
+    font-weight: 550;
+  }
+
+  .reading-help button {
+    background: transparent;
+    color: inherit;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    border-radius: 8px;
+  }
+
+  .reading-help p {
+    font-size: 13px;
+    line-height: 1.9;
+    color: #becdc3;
+  }
+
+  .reading-help :where(p + p) {
+    margin-block-start: 12px;
+  }
+
+  @starting-style {
+    .reading-help:popover-open {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  @media (hover: hover) {
+    .scope-help:hover,
+    .reading-help button:hover {
+      background: #ffffff12;
+    }
+  }
+
+  .history-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-block: 10px;
+    font-size: 12px;
+  }
+
+  .history-control input {
+    flex: 1;
+    inline-size: 50px;
+  }
+
+  .history-control output {
+    font-family: var(--mono);
+  }
+
+  .explanation {
+    border-inline-start: 3px solid var(--green);
+    padding-inline-start: 14px;
+    margin-block: 4px 22px;
+    min-block-size: 86px;
+  }
+
+  .event-tag {
+    display: block;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 600;
+    margin-block-end: 6px;
+  }
+
+  .explanation p {
+    font-size: 13px;
+    line-height: 1.9;
+  }
+
+  .explanation .snapshot {
+    color: var(--muted);
+    font: 11px / 1.8 var(--mono);
+    margin-block-start: 6px;
+  }
+
+  .event-log summary {
+    padding-block-end: 0;
+  }
+
+  .event-log summary span {
+    float: inline-end;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .event-log:open summary {
+    padding-block-end: 14px;
+  }
+
+  .table-scroll {
+    max-block-size: 260px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    border-radius: 6px;
+  }
+
+  .table-scroll thead {
+    position: sticky;
+    inset-block-start: 0;
+    background: var(--paper);
+  }
+
+  tr[aria-current="true"] {
+    background: var(--soft);
+  }
+
+  @container workbench (width < 500px) {
+    .signal-flow {
+      grid-template-columns: 1fr 16px 132px 16px 1fr;
+      padding-block: 24px;
+    }
+
+    .signal-value > output {
+      font-size: 40px;
+      min-inline-size: 52px;
+    }
+
+    .controls {
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 14px;
+    }
+
+    .reset-control {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      border: 0;
+      border-block-start: 1px solid var(--line);
+      padding: 12px 0 0;
+      gap: 4px 16px;
+    }
+
+    .reset-control legend {
+      float: inline-start;
+      margin: 0;
+      align-self: center;
+    }
+
+    .reset-label {
+      min-block-size: 36px;
+    }
+
+    .reset-control small {
+      margin: 0;
+    }
+
+    .analyzer figcaption {
+      padding-inline: 10px;
+      gap: 5px;
+      font-size: 12px;
+    }
+
+    .scope-key {
+      font-size: 10px;
+    }
+
+    .scope-footer {
+      padding-inline: 12px;
+    }
+
+    .history-control {
+      gap: 6px;
+    }
+
+    .history-control .text-button {
+      padding-inline: 4px;
+    }
+
+    #scope {
+      block-size: 300px;
+    }
+
+    th,
+    td {
+      padding-inline: 5px;
+    }
+  }
+}
